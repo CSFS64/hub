@@ -259,7 +259,6 @@ function normalizePostRow(row) {
     : (() => { try { return JSON.parse(row.images || "[]"); } catch { return []; } })();
 
   const postId = row.post_id ?? row.postId ?? row.pid ?? row.p_id ?? row.id;
-  id: postId != null ? String(postId) : null,
 
   return {
     id: postId != null ? String(postId) : null,
