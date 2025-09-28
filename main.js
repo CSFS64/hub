@@ -46,6 +46,14 @@ function toast(text) {
   toast._t = setTimeout(() => el.classList.remove('show'), 1800);
 }
 
+let __meCache = null;
+async function awaitMeIdCache(){
+  if (!USE_BACKEND) return getMeLocal();
+  if (__meCache) return __meCache;
+  try { __meCache = (await api("/me")).user || null; } catch {}
+  return __meCache;
+}
+
 /* =========================
  * 后端 API 包装（含带 Cookie）
  * ========================= */
