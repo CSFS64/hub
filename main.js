@@ -1,7 +1,7 @@
 /* =========================
  * 切换：后端/本地
  * ========================= */
-const USE_BACKEND = false; // 后端写好前，可设为 false 先演示
+const USE_BACKEND = true; // 后端写好前，可设为 false 先演示
 const API_BASE = "https://mini-forum-backend.20060303jjc.workers.dev"; // ← 改成你的 Worker 域名
 const MAX_IMAGES = 3;
 
