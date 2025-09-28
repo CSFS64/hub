@@ -301,6 +301,10 @@ function bindGlobalUI() {
     });
   }
 
+  $('#composerImageInput')?.addEventListener('change', handleInlineImages);
+  $('#btnClearDraft')?.addEventListener('click', clearInlineDraft);
+  $('#btnPost')?.addEventListener('click', handleSubmitInline);
+
   $('#nav-home').addEventListener('click', () => { location.hash = Routes.home; });
   $('#nav-me').addEventListener('click', async () => {
     const me = await getMe();
