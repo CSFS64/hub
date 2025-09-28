@@ -1,918 +1,566 @@
-/* main.js（已接入 Cloudflare Worker 后端）
- * - 首页推荐/关注流
- * - 发帖（文字 + 最多 3 张图，先上传到 R2）
- * - 个人主页（头像/封面/简介从后端读写），关注/取关
- * - 帖子详情 + “线程”逻辑（与后端保持一致）
- * - 未登录时弹出手机号/验证码对话框完成登录（验证码看 wrangler tail 日志）
- *
- * 切换数据源：
- *   USE_BACKEND = true  -> 使用后端 API（生产）
- *   USE_BACKEND = false -> 使用本地 localStorage（演示）
- */
-
 /* =========================
  * 切换：后端/本地
  * ========================= */
-const USE_BACKEND = true;
-const API_BASE = "https://mini-forum-backend.20060303jjc.workers.dev"; // 你的 Worker 域名
+const USE_BACKEND = true; // 后端写好前，可设为 false 先演示
+const API_BASE = "https://mini-forum-backend.20060303jjc.workers.dev"; // ← 改成你的 Worker 域名
+const MAX_IMAGES = 3;
 
 /* =========================
- * 小工具
+ * 全局状态（简单 SPA ）
  * ========================= */
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-const now = () => Date.now();
-const uuid = () => crypto.randomUUID ? crypto.randomUUID() : 'u' + Math.random().toString(36).slice(2);
-const fmtTime = (ts) => {
-  const d = new Date(ts);
-  const diff = (Date.now() - ts) / 1000;
-  if (diff < 60) return `${Math.floor(diff)}秒前`;
-  if (diff < 3600) return `${Math.floor(diff/60)}分钟前`;
-  if (diff < 86400) return `${Math.floor(diff/3600)}小时前`;
-  return `${d.getFullYear()}-${(d.getMonth()+1+'').padStart(2,'0')}-${(d.getDate()+'').padStart(2,'0')} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+
+const state = {
+  me: null,          // 当前已登录用户
+  token: null,       // JWT
+  feed: [],          // 首页“推荐”
+  followingFeed: [], // “关注”流
+  viewing: "home",   // home | following | me | post
+  postDetail: null,  // 当前查看的帖子
+  profileUser: null, // 当前查看的个人主页用户
 };
-const escapeHtml = s =>
-  String(s ?? "").replace(/[&<>"']/g, m =>
-    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m])
-  );
-const linkify = (text) => text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
-
-function toast(text) {
-  const el = $('#toast');
-  if (!el) return alert(text);
-  el.textContent = text;
-  el.classList.add('show');
-  clearTimeout(toast._t);
-  toast._t = setTimeout(() => el.classList.remove('show'), 1800);
-}
-
-let __meCache = null;
-async function awaitMeIdCache(){
-  if (!USE_BACKEND) return getMeLocal();
-  if (__meCache) return __meCache;
-  try { __meCache = (await api("/me")).user || null; } catch {}
-  return __meCache;
-}
 
 /* =========================
- * 后端 API 包装（含带 Cookie）
+ * 工具
  * ========================= */
-async function api(path, opts = {}) {
-  const isForm = opts.body instanceof FormData;
-  const headers = isForm ? (opts.headers || {}) : { "content-type": "application/json", ...(opts.headers || {}) };
-  const res = await fetch(`${API_BASE}${path}`, {
-    credentials: "include", // 关键：跨站也带上/接收 Cookie
-    ...opts,
-    headers
-  });
-  const ctype = res.headers.get("content-type") || "";
-  const data = ctype.includes("application/json") ? await res.json() : await res.text();
-  if (!res.ok || (data && data.ok === false)) {
-    const msg = (data && data.error) ? data.error : `${res.status} ${res.statusText}`;
-    throw new Error(msg);
-  }
-  return data;
+function toast(msg, ms = 1800) {
+  const el = $("#toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), ms);
 }
 
-/* 登录流程（简易弹窗版） */
-function normalizePhone(p) {
-  p = (p || "").trim();
-  if (/^\d{11}$/.test(p) && p.startsWith("1")) p = "+86" + p;  // 11位国内号 → +86
-  if (!/^\+\d{6,15}$/.test(p)) throw new Error("Invalid phone");
-  return p;
+function setAuthVisible(isAuthed) {
+  $("#btnAuth").classList.toggle("hidden", isAuthed);
+  $("#btnLogout").classList.toggle("hidden", !isAuthed);
 }
 
-async function ensureLogin() {
-  if (!USE_BACKEND) return;
+function saveSession() {
+  localStorage.setItem("mini_forum_session", JSON.stringify({
+    token: state.token,
+    me: state.me,
+  }));
+}
+function loadSession() {
   try {
-    const me = await api("/me");
-    if (me && me.user) return; // 已登录
-  } catch (_) {}
-
-  // 未登录 -> 触发短信流程
-  let phone = prompt("请输入手机号（可填 11 位国内号或 +国际区号）：");
-  if (!phone) return;
-
-  // 关键：前端先规范化
-  try { phone = normalizePhone(phone); }
-  catch { toast("手机号格式不正确"); return; }
-
-  await api("/auth/request_code", { method: "POST", body: JSON.stringify({ phone }) });
-  toast("验证码已发送（开发阶段请在 wrangler tail 日志查看）");
-
-  const code = prompt("请输入 6 位验证码：");
-  if (!code) return;
-
-  const nickname = prompt("首次登录，请输入你的昵称：") || "新用户";
-  await api("/auth/verify_code", { method: "POST", body: JSON.stringify({ phone, code, nickname }) });
-  toast("登录成功");
+    const raw = localStorage.getItem("mini_forum_session");
+    if (!raw) return;
+    const { token, me } = JSON.parse(raw);
+    state.token = token; state.me = me;
+    setAuthVisible(!!token);
+  } catch {}
 }
 
-/* =========================
- * 本地演示存储（当 USE_BACKEND=false）
- * ========================= */
-const Storage = {
-  key: 'mini_forum_demo_v1',
-  load() { try { return JSON.parse(localStorage.getItem(this.key)) || null; } catch { return null; } },
-  save(state) { localStorage.setItem(this.key, JSON.stringify(state)); },
-};
-
-const createInitialState = () => {
-  const userA = { id: uuid(), nickname: 'Alice', bio: '热爱前端与猫', avatar: '', cover: '', following: [], followers: [], createdAt: now() };
-  const userB = { id: uuid(), nickname: 'Bob', bio: '徒步/胶片摄影', avatar: '', cover: '', following: [], followers: [], createdAt: now() };
-  const me    = { id: uuid(), nickname: '你', bio: '点击头像可编辑资料', avatar: '', cover: '', following: [userA.id], followers: [], createdAt: now() };
-  userA.followers.push(me.id);
-  const posts = [
-    { id: uuid(), authorId: userA.id, content: '第一条贴子，欢迎来到小站～', images: [], createdAt: now()-7200000, replyToId: null, threadRootId: null, likes: 2, reposts: 0, replies: 0 },
-    { id: uuid(), authorId: userB.id, content: '今天的天空很蓝。', images: [], createdAt: now()-3600000, replyToId: null, threadRootId: null, likes: 1, reposts: 0, replies: 0 },
-  ];
-  return { users: { [me.id]: me, [userA.id]: userA, [userB.id]: userB }, posts, currentUserId: me.id, version: 1 };
-};
-
-let DB = USE_BACKEND ? null : (Storage.load() || createInitialState());
-if (!USE_BACKEND) Storage.save(DB);
-
-/* 便捷选择器（本地模式用） */
-const getUserLocal = (id) => DB.users[id];
-const getMeLocal   = () => DB.users[DB.currentUserId];
-
-/* =========================
- * 统一的数据适配层
- *   - 当 USE_BACKEND=true 时，使用后端
- *   - 否则使用本地 DB
- * ========================= */
-
-/* 登录用户（仅用于渲染头像/昵称） */
-async function getMe() {
-  if (!USE_BACKEND) return getMeLocal();
-  const r = await api("/me");
-  return r.user || null;
-}
-
-/* 关注/取关/是否已关注 */
-async function follow(uid) {
-  if (!USE_BACKEND) {
-    const me = getMeLocal();
-    if (me.id === uid) return;
-    if (!me.following.includes(uid)) me.following.push(uid);
-    const target = getUserLocal(uid);
-    if (!target.followers.includes(me.id)) target.followers.push(me.id);
-    Storage.save(DB);
-    return;
-  }
-  await api(`/follow/${uid}`, { method: "POST" });
-}
-async function unfollow(uid) {
-  if (!USE_BACKEND) {
-    const me = getMeLocal();
-    if (me.id === uid) return;
-    me.following = me.following.filter(id => id !== uid);
-    const target = getUserLocal(uid);
-    target.followers = target.followers.filter(id => id !== me.id);
-    Storage.save(DB);
-    return;
-  }
-  await api(`/follow/${uid}`, { method: "DELETE" });
-}
-async function isFollowing(uid) {
-  if (!USE_BACKEND) return getMeLocal().following.includes(uid);
-  // 后端没有“单查是否关注”的独立接口，这里在渲染 profile 时返回 counts；
-  // 简化起见：在需要判断的地方不做即时查询，按钮以 follow/unfollow 动作为准。
-  // 若要精准显示，建议在 worker 增加 /follow/state/:uid。
-  return false; // 默认不显示“已关注”状态，点击后会变成已关注
-}
-
-/* 发帖 / 回复 */
-async function createPost({ authorId, content, images }) {
-  if (!USE_BACKEND) {
-    const p = { id: uuid(), authorId, content, images: images || [], createdAt: now(), replyToId: null, threadRootId: null, likes: 0, reposts: 0, replies: 0 };
-    DB.posts.unshift(p); Storage.save(DB); return p;
-  }
-  const r = await api("/api/posts", { method: "POST", body: JSON.stringify({ content, images }) });
-  return { id: r.id };
-}
-async function createReply({ authorId, parentId, content, images }) {
-  if (!USE_BACKEND) {
-    const parent = DB.posts.find(p => p.id === parentId);
-    if (!parent) throw new Error('Parent not found');
-    let threadRootId = null;
-    const sameAuthor = parent.authorId === authorId;
-    if (sameAuthor) threadRootId = parent.threadRootId || parent.id;
-    const r = { id: uuid(), authorId, content, images: images || [], createdAt: now(), replyToId: parentId, threadRootId, likes: 0, reposts: 0, replies: 0 };
-    DB.posts.unshift(r); parent.replies += 1; Storage.save(DB); return r;
-  }
-  const r = await api(`/api/posts/${encodeURIComponent(parentId)}/reply`, {
-    method: "POST",
-    body: JSON.stringify({ content, images })
+async function api(path, { method = "GET", body, formData, auth = true } = {}) {
+  if (!USE_BACKEND) return mockApi(path, { method, body, formData });
+  const headers = new Headers();
+  if (!formData) headers.set("content-type", "application/json; charset=utf-8");
+  if (auth && state.token) headers.set("authorization", `Bearer ${state.token}`);
+  const res = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers,
+    body: formData ? formData : (body ? JSON.stringify(body) : undefined),
+    credentials: "omit",
   });
-  return { id: r.id };
-}
-
-/* 线程 */
-async function getThreadChainBackend(rootId) {
-  const r = await api(`/api/posts/${encodeURIComponent(rootId)}/thread`);
-  return r.chain || [];
-}
-
-/* 首页 feed */
-async function getForYouFeed() {
-  if (!USE_BACKEND) return DB.posts.filter(p => p.replyToId === null).sort((a,b)=>b.createdAt-a.createdAt);
-  const r = await api(`/api/posts?type=forYou`);
-  return r.data.map(normalizePostRow);
-}
-async function getFollowingFeed() {
-  if (!USE_BACKEND) {
-    const me = getMeLocal(); const set = new Set(me.following.concat([me.id]));
-    return DB.posts.filter(p => p.replyToId === null && set.has(p.authorId)).sort((a,b)=>b.createdAt-a.createdAt);
+  if (!res.ok) {
+    const detail = await safeJson(res);
+    throw new Error(detail?.error || `HTTP ${res.status}`);
   }
-  const r = await api(`/api/posts?type=following`);
-  return r.data.map(normalizePostRow);
+  return safeJson(res);
+}
+async function safeJson(res) {
+  const ct = res.headers.get("content-type") || "";
+  if (ct.includes("application/json")) return await res.json();
+  const text = await res.text();
+  try { return JSON.parse(text); } catch { return { ok: true, text }; }
 }
 
-/* 个人主页数据 */
-async function fetchProfile(uid) {
-  if (!USE_BACKEND) {
-    const user = getUserLocal(uid);
-    const items = DB.posts.filter(p => p.authorId === uid && p.replyToId === null).sort((a,b)=>b.createdAt-a.createdAt);
-    return { user, following_count: user.following.length, followers_count: user.followers.length, items };
-  }
-  const u = await api(`/users/${uid}`);
-  // 拉该用户的根贴
-  const r = await api(`/api/posts?type=forYou&limit=100`); // 简化：后端暂未提供按作者过滤，这里客户端筛选
-  const items = r.data.map(normalizePostRow).filter(p => p.authorId === uid && p.replyToId === null);
-  return { user: u.user, following_count: u.following_count, followers_count: u.followers_count, items };
+/* =========================
+ * 事件绑定
+ * ========================= */
+window.addEventListener("DOMContentLoaded", () => {
+  bindTopbar();
+  bindDialogs();
+  loadSession();
+  routeTo("home"); // 默认进首页
+});
+
+function bindTopbar() {
+  $("#btnHome").onclick = () => routeTo("home");
+  $("#btnFollowing").onclick = () => routeTo("following");
+  $("#btnProfile").onclick = () => {
+    if (!state.me) return openAuth();
+    openProfile(state.me.id);
+  };
+  $("#btnNewPost").onclick = () => openPostDialog();
+  $("#btnAuth").onclick = () => openAuth();
+  $("#btnLogout").onclick = () => logout();
+  $("#searchInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") doSearch(e.target.value.trim());
+  });
 }
 
-/* 上传图片（到 R2，通过 Worker /upload/image） */
-async function uploadImage(file) {
-  const fd = new FormData();
-  fd.append("file", file);
-  const r = await api("/upload/image", { method: "POST", body: fd });
-  // 返回 { ok:true, url:"/media/..." } -> 拼成完整可访问 URL
-  return `${API_BASE}${r.url}`;
-}
+function bindDialogs() {
+  const authDialog = $("#authDialog");
+  // 切换标签
+  $$(".tab", authDialog).forEach(btn => {
+    btn.onclick = () => {
+      $$(".tab", authDialog).forEach(b => b.classList.toggle("active", b===btn));
+      const key = btn.dataset.tab;
+      $$(".tabpanel", authDialog).forEach(p => p.classList.toggle("active", p.dataset.panel === key));
+    };
+  });
 
-/* 将后端 posts 行适配为前端渲染需要的结构 */
-function normalizePostRow(row) {
-  const imgs = Array.isArray(row.images)
-    ? row.images
-    : (() => { try { return JSON.parse(row.images || "[]"); } catch { return []; } })();
+  $("#btnLogin").onclick = async (e) => {
+    e.preventDefault();
+    try {
+      const account = $("#loginAccount").value.trim();
+      const password = $("#loginPassword").value;
+      const data = await api("/auth/login", { method:"POST", body: { account, password }, auth:false });
+      onAuthSuccess(data);
+      authDialog.close();
+      toast("登录成功");
+    } catch (err) { toast(err.message || "登录失败"); }
+  };
+  $("#btnSendOtpLogin").onclick = () => sendOtp($("#phoneLoginNumber").value.trim());
+  $("#btnPhoneLogin").onclick = async (e) => {
+    e.preventDefault();
+    try {
+      const phone = $("#phoneLoginNumber").value.trim();
+      const code = $("#phoneLoginCode").value.trim();
+      const data = await api("/auth/login_phone", { method:"POST", body: { phone, code }, auth:false });
+      onAuthSuccess(data);
+      authDialog.close();
+      toast("登录成功");
+    } catch (err) { toast(err.message || "登录失败"); }
+  };
 
-  // 统一拿到 id，然后做强兜底
-  const rawId =
-    row.id ?? row.post_id ?? row.postId ?? row.pid ?? row.p_id;
+  $("#btnSendOtpSignup").onclick = () => sendOtp($("#signupPhone").value.trim());
+  $("#btnSignup").onclick = async (e) => {
+    e.preventDefault();
+    try {
+      const phone = $("#signupPhone").value.trim();
+      const code = $("#signupCode").value.trim();
+      const nickname = $("#signupNickname").value.trim();
+      const password = $("#signupPassword").value;
+      const data = await api("/auth/signup", { method:"POST", body: { phone, code, nickname, password }, auth:false });
+      onAuthSuccess(data);
+      authDialog.close();
+      toast("注册成功");
+    } catch (err) { toast(err.message || "注册失败"); }
+  };
 
-  const idStr = rawId == null ? null : String(rawId).trim();
-  const safeId = idStr === "" ? null : idStr;
-
-  return {
-    id: safeId,                                  // <== 关键：保证不是 ""，要么是字符串要么是 null
-    authorId: row.author_id,
-    authorNick: row.nickname || "",
-    authorAvatar: row.avatar || "",
-    content: row.content || "",
-    images: imgs.map(u => ({ url: u })),
-    createdAt: row.created_at,
-    replyToId: row.reply_to_id != null ? String(row.reply_to_id) : null,
-    threadRootId: row.thread_root_id != null ? String(row.thread_root_id) : null,
-    likes: row.likes || 0,
-    reposts: row.reposts || 0,
-    replies: row.replies || 0
+  // 发帖
+  const postDialog = $("#postDialog");
+  $("#postSubmit").onclick = async (e) => {
+    e.preventDefault();
+    try {
+      if (!state.me) { openAuth(); return; }
+      const text = $("#postText").value.trim();
+      if (!text && !filesSelected()) { toast("内容或图片至少一项"); return; }
+      const fd = new FormData();
+      fd.append("text", text);
+      for (const id of ["postImg1","postImg2","postImg3"]) {
+        const f = $("#"+id).files?.[0];
+        if (f) fd.append("images", f, f.name);
+      }
+      await api("/posts", { method:"POST", formData: fd });
+      toast("发布成功");
+      postDialog.close();
+      clearPostDialog();
+      refreshFeed();
+    } catch (err) { toast(err.message || "发布失败"); }
   };
 }
 
-/* =========================
- * 路由
- * ========================= */
-const Routes = {
-  home: '#/home',
-  profile: (uid) => `#/u/${uid}`,
-  post: (pid) => `#/post/${pid}`
-};
-function parseRoute() {
-  const h = location.hash || '#/home';
-  const [path, queryStr] = h.split('?');
-  const query = Object.fromEntries(new URLSearchParams(queryStr || ''));
-  if (path.startsWith('#/u/')) return { page: 'profile', uid: path.slice(4), query };
-  if (path.startsWith('#/post/')) return { page: 'post', pid: path.slice(7), query };
-  return { page: 'home', query };
+function filesSelected() {
+  return ["postImg1","postImg2","postImg3"].some(id => $("#"+id).files?.length);
 }
 
 /* =========================
- * 启动
+ * 视图路由
  * ========================= */
-window.addEventListener('hashchange', () => renderApp());
-document.addEventListener('DOMContentLoaded', async () => {
-  bindGlobalUI();
-  if (USE_BACKEND) await ensureLogin();
-  renderApp();
-});
+async function routeTo(view) {
+  state.viewing = view;
+  $$(".nav-btn").forEach(b => b.classList.toggle("active", b.dataset.view === view || (view==="home" && b.id==="btnHome")));
+  $("#feedView").classList.add("hidden");
+  $("#profileView").classList.add("hidden");
+  $("#postDetailView").classList.add("hidden");
 
-/* =========================
- * 全局 UI & 发帖弹层
- * ========================= */
-function bindGlobalUI() {
-  const composeBtn = $('#btn-compose');
-  if (composeBtn) composeBtn.addEventListener('click', () => openComposeModal());
-
-  $('#overlay').addEventListener('click', (e) => { if (e.target.id === 'overlay') closeModal(); });
-  $$('#overlay .modal .btn-close').forEach(btn => btn.addEventListener('click', closeModal));
-
-  // 弹窗发布（存在才绑定）
-  const composeForm = document.querySelector('#compose-form');
-  if (composeForm) {
-    document.querySelector('#compose-images')?.addEventListener('change', handleComposeImages);
-    composeForm.addEventListener('submit', (e) => handleSubmitCompose(e));
-    document.querySelector('#compose-clear-images')?.addEventListener('click', () => {
-      const input = document.querySelector('#compose-images');
-      if (input) input.value = '';
-      document.querySelector('#compose-previews').innerHTML = '';
-      composeImages = [];
-    });
+  if (view === "home") {
+    $("#feedView").classList.remove("hidden");
+    await refreshFeed();
+  } else if (view === "following") {
+    $("#feedView").classList.remove("hidden");
+    await refreshFollowing();
   }
-
-  // 内联发布（确保按钮不是 submit）
-  document.querySelector('#btnPost')?.setAttribute('type', 'button');
-  document.querySelector('#btnClearDraft')?.setAttribute('type', 'button');
-
-  document.querySelector('#composerImageInput')?.addEventListener('change', handleInlineImages);
-  document.querySelector('#btnClearDraft')?.addEventListener('click', (e) => { e.preventDefault(); clearInlineDraft(); });
-  document.querySelector('#btnPost')?.addEventListener('click', (e) => { e.preventDefault(); handleSubmitInline(); });
-
-  $('#nav-home').addEventListener('click', () => { location.hash = Routes.home; });
-  $('#nav-me').addEventListener('click', async () => {
-    const me = await getMe();
-    if (me?.id) location.hash = Routes.profile(me.id);
-  });
-
-  $('#tab-forYou').addEventListener('click', () => renderHome('forYou'));
-  $('#tab-following').addEventListener('click', () => renderHome('following'));
 }
 
-let composeImages = []; // [{file, url(base64)}...]
-function openComposeModal(replyToId = null) {
-  $('#overlay').classList.add('open');
-  $('#modal-compose').classList.add('open');
-  const form = $('#compose-form');
-  form.reset(); $('#compose-previews').innerHTML = ''; composeImages = [];
-  form.dataset.replyTo = replyToId || '';
+async function refreshFeed() {
+  const data = await api("/feed?tab=for_you", { method:"GET", auth:falseIfNoToken() });
+  state.feed = data.items || [];
+  renderFeed("#feedView", state.feed);
 }
-function closeModal() {
-  $('#overlay').classList.remove('open');
-  $$('#overlay .modal').forEach(m => m.classList.remove('open'));
+async function refreshFollowing() {
+  const data = await api("/feed?tab=following", { method:"GET", auth:falseIfNoToken() });
+  state.followingFeed = data.items || [];
+  renderFeed("#feedView", state.followingFeed);
 }
-function handleComposeImages(e) {
-  const files = Array.from(e.target.files || []);
-  const all = composeImages.length + files.length;
-  if (all > 3) { toast('最多选择 3 张图片'); return; }
-  files.forEach(f => {
-    if (!/^image\//.test(f.type)) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      composeImages.push({ file: f, url: reader.result });
-      renderComposePreviews();
-    };
-    reader.readAsDataURL(f);
-  });
-}
-function renderComposePreviews() {
-  const box = $('#compose-previews');
-  box.innerHTML = composeImages.map((img, i) => `
-    <div class="img-cell">
-      <img src="${img.url}" alt="preview"/>
-      <button class="img-del" data-i="${i}" aria-label="删除">×</button>
-    </div>
-  `).join('');
-  $$('#compose-previews .img-del').forEach(btn => {
-    btn.addEventListener('click', () => { const i = +btn.dataset.i; composeImages.splice(i,1); renderComposePreviews(); });
-  });
-}
-
-async function handleSubmitCompose(e) {
-  e?.preventDefault?.();
-
-  const formEl = (e && e.currentTarget) || document.querySelector('#compose-form');
-  const replyTo = formEl?.dataset?.replyTo || null;
-
-  const me = await getMe();
-  const content = document.querySelector('#compose-content')?.value?.trim?.() || "";
-
-  if (!content && composeImages.length === 0) {
-    toast('内容或图片至少有一项');
-    return;
-  }
-
-  try {
-    let imageUrls = [];
-    if (USE_BACKEND && composeImages.length) {
-      for (const it of composeImages) {
-        const url = await uploadImage(it.file);
-        imageUrls.push(url);
-      }
-    } else {
-      imageUrls = composeImages.map(x => x.url);
-    }
-
-    if (replyTo) {
-      await createReply({ authorId: me?.id || 'me', parentId: replyTo, content, images: USE_BACKEND ? imageUrls : composeImages });
-    } else {
-      await createPost({ authorId: me?.id || 'me', content, images: USE_BACKEND ? imageUrls : composeImages });
-    }
-
-    closeModal();
-
-    const r = parseRoute();
-    if (r.page === 'home') renderHome(getActiveTab());
-    else if (r.page === 'profile') renderProfile(r.uid);
-    else if (r.page === 'post') renderPostDetail(r.pid);
-
-    toast('已发布');
-  } catch (err) {
-    console.error(err);
-    toast('发布失败：' + err.message);
-  }
+function falseIfNoToken() {
+  return !!state.token;
 }
 
 /* =========================
- * 渲染根
+ * 渲染
  * ========================= */
-async function renderApp() {
-  await renderHeaderUser();
-  const r = parseRoute();
-  if (r.page === 'home') renderHome(getActiveTab());
-  if (r.page === 'profile') renderProfile(r.uid);
-  if (r.page === 'post') renderPostDetail(r.pid);
+function renderFeed(containerSel, list){
+  const el = $(containerSel);
+  el.innerHTML = `<h2>${state.viewing==="following"?"关注":"推荐"}</h2>` +
+    list.map(renderPostCard).join("") || "<div class='card'>暂无内容</div>";
+  bindPostActionButtons(el);
 }
 
-/* 头部用户区 */
-async function renderHeaderUser() {
-  let me = null;
-  if (USE_BACKEND) {
-    try { const r = await api("/me"); me = r.user || null; } catch (_) {}
-  } else {
-    me = getMeLocal();
-  }
-
-  if (!me) {
-    // 未登录：显示登录按钮
-    $('#user-entry').innerHTML = `
-      <button class="btn primary" id="btn-login">登录/注册</button>
-    `;
-    $('#btn-login')?.addEventListener('click', async () => {
-      try {
-        await ensureLogin();     // 走短信验证码
-        await renderHeaderUser();// 登录后刷新头部
-        renderHome(getActiveTab());
-      } catch (e) {
-        toast('登录失败：' + e.message);
-      }
-    });
-    return;
-  }
-
-  // 已登录：展示“发帖 + 头像”
-  const avatarHTML = me?.avatar
-    ? `<img src="${me.avatar}" alt="${escapeHtml(me.nickname || '')}">`
-    : `<div class="avatar-ph" aria-label="${escapeHtml(me?.nickname || '我')}">
-         ${escapeHtml((me?.nickname || '我').slice(0,1).toUpperCase())}
-       </div>`;
-
-  $('#user-entry').innerHTML = `
-    <button class="btn ghost" id="btn-compose">发帖</button>
-    <div class="user-mini" title="我的主页">
-      <div class="avatar sm">${avatarHTML}</div>
-      <span class="nick">${escapeHtml(me?.nickname || '')}</span>
-    </div>
-  `;
-
-  $('#btn-compose').addEventListener('click', () => openComposeModal());
-  $('.user-mini').addEventListener('click', () => { if (me?.id) location.hash = Routes.profile(me.id); });
-}
-
-/* =========================
- * 首页：推荐/关注
- * ========================= */
-function getActiveTab() { return $('.feed-tabs .tab.active')?.dataset.tab || 'forYou'; }
-
-async function renderHome(tab = 'forYou') {
-  // 有些页面元素在初始时未渲染出来，加上 ?.
-  $$('.feed-tabs .tab').forEach(t => t.classList.remove('active'));
-  $(`.feed-tabs .tab[data-tab="${tab}"]`)?.classList.add('active');
-
-  const box = $('#feed-list');
-  box.innerHTML = `<div class="empty">加载中...</div>`;
-
-  try {
-    // 关键：先拿到当前登录用户（用于判断“删除按钮是否展示”等）
-    const me = await awaitMeIdCache();
-
-    const list = (tab === 'forYou') ? await getForYouFeed() : await getFollowingFeed();
-    if (!list.length) {
-      box.innerHTML = `<div class="empty">这里还没有内容。去关注一些人，或者发第一条吧！</div>`;
-      return;
-    }
-
-    // 传入 me
-    box.innerHTML = list.map(p => renderPostCard(p, me)).join('');
-    bindPostCardEvents(box);
-  } catch (e) {
-    box.innerHTML = `<div class="empty">加载失败：${escapeHtml(e.message)}</div>`;
-  }
-}
-
-/* 帖子卡片（根贴） */
-function renderPostCard(p, me) {
-  const nick = USE_BACKEND ? (p.authorNick || '用户') : getUserLocal(p.authorId).nickname;
-  const avatar = USE_BACKEND ? p.authorAvatar : (getUserLocal(p.authorId).avatar || '');
-  const avatarHTML = avatar
-    ? `<img src="${avatar}" alt="${escapeHtml(nick)}">`
-    : `<div class="avatar-ph" aria-label="${escapeHtml(nick)}">${escapeHtml(nick.slice(0,1).toUpperCase())}</div>`;
-
-  const canDelete = !!(me && me.id === p.authorId);
-  const likeCount = p.likes ?? 0;
-  const hasValidId = typeof p?.id === 'string' && p.id.trim() !== '';
-
+function renderPostCard(p){
+  const me = state.me;
+  const liked = !!p.liked;
+  const canDelete = me && me.id === p.author.id;
+  const imgs = (p.images||[]).map(src => `<img src="${src}" alt="" style="max-width:100%; border:1px solid var(--border); border-radius:12px; margin-top:8px">`).join("");
   return `
-    <article class="post" data-id="${p.id}">
-      <div class="avatar">${avatarHTML}</div>
-      <div class="body">
-        <div class="meta">
-          <span class="nick clickable" data-user="${p.authorId}">${escapeHtml(nick)}</span>
-          <span class="time">· ${fmtTime(p.createdAt)}</span>
-        </div>
-        ${renderContent(p)}
+  <article class="card" data-post="${p.id}">
+    <div class="row">
+      <img class="avatar" src="${p.author.avatar || 'https://avatar.iran.liara.run/public'}" alt="">
+      <div class="content">
+        <div><strong class="link" data-user="${p.author.id}" style="cursor:pointer">${escapeHtml(p.author.nickname || p.author.username)}</strong>
+          <span class="meta"> · @${escapeHtml(p.author.username)} · ${timeAgo(p.created_at)}</span></div>
+        ${p.text ? `<blockquote>${escapeHtml(p.text)}</blockquote>` : ""}
+        ${imgs}
         <div class="actions">
-          <button class="act reply">评论</button>
-          <button class="act detail">详情</button>
-          <button class="act like" data-like="${p?.id ?? ''}">❤ ${likeCount}</button>
-          ${canDelete ? `<button class="act danger" data-del="${p?.id ?? ''}">删除</button>` : ""}
-          ${renderFollowBtn(p.authorId)}
+          <button class="btn-detail" data-id="${p.id}">评论(${p.comments_count||0})</button>
+          <button class="btn-like ${liked?'liked':''}" data-id="${p.id}">赞(${p.likes||0})</button>
+          <button class="btn-follow" data-user="${p.author.id}">${p.author.following ? "已关注" : "关注"}</button>
+          ${canDelete ? `<button class="btn-delete danger" data-id="${p.id}">删除</button>` : ""}
         </div>
       </div>
-    </article>
-  `;
+    </div>
+  </article>`;
 }
 
-function renderContent(p) {
-  const text = `<div class="text">${linkify(escapeHtml(p.content))}</div>`;
-  const imgs = (p.images && p.images.length) ? `
-    <div class="media-grid">
-      ${p.images.map(img => `<img src="${img.url}" class="media-img" alt="img">`).join('')}
-    </div>` : '';
-  return text + imgs;
-}
-
-function renderFollowBtn(uid) {
-  // 后端模式下，为避免多次查询，这里总是显示“关注”或“取消关注”两态之一。
-  // 简化：如果是本人，不显示按钮。
-  // 本地模式沿用原逻辑。
-  if (USE_BACKEND) {
-    // 需要 me.id 才能判断本人
-    // 在按钮点击时再调用 follow/unfollow
-    return `<button class="act follow primary" data-follow="${uid}">关注/取关</button>`;
-  }
-  const me = getMeLocal();
-  if (uid === me.id) return '';
-  return isFollowing(uid)
-    ? `<button class="act follow danger" data-follow="${uid}">取消关注</button>`
-    : `<button class="act follow primary" data-follow="${uid}">关注</button>`;
-}
-
-function bindPostCardEvents(container) {
-  container.querySelectorAll('.nick.clickable').forEach(el => {
-    el.addEventListener('click', () => { const uid = el.dataset.user; location.hash = Routes.profile(uid); });
-  });
-  container.querySelectorAll('.avatar img').forEach(img => {
-    img.addEventListener('click', () => openImageViewer(img.src));
-  });
-  container.querySelectorAll('.act.reply').forEach(btn => {
-    btn.addEventListener('click', () => { const post = btn.closest('.post'); openComposeModal(post.dataset.id); });
-  });
-  container.querySelectorAll('.act.detail').forEach(btn => {
-    btn.addEventListener('click', () => { const post = btn.closest('.post'); location.hash = Routes.post(post.dataset.id); });
-  });
-  container.querySelectorAll('.act.follow').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const uid = btn.dataset.follow;
-      try {
-        // 简化：再次点击视为切换，后端没有状态接口，这里直接尝试 follow，再尝试 unfollow。
-        await follow(uid).catch(async () => { await unfollow(uid); });
-        toast('已执行关注/取关');
-        renderHome(getActiveTab());
-      } catch (e) {
-        toast('操作失败：' + e.message);
-      }
-    });
-  });
+function bindPostActionButtons(root=document){
+  // 进入详情
+  $$(".btn-detail", root).forEach(b => b.onclick = () => openPostDetail(b.dataset.id));
   // 点赞
-  container.querySelectorAll('[data-like]').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-      const idRaw = btn.getAttribute('data-like');
-      const id = (idRaw ?? '').trim();
-      if (!id || id === 'null' || id === 'undefined') {
-        toast('这条帖子缺少有效 ID'); 
-        return;
-      }
-      try {
-        await likePost(id);
-        renderHome(getActiveTab());
-      } catch(e){ toast('点赞失败：'+e.message); }
-    });
-  });
-  
+  $$(".btn-like", root).forEach(b => b.onclick = () => toggleLike(b.dataset.id, b));
   // 删除
-  container.querySelectorAll('[data-del]').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-      const idRaw = btn.getAttribute('data-del');
-      const id = (idRaw ?? '').trim();
-      if (!id || id === 'null' || id === 'undefined') {
-        toast('这条帖子缺少有效 ID'); 
-        return;
-      }
-      if (!confirm('确定删除这条帖子？该操作不可恢复')) return;
-      try {
-        await deletePost(id);
-        renderHome(getActiveTab());
-        toast('已删除');
-      } catch(e){ toast('删除失败：'+e.message); }
-    });
-  });
+  $$(".btn-delete", root).forEach(b => b.onclick = () => deletePost(b.dataset.id));
+  // 关注
+  $$(".btn-follow", root).forEach(b => b.onclick = () => toggleFollow(b.dataset.user, b));
+  // 点击用户名进入主页
+  $$(".link[data-user]", root).forEach(a => a.onclick = () => openProfile(a.dataset.user));
+}
+
+/* =========================
+ * 详情页 & 评论
+ * ========================= */
+async function openPostDetail(id){
+  const data = await api(`/posts/${id}`, { method:"GET", auth:falseIfNoToken() });
+  state.postDetail = data;
+  $("#feedView").classList.add("hidden");
+  $("#profileView").classList.add("hidden");
+  const v = $("#postDetailView");
+  v.classList.remove("hidden");
+  v.innerHTML = `
+    <div class="card">${renderPostCard(data)}</div>
+    <div class="card">
+      <h3>评论 · ${data.comments?.length||0}</h3>
+      <div id="comments">${(data.comments||[]).map(renderComment).join("") || "<div class='meta'>还没有评论</div>"}</div>
+      <div class="row" style="margin-top:8px">
+        <img class="avatar" src="${state.me?.avatar || 'https://avatar.iran.liara.run/public'}" alt="">
+        <div class="content">
+          <textarea id="replyText" placeholder="发表你的看法…"></textarea>
+          <div class="actions" style="justify-content:flex-end">
+            <button class="primary" id="sendReply">回复</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  bindPostActionButtons(v);
+  $("#sendReply").onclick = async () => {
+    if (!state.me) return openAuth();
+    const text = $("#replyText").value.trim();
+    if (!text) return toast("请输入内容");
+    await api(`/posts/${id}/comments`, { method:"POST", body:{ text } });
+    toast("已发布评论");
+    openPostDetail(id); // 重新拉取
+  };
+}
+
+function renderComment(c){
+  return `
+    <div class="row" style="margin:10px 0">
+      <img class="avatar" src="${c.author.avatar || 'https://avatar.iran.liara.run/public'}">
+      <div class="content">
+        <div><strong class="link" data-user="${c.author.id}" style="cursor:pointer">${escapeHtml(c.author.nickname || c.author.username)}</strong>
+          <span class="meta"> · @${escapeHtml(c.author.username)} · ${timeAgo(c.created_at)}</span></div>
+        ${c.text ? `<blockquote>${escapeHtml(c.text)}</blockquote>` : ""}
+      </div>
+    </div>
+  `;
 }
 
 /* =========================
  * 个人主页
  * ========================= */
-async function renderProfile(uid) {
-  const box = $('#feed-list');
-  box.innerHTML = `<div class="empty">加载中...</div>`;
-  try {
-    const { user, following_count, followers_count, items } = await fetchProfile(uid);
-    if (!user) { box.innerHTML = `<div class="empty">用户不存在</div>`; return; }
-
-    const avatarHTML = user.avatar
-      ? `<img src="${user.avatar}" alt="${escapeHtml(user.nickname)}">`
-      : `<div class="avatar-ph" aria-label="${escapeHtml(user.nickname)}">${escapeHtml(user.nickname.slice(0,1).toUpperCase())}</div>`;
-
-    box.innerHTML = `
-      <section class="profile">
-        <div class="cover">${user.cover ? `<img src="${user.cover}" alt="cover">` : `<div class="cover-ph">上传封面</div>`}</div>
-        <div class="profile-row">
-          <div class="avatar xl">${avatarHTML}</div>
-          <div class="meta">
-            <div class="nick">${escapeHtml(user.nickname)}</div>
-            <div class="bio">${escapeHtml(user.bio || '')}</div>
-            <div class="stats">
-              <span class="stat"><b>${following_count ?? 0}</b> 关注中</span>
-              <span class="stat"><b>${followers_count ?? 0}</b> 粉丝</span>
-            </div>
+async function openProfile(userId){
+  const data = await api(`/users/${userId}`, { method:"GET", auth:falseIfNoToken() });
+  state.profileUser = data.user;
+  state.viewing = "me";
+  $("#feedView").classList.add("hidden");
+  $("#postDetailView").classList.add("hidden");
+  const el = $("#profileView");
+  el.classList.remove("hidden");
+  const u = data.user;
+  el.innerHTML = `
+    <section class="card">
+      <div class="row">
+        <img class="avatar" src="${u.avatar || 'https://avatar.iran.liara.run/public'}">
+        <div class="content">
+          <div><strong>${escapeHtml(u.nickname || u.username)}</strong> <span class="meta"> @${escapeHtml(u.username)}</span></div>
+          ${u.bio ? `<div class="meta" style="margin-top:4px">${escapeHtml(u.bio)}</div>` : ""}
+          <div class="grid-2" style="margin-top:8px">
+            <div class="stat">关注 ${u.following_count||0}</div>
+            <div class="stat">粉丝 ${u.followers_count||0}</div>
           </div>
-          <div class="actions">
-            <!-- 简化：本人不显示关注按钮；他人显示一个“关注/取关”切换 -->
-            <button class="btn" id="btn-edit-profile" style="display:${USE_BACKEND ? 'none' : 'inline-block'}">编辑资料</button>
-            <button class="btn" id="btn-follow-toggle" data-follow="${user.id}" style="display:${USE_BACKEND ? 'inline-block' : 'none'}">关注/取关</button>
-          </div>
+          ${ state.me && state.me.id !== u.id
+              ? `<div class="actions" style="margin-top:8px">
+                    <button class="btn-follow" data-user="${u.id}">${u.following ? "已关注" : "关注"}</button>
+                 </div>`
+              : "" }
         </div>
-        <div class="profile-tabs"><button class="tab active">动态</button></div>
-        <div id="profile-list"></div>
-      </section>
-    `;
-
-    // 绑定
-    const flBtn = $('#btn-follow-toggle');
-    if (flBtn) flBtn.addEventListener('click', async () => {
-      try { await follow(user.id).catch(async ()=>{ await unfollow(user.id); }); toast('已执行关注/取关'); renderProfile(uid); }
-      catch(e){ toast('操作失败：' + e.message); }
-    });
-
-    const list = $('#profile-list');
-    if (!items.length) {
-      list.innerHTML = `<div class="empty">还没有发布内容</div>`;
-    } else {
-      const me = await awaitMeIdCache();
-      list.innerHTML = items.map(p => renderPostCard(p, me)).join('');
-      bindPostCardEvents(list);
-    }
-  } catch (e) {
-    box.innerHTML = `<div class="empty">加载失败：${escapeHtml(e.message)}</div>`;
-  }
+      </div>
+    </section>
+    <section>
+      <h2>帖子</h2>
+      ${ (data.posts||[]).map(renderPostCard).join("") || "<div class='card'>暂无帖子</div>" }
+    </section>
+  `;
+  bindPostActionButtons(el);
 }
 
 /* =========================
- * 帖子详情（含线程）
+ * 动作：发帖/删帖/点赞/关注
  * ========================= */
-async function renderPostDetail(pid) {
-  const box = $('#feed-list');
-  box.innerHTML = `<div class="empty">加载中...</div>`;
-
-  if (!USE_BACKEND) {
-    const post = DB.posts.find(p => p.id === pid);
-    if (!post) { box.innerHTML = `<div class="empty">贴子不存在</div>`; return; }
-    const user = getUserLocal(post.authorId);
-    const chain = DB.posts.filter(p => (p.id === pid || p.threadRootId === pid) && p.authorId === user.id).sort((a,b)=>a.createdAt-b.createdAt);
-
-    box.innerHTML = `
-      <article class="post detail" data-id="${post.id}">
-        <div class="avatar">${user.avatar ? `<img src="${user.avatar}">` : `<div class="avatar-ph">${escapeHtml(user.nickname.slice(0,1).toUpperCase())}</div>`}</div>
-        <div class="body">
-          <div class="meta"><span class="nick clickable" data-user="${user.id}">${escapeHtml(user.nickname)}</span><span class="time">· ${fmtTime(post.createdAt)}</span></div>
-          ${renderContent(post)}
-          <div class="actions"><button class="act reply">评论</button>${renderFollowBtn(user.id)}</div>
-        </div>
-      </article>
-      ${chain.length>1 ? `<section class="thread-full"><div class="thread-head">线程</div>${chain.slice(1).map(renderThreadItemLocal).join('')}</section>` : ''}
-    `;
-    bindDetailEvents();
-    const replies = DB.posts.filter(p => p.replyToId === post.id && (!p.threadRootId || p.threadRootId !== post.id)).sort((a,b)=>a.createdAt-b.createdAt);
-    const list = $('#reply-list'); if (list) { list.innerHTML = replies.map(renderReplyItemLocal).join(''); bindReplyListEvents(list); }
-    return;
-  }
-
-  // 后端
-  try {
-    // 为了简单：先从 forYou 拉一批，再找到这条（生产环境建议新增 /posts/:id）
-    const r = await api(`/api/posts?type=forYou&limit=100`);
-    const all = r.data.map(normalizePostRow);
-    const post = all.find(p => String(p.id) === String(pid));
-    if (!post) { box.innerHTML = `<div class="empty">贴子不存在</div>`; return; }
-
-    const chain = await getThreadChainBackend(pid);
-
-    box.innerHTML = `
-      <article class="post detail" data-id="${post.id}">
-        <div class="avatar">${post.authorAvatar ? `<img src="${post.authorAvatar}">` : `<div class="avatar-ph">${escapeHtml((post.authorNick||'用').slice(0,1).toUpperCase())}</div>`}</div>
-        <div class="body">
-          <div class="meta"><span class="nick clickable" data-user="${post.authorId}">${escapeHtml(post.authorNick||'用户')}</span><span class="time">· ${fmtTime(post.createdAt)}</span></div>
-          ${renderContent(post)}
-          <div class="actions"><button class="act reply">评论</button>${renderFollowBtn(post.authorId)}</div>
-        </div>
-      </article>
-      ${chain.length ? `<section class="thread-full"><div class="thread-head">线程</div>${chain.map(normalizePostRow).map(renderThreadItem).join('')}</section>` : ''}
-      <section class="replies"><div class="reply-head">所有回复</div><div id="reply-list"><div class="empty">（简化版：只展示线程，不展示普通回复列表）</div></div></section>
-    `;
-    bindDetailEvents();
-  } catch (e) {
-    box.innerHTML = `<div class="empty">加载失败：${escapeHtml(e.message)}</div>`;
+function openPostDialog(){
+  if (!state.me) return openAuth();
+  clearPostDialog();
+  $("#postDialog").showModal();
+}
+function clearPostDialog(){
+  $("#postText").value = "";
+  ["postImg1","postImg2","postImg3"].forEach(id => $("#"+id).value = "");
+}
+async function deletePost(postId){
+  if (!confirm("确定删除这条帖子？")) return;
+  await api(`/posts/${postId}`, { method:"DELETE" });
+  toast("已删除");
+  // 刷新当前视图
+  if (!$("#feedView").classList.contains("hidden")) {
+    state.viewing === "following" ? refreshFollowing() : refreshFeed();
+  } else if (!$("#profileView").classList.contains("hidden")) {
+    openProfile(state.profileUser.id);
+  } else if (!$("#postDetailView").classList.contains("hidden")) {
+    routeTo("home");
   }
 }
-
-/* 本地详情渲染项 */
-function renderThreadItemLocal(t) {
-  const u = getUserLocal(t.authorId);
-  return `
-    <div class="thread-item" data-id="${t.id}">
-      <div class="avatar sm">${u.avatar ? `<img src="${u.avatar}">` : `<div class="avatar-ph">${escapeHtml(u.nickname.slice(0,1).toUpperCase())}</div>`}</div>
-      <div class="body">
-        <div class="meta"><span class="nick clickable" data-user="${u.id}">${escapeHtml(u.nickname)}</span><span class="time">· ${fmtTime(t.createdAt)}</span></div>
-        ${renderContent(t)}
-      </div>
-    </div>
-  `;
+async function toggleLike(postId, btn){
+  if (!state.me) return openAuth();
+  const liked = btn.classList.contains("liked");
+  await api(`/posts/${postId}/like`, { method: liked ? "DELETE" : "POST" });
+  // 简单前端更新
+  const text = btn.textContent;
+  const num = (text.match(/\d+/)||[0])[0]|0;
+  btn.textContent = `赞(${liked? num-1: num+1})`;
+  btn.classList.toggle("liked", !liked);
 }
-function renderReplyItemLocal(p) {
-  const u = getUserLocal(p.authorId);
-  return `
-    <div class="reply-item" data-id="${p.id}">
-      <div class="avatar sm">${u.avatar ? `<img src="${u.avatar}">` : `<div class="avatar-ph">${escapeHtml(u.nickname.slice(0,1).toUpperCase())}</div>`}</div>
-      <div class="body">
-        <div class="meta"><span class="nick clickable" data-user="${u.id}">${escapeHtml(u.nickname)}</span><span class="time">· ${fmtTime(p.createdAt)}</span></div>
-        ${renderContent(p)}
-        <div class="actions"><button class="act reply">回复</button></div>
-      </div>
-    </div>
-  `;
-}
-
-/* 后端线程项渲染 */
-function renderThreadItem(tnorm) {
-  const nick = tnorm.authorNick || '用户';
-  const avatar = tnorm.authorAvatar || '';
-  const avatarHTML = avatar ? `<img src="${avatar}">` : `<div class="avatar-ph">${escapeHtml(nick.slice(0,1).toUpperCase())}</div>`;
-  return `
-    <div class="thread-item" data-id="${tnorm.id}">
-      <div class="avatar sm">${avatarHTML}</div>
-      <div class="body">
-        <div class="meta"><span class="nick clickable" data-user="${tnorm.authorId}">${escapeHtml(nick)}</span><span class="time">· ${fmtTime(tnorm.createdAt)}</span></div>
-        ${renderContent(tnorm)}
-      </div>
-    </div>
-  `;
-}
-
-function bindDetailEvents() {
-  const box = $('#feed-list');
-  box.querySelectorAll('.nick.clickable').forEach(el => { el.addEventListener('click', () => location.hash = Routes.profile(el.dataset.user)); });
-  box.querySelectorAll('.avatar img').forEach(img => { img.addEventListener('click', () => openImageViewer(img.src)); });
-  const replyBtn = box.querySelector('.post.detail .act.reply');
-  if (replyBtn) replyBtn.addEventListener('click', (e) => { const pid = e.currentTarget.closest('.post').dataset.id; openComposeModal(pid); });
-  box.querySelectorAll('.post.detail .act.follow').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const uid = btn.dataset.follow;
-      try { await follow(uid).catch(async ()=>{ await unfollow(uid); }); toast('已执行关注/取关'); renderPostDetail($('#feed-list .post.detail').dataset.id); }
-      catch(e){ toast('操作失败：' + e.message); }
-    });
-  });
-}
-
-function bindReplyListEvents(container) {
-  container.querySelectorAll('.reply-item .act.reply').forEach(btn => {
-    btn.addEventListener('click', () => { const pid = btn.closest('.reply-item').dataset.id; openComposeModal(pid); });
-  });
-  container.querySelectorAll('.avatar img').forEach(img => { img.addEventListener('click', () => openImageViewer(img.src)); });
-  container.querySelectorAll('.nick.clickable').forEach(el => { el.addEventListener('click', () => location.hash = Routes.profile(el.dataset.user)); });
+async function toggleFollow(userId, btn){
+  if (!state.me) return openAuth();
+  const followed = btn.textContent.includes("已关注");
+  await api(`/users/${userId}/follow`, { method: followed ? "DELETE":"POST" });
+  btn.textContent = followed ? "关注" : "已关注";
 }
 
 /* =========================
- * 头像、封面渲染 & 大图查看
+ * 搜索（非常简单：交由后端）
  * ========================= */
-function openImageViewer(src) {
-  $('#overlay').classList.add('open'); $('#modal-image').classList.add('open');
-  $('#modal-image .img-view').src = src;
+async function doSearch(q){
+  if (!q) return;
+  const res = await api(`/search?q=${encodeURIComponent(q)}`, { method:"GET", auth:falseIfNoToken() });
+  // 简单把结果渲染成 feed 样式
+  $("#feedView").classList.remove("hidden");
+  $("#profileView").classList.add("hidden");
+  $("#postDetailView").classList.add("hidden");
+  $("#feedView").innerHTML = `<h2>搜索结果</h2>` + (res.items||[]).map(renderPostCard).join("") || "<div class='card'>没有找到</div>";
+  bindPostActionButtons($("#feedView"));
 }
 
-let inlineImages = []; // [{file, url(base64)}]
-
-function handleInlineImages(e) {
-  const files = Array.from(e.target.files || []);
-  const all = inlineImages.length + files.length;
-  if (all > 3) { toast('最多选择 3 张图片'); return; }
-  files.forEach(f => {
-    if (!/^image\//.test(f.type)) return;
-    const rd = new FileReader();
-    rd.onload = () => {
-      inlineImages.push({ file: f, url: rd.result });
-      renderInlinePreviews();
-    };
-    rd.readAsDataURL(f);
-  });
+/* =========================
+ * 认证
+ * ========================= */
+function openAuth(){ $("#authDialog").showModal(); }
+async function sendOtp(phone){
+  if (!phone) return toast("请输入手机号");
+  try{
+    await api("/auth/send_otp", { method:"POST", body:{ phone }, auth:false });
+    toast("验证码已发送");
+  }catch(err){ toast(err.message || "发送失败"); }
+}
+function onAuthSuccess(data){
+  state.token = data.token;
+  state.me = data.user;
+  setAuthVisible(true);
+  saveSession();
+  refreshFeed();
+}
+function logout(){
+  state.token = null; state.me = null;
+  saveSession();
+  setAuthVisible(false);
+  toast("已退出");
+  routeTo("home");
 }
 
-function renderInlinePreviews() {
-  const box = $('#composerPreview');
-  if (!box) return;
-  box.innerHTML = inlineImages.map((img, i) => `
-    <div class="img-cell">
-      <img src="${img.url}" alt="preview"/>
-      <button class="img-del" data-i="${i}" aria-label="删除">×</button>
-    </div>
-  `).join('');
-  box.querySelectorAll('.img-del').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const i = +btn.dataset.i; inlineImages.splice(i,1); renderInlinePreviews();
-    });
-  });
+/* =========================
+ * 小工具
+ * ========================= */
+function timeAgo(iso){
+  const t = new Date(iso).getTime();
+  const s = Math.floor((Date.now()-t)/1000);
+  if (s<60) return `${s}秒前`;
+  const m = Math.floor(s/60); if (m<60) return `${m}分钟前`;
+  const h = Math.floor(m/60); if (h<24) return `${h}小时前`;
+  const d = Math.floor(h/24); if (d<7) return `${d}天前`;
+  return new Date(iso).toLocaleString();
+}
+function escapeHtml(s=""){
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-function clearInlineDraft() {
-  $('#composerText').value = '';
-  inlineImages = [];
-  renderInlinePreviews();
-  $('#composerImageInput').value = '';
-}
+/* =========================
+ * 本地演示 mock（后端未就绪时）
+ * ========================= */
+async function mockApi(path, { method="GET", body, formData }={}){
+  // 极简模拟，数据落在 localStorage
+  const store = JSON.parse(localStorage.getItem("mf_mock") || `{"users":[],"posts":[],"seq":1}`);
+  const save = ()=>localStorage.setItem("mf_mock", JSON.stringify(store));
+  const ok = (d)=>Promise.resolve(d);
 
-async function handleSubmitInline() {
-  await ensureLogin();
-
-  const me = await getMe();
-  const content = ($('#composerText')?.value || '').trim();
-  if (!content && inlineImages.length === 0) {
-    toast('内容或图片至少有一项'); return;
+  // 认证
+  if (path==="/auth/send_otp" && method==="POST") return ok({ ok:true });
+  if (path==="/auth/signup" && method==="POST"){
+    const id = String(store.seq++);
+    const username = "u"+id;
+    const user = { id, username, nickname: body.nickname, phone: body.phone };
+    store.users.push(user); save();
+    state.token = "mock."+id; state.me = user; saveSession();
+    return ok({ token: state.token, user });
+  }
+  if (path==="/auth/login" && method==="POST"){
+    const user = store.users.find(u => u.username===body.account || u.phone===body.account);
+    if (!user) throw new Error("账号不存在");
+    state.token = "mock."+user.id; state.me = user; saveSession();
+    return ok({ token: state.token, user });
+  }
+  if (path==="/auth/login_phone" && method==="POST"){
+    const user = store.users.find(u => u.phone===body.phone) || (() => {
+      const id = String(store.seq++); const username="u"+id;
+      const u = { id, username, nickname:"用户"+id, phone: body.phone }; store.users.push(u); return u;
+    })();
+    save(); state.token = "mock."+user.id; state.me = user; saveSession();
+    return ok({ token: state.token, user });
   }
 
-  try {
-    let imageUrls = [];
-    if (USE_BACKEND && inlineImages.length) {
-      for (const it of inlineImages) {
-        const url = await uploadImage(it.file);
-        imageUrls.push(url);
-      }
-    } else {
-      imageUrls = inlineImages.map(x => x.url);
-    }
-
-    await createPost({ authorId: me?.id || 'me', content, images: USE_BACKEND ? imageUrls : inlineImages });
-    clearInlineDraft();
-    renderHome(getActiveTab());
-    toast('已发布');
-  } catch (err) {
-    console.error(err);
-    toast('发布失败：' + err.message);
+  // Feed
+  if (path.startsWith("/feed")) {
+    const items = store.posts.slice().reverse();
+    return ok({ items });
   }
+
+  // 发帖
+  if (path==="/posts" && method==="POST"){
+    const id = String(store.seq++);
+    const text = formData ? (formData.get("text")||"").toString() : (body?.text||"");
+    const images = [];
+    const p = { id, text, images, author: state.me, created_at: new Date().toISOString(), likes:0, comments_count:0 };
+    store.posts.push(p); save();
+    return ok(p);
+  }
+
+  if (path.startsWith("/posts/") && method==="DELETE"){
+    const id = path.split("/")[2];
+    const idx = store.posts.findIndex(x=>x.id===id);
+    if (idx>=0) store.posts.splice(idx,1); save();
+    return ok({ ok:true });
+  }
+
+  if (path.startsWith("/posts/") && path.endsWith("/like")){
+    const id = path.split("/")[2];
+    const p = store.posts.find(x=>x.id===id); if (!p) throw new Error("not found");
+    if (method==="POST") p.likes++; else p.likes=Math.max(0, p.likes-1);
+    save(); return ok({ ok:true });
+  }
+
+  if (path.startsWith("/posts/") && method==="GET"){
+    const id = path.split("/")[2];
+    const p = store.posts.find(x=>x.id===id);
+    return ok({ ...p, comments: p.comments||[] });
+  }
+
+  if (path.startsWith("/posts/") && path.endsWith("/comments") && method==="POST"){
+    const id = path.split("/")[2];
+    const p = store.posts.find(x=>x.id===id); if (!p) throw new Error("not found");
+    p.comments = p.comments || [];
+    p.comments.push({ id:String(store.seq++), text: body.text, created_at:new Date().toISOString(), author: state.me });
+    p.comments_count = p.comments.length; save();
+    return ok({ ok:true });
+  }
+
+  if (path.startsWith("/users/") && path.endsWith("/follow")){
+    return ok({ ok:true });
+  }
+
+  if (path.startsWith("/users/") && method==="GET"){
+    const id = path.split("/")[2];
+    const user = store.users.find(u=>u.id===id) || store.users[0];
+    const posts = store.posts.filter(p=>p.author.id===user.id).slice().reverse();
+    return ok({ user: { ...user, followers_count: 0, following_count: 0, following:false }, posts });
+  }
+
+  if (path.startsWith("/search")) {
+    const q = decodeURIComponent(path.split("?q=")[1]||"").toLowerCase();
+    const items = store.posts.filter(p => p.text?.toLowerCase().includes(q)).slice().reverse();
+    return ok({ items });
+  }
+
+  throw new Error("Mock 未实现的接口: " + method + " " + path);
 }
 
-async function likePost(id) {
-  if (!USE_BACKEND) {
-    const p = DB.posts.find(x=>String(x.id)===String(id));
-    if (p) { p.likes = (p.likes||0)+1; Storage.save(DB); }
-    return;
-  }
-  await api(`/api/posts/${encodeURIComponent(id)}/like`, { method: "POST" });
-}
-
-async function deletePost(id) {
-  if (!USE_BACKEND) {
-    DB.posts = DB.posts.filter(p=>String(p.id)!==String(id) && String(p.replyToId)!==String(id));
-    Storage.save(DB);
-    return;
-  }
-  await api(`/api/posts/${encodeURIComponent(id)}`, { method: "DELETE" });
-}
+/* =========================
+ * 与后端对齐的接口（建议）
+ * =========================
+  POST   /auth/send_otp            { phone }
+  POST   /auth/signup              { phone, code, nickname, password }
+  POST   /auth/login               { account, password }           // account 可是 username 或 phone
+  POST   /auth/login_phone         { phone, code }
+  GET    /me
+  GET    /feed?tab=for_you|following
+  POST   /posts                    multipart/form-data: text, images[]
+  GET    /posts/:id
+  DELETE /posts/:id
+  POST   /posts/:id/like
+  DELETE /posts/:id/like
+  POST   /posts/:id/comments       { text }
+  GET    /users/:id
+  POST   /users/:id/follow
+  DELETE /users/:id/follow
+*/
