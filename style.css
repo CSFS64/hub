@@ -96,3 +96,64 @@ a:hover{text-decoration:underline}
   .sidebar,.aside{display:none}
   .search input{width:54vw}
 }
+
+/* === 弹层与遮罩的可见性控制 === */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  display: none;              /* 默认不显示 */
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 1000;
+}
+
+/* 打开时显示；即便有 hidden 属性，也会被 display 覆盖 */
+.overlay.open {
+  display: flex;
+}
+
+.modal {
+  background: #fff;
+  width: min(700px, 100%);
+  max-height: 80vh;
+  overflow: auto;
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.18);
+  display: none;              /* 默认不显示 */
+  margin: 12px;
+}
+
+/* 只给被打开的弹层加 .open */
+.modal.open {
+  display: block;
+}
+
+/* 关闭按钮的基础样式（可选优化） */
+.modal .btn-close {
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-body {
+  padding: 16px;
+}
+
+.img-view {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
