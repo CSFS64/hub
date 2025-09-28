@@ -3,155 +3,119 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>MiniForum</title>
-  <link rel="icon" href="data:," />
-  <link rel="stylesheet" href="./style.css" />
+  <title>Mini Forum</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="shortcut icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💬</text></svg>">
 </head>
 <body>
-  <div id="app">
-    <!-- 顶部导航 -->
-    <header class="topbar">
-      <div class="topbar-inner">
-        <div class="brand">MiniForum</div>
-        <div class="search">
-          <input id="searchInput" placeholder="搜索内容、用户…" />
-        </div>
-        <div class="user-entry" id="user-entry"></div>
-      </div>
-    </header>
-
-    <main class="layout">
-      <!-- 左侧导航 -->
-      <aside class="leftnav">
-        <button class="nav-btn" id="nav-home">🏠 首页</button>
-        <button class="nav-btn" id="nav-following">👥 关注</button>
-        <button class="nav-btn" id="btn-compose">✍️ 发布</button>
-        <button class="nav-btn" id="nav-me">🙋 我的主页</button>
-        <button class="nav-btn" disabled>⚙️ 设置</button>
-      </aside>
-
-      <!-- 中栏：时间线 -->
-      <section class="center">
-        <div class="tabs">
-          <button class="tab active" id="tab-forYou" data-tab="forYou">推荐</button>
-          <button class="tab" id="tab-following" data-tab="following">关注</button>
-        </div>
-
-        <!-- 置顶发布框（推特式） -->
-        <div class="composer card">
-          <img class="avatar sm" id="composerAvatar" alt="me" />
-          <div class="composer-body">
-            <textarea id="composerText" rows="3" maxlength="5000" placeholder="有什么新鲜事？"></textarea>
-            <div class="composer-tools">
-              <label class="btn ghost">
-                <input id="composerImageInput" type="file" accept="image/*" multiple hidden />
-                添加图片
-              </label>
-              <div class="spacer"></div>
-              <button class="btn" id="btnClearDraft">清空</button>
-              <button class="btn primary" id="btnPost">发布</button>
-            </div>
-            <div id="composerPreview" class="media-grid"></div>
-          </div>
-        </div>
-
-        <div id="feed-list"></div>
-        <div class="loadmore">
-          <button class="btn ghost" id="btnLoadMore">加载更多</button>
-        </div>
-      </section>
-
-      <!-- 右侧探索 -->
-      <aside class="rightcol">
-        <div class="card">
-          <div class="card-title">可能感兴趣的人</div>
-          <div id="suggestions"></div>
-        </div>
-        <div class="card">
-          <div class="card-title">热门话题</div>
-          <div class="chips">
-            <span class="chip">#前端</span>
-            <span class="chip">#Cloudflare</span>
-            <span class="chip">#设计</span>
-          </div>
-        </div>
-      </aside>
-    </main>
-
-    <footer class="footer">© MiniForum · <a href="#">隐私</a> · <a href="#">条款</a></footer>
-
-    <!-- 通用遮罩/弹层 -->
-    <div class="overlay" id="overlay" hidden>
-      <!-- 发帖弹层 -->
-      <div class="modal" id="modal-compose">
-        <div class="modal-head">
-          <div class="title">发布内容</div>
-          <button class="btn-close" aria-label="关闭">×</button>
-        </div>
-        <form id="compose-form" class="modal-body">
-          <textarea id="compose-content" rows="4" maxlength="5000" placeholder="写点什么吧…"></textarea>
-          <div class="uploader">
-            <label class="btn ghost">
-              <input id="compose-images" type="file" accept="image/*" multiple hidden />
-              选择图片（最多 3 张）
-            </label>
-            <button type="button" class="btn" id="compose-clear-images">清空图片</button>
-          </div>
-          <div id="compose-previews" class="media-grid"></div>
-          <div class="modal-actions">
-            <button type="button" class="btn btn-close">取消</button>
-            <button type="submit" class="btn primary">发布</button>
-          </div>
-        </form>
-      </div>
-
-      <!-- 编辑资料 -->
-      <div class="modal" id="modal-edit">
-        <div class="modal-head">
-          <div class="title">编辑资料</div>
-          <button class="btn-close" aria-label="关闭">×</button>
-        </div>
-        <form id="edit-form" class="modal-body">
-          <label>昵称 <input id="edit-nick" maxlength="24" /></label>
-          <label>简介 <textarea id="edit-bio" rows="3" maxlength="200"></textarea></label>
-          <div class="uploader grid2">
-            <div>
-              <div class="label">头像</div>
-              <img id="edit-avatar-preview" class="avatar lg" alt="avatar" />
-              <input id="edit-avatar" type="file" accept="image/*" />
-            </div>
-            <div>
-              <div class="label">封面</div>
-              <img id="edit-cover-preview" class="banner" alt="cover" />
-              <input id="edit-cover" type="file" accept="image/*" />
-            </div>
-          </div>
-          <div class="modal-actions">
-            <button type="button" class="btn btn-close">取消</button>
-            <button type="submit" class="btn primary">保存</button>
-          </div>
-        </form>
-      </div>
-
-      <!-- 大图预览 -->
-      <div class="modal" id="modal-image">
-        <div class="modal-head">
-          <div class="title">预览</div>
-          <button class="btn-close" aria-label="关闭">×</button>
-        </div>
-        <div class="modal-body">
-          <img class="img-view" alt="preview" />
-        </div>
-      </div>
+  <header class="topbar">
+    <div class="brand">Mini Forum</div>
+    <div class="search">
+      <input id="searchInput" placeholder="搜索用户或帖子…" />
     </div>
+    <nav class="topnav">
+      <button id="btnHome" class="nav-btn active" data-view="home">首页</button>
+      <button id="btnFollowing" class="nav-btn" data-view="following">关注</button>
+      <button id="btnNewPost" class="primary">发帖</button>
+      <button id="btnProfile" class="nav-btn" data-view="me">我的</button>
+      <button id="btnAuth" class="secondary">登录/注册</button>
+      <button id="btnLogout" class="danger hidden">退出</button>
+    </nav>
+  </header>
 
-    <!-- Toast -->
-    <div id="toast"></div>
+  <main id="app">
+    <!-- Feed -->
+    <section id="feedView" class="view"></section>
 
-    <!-- 移动端悬浮发布 -->
-    <button class="fab" id="fabCompose" title="发布">＋</button>
-  </div>
+    <!-- Profile -->
+    <section id="profileView" class="view hidden"></section>
 
-  <script type="module" src="./main.js"></script>
+    <!-- Post Detail -->
+    <section id="postDetailView" class="view hidden"></section>
+  </main>
+
+  <!-- 发帖弹窗 -->
+  <dialog id="postDialog">
+    <form method="dialog" class="dialog">
+      <h3>发表新帖子</h3>
+      <textarea id="postText" maxlength="500" placeholder="分享点什么吧（最多 500 字）"></textarea>
+      <div class="images">
+        <input type="file" id="postImg1" accept="image/*" />
+        <input type="file" id="postImg2" accept="image/*" />
+        <input type="file" id="postImg3" accept="image/*" />
+      </div>
+      <menu>
+        <button value="cancel">取消</button>
+        <button id="postSubmit" value="confirm" class="primary">发布</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <!-- 登录/注册弹窗 -->
+  <dialog id="authDialog">
+    <form method="dialog" class="dialog tabs">
+      <div class="tabbar">
+        <button type="button" class="tab active" data-tab="login">账号登录</button>
+        <button type="button" class="tab" data-tab="phone">手机登录</button>
+        <button type="button" class="tab" data-tab="signup">注册</button>
+      </div>
+
+      <div class="tabpanel active" data-panel="login">
+        <label>账号/手机号
+          <input id="loginAccount" autocomplete="username" />
+        </label>
+        <label>密码
+          <input id="loginPassword" type="password" autocomplete="current-password" />
+        </label>
+        <menu>
+          <button value="cancel">取消</button>
+          <button id="btnLogin" class="primary">登录</button>
+        </menu>
+      </div>
+
+      <div class="tabpanel" data-panel="phone">
+        <label>手机号
+          <input id="phoneLoginNumber" placeholder="+86 1xxxxxxxxxx" />
+        </label>
+        <div class="otp-line">
+          <label>验证码
+            <input id="phoneLoginCode" inputmode="numeric" maxlength="6" />
+          </label>
+          <button id="btnSendOtpLogin" type="button" class="secondary">获取验证码</button>
+        </div>
+        <menu>
+          <button value="cancel">取消</button>
+          <button id="btnPhoneLogin" class="primary">登录</button>
+        </menu>
+      </div>
+
+      <div class="tabpanel" data-panel="signup">
+        <label>手机号
+          <input id="signupPhone" placeholder="+86 1xxxxxxxxxx" />
+        </label>
+        <div class="otp-line">
+          <label>验证码
+            <input id="signupCode" inputmode="numeric" maxlength="6" />
+          </label>
+          <button id="btnSendOtpSignup" type="button" class="secondary">获取验证码</button>
+        </div>
+        <label>昵称
+          <input id="signupNickname" maxlength="30" />
+        </label>
+        <label>密码
+          <input id="signupPassword" type="password" autocomplete="new-password" />
+        </label>
+        <menu>
+          <button value="cancel">取消</button>
+          <button id="btnSignup" class="primary">注册并登录</button>
+        </menu>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 全局 toast -->
+  <div id="toast" class="toast"></div>
+
+  <script src="main.js"></script>
 </body>
 </html>
