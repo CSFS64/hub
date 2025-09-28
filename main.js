@@ -67,6 +67,13 @@ async function api(path, opts = {}) {
 }
 
 /* 登录流程（简易弹窗版） */
+function normalizePhone(p) {
+  p = (p || "").trim();
+  if (/^\d{11}$/.test(p) && p.startsWith("1")) p = "+86" + p;  // 11位国内号 → +86
+  if (!/^\+\d{6,15}$/.test(p)) throw new Error("Invalid phone");
+  return p;
+}
+
 async function ensureLogin() {
   if (!USE_BACKEND) return; // 本地演示时不强制登录
   try {
@@ -292,18 +299,26 @@ function bindGlobalUI() {
   $('#overlay').addEventListener('click', (e) => { if (e.target.id === 'overlay') closeModal(); });
   $$('#overlay .modal .btn-close').forEach(btn => btn.addEventListener('click', closeModal));
 
-  const composeForm = $('#compose-form');
+  // 弹窗发布（存在才绑定）
+  const composeForm = document.querySelector('#compose-form');
   if (composeForm) {
-    $('#compose-images').addEventListener('change', handleComposeImages);
-    composeForm.addEventListener('submit', handleSubmitCompose);
-    $('#compose-clear-images').addEventListener('click', () => {
-      $('#compose-images').value = ''; $('#compose-previews').innerHTML = ''; composeImages = [];
+    document.querySelector('#compose-images')?.addEventListener('change', handleComposeImages);
+    composeForm.addEventListener('submit', (e) => handleSubmitCompose(e));
+    document.querySelector('#compose-clear-images')?.addEventListener('click', () => {
+      const input = document.querySelector('#compose-images');
+      if (input) input.value = '';
+      document.querySelector('#compose-previews').innerHTML = '';
+      composeImages = [];
     });
   }
 
-  $('#composerImageInput')?.addEventListener('change', handleInlineImages);
-  $('#btnClearDraft')?.addEventListener('click', clearInlineDraft);
-  $('#btnPost')?.addEventListener('click', handleSubmitInline);
+  // 内联发布（确保按钮不是 submit）
+  document.querySelector('#btnPost')?.setAttribute('type', 'button');
+  document.querySelector('#btnClearDraft')?.setAttribute('type', 'button');
+
+  document.querySelector('#composerImageInput')?.addEventListener('change', handleInlineImages);
+  document.querySelector('#btnClearDraft')?.addEventListener('click', (e) => { e.preventDefault(); clearInlineDraft(); });
+  document.querySelector('#btnPost')?.addEventListener('click', (e) => { e.preventDefault(); handleSubmitInline(); });
 
   $('#nav-home').addEventListener('click', () => { location.hash = Routes.home; });
   $('#nav-me').addEventListener('click', async () => {
@@ -355,23 +370,28 @@ function renderComposePreviews() {
 }
 
 async function handleSubmitCompose(e) {
-  e.preventDefault();
-  const me = await getMe();
-  const content = $('#compose-content').value.trim();
-  const replyTo = e.currentTarget.dataset.replyTo || null;
+  e?.preventDefault?.();
 
-  if (!content && composeImages.length === 0) { toast('内容或图片至少有一项'); return; }
+  const formEl = (e && e.currentTarget) || document.querySelector('#compose-form');
+  const replyTo = formEl?.dataset?.replyTo || null;
+
+  const me = await getMe();
+  const content = document.querySelector('#compose-content')?.value?.trim?.() || "";
+
+  if (!content && composeImages.length === 0) {
+    toast('内容或图片至少有一项');
+    return;
+  }
 
   try {
     let imageUrls = [];
     if (USE_BACKEND && composeImages.length) {
-      // 逐张上传
       for (const it of composeImages) {
         const url = await uploadImage(it.file);
         imageUrls.push(url);
       }
     } else {
-      imageUrls = composeImages; // 本地模式里仍用 base64 预览
+      imageUrls = composeImages.map(x => x.url);
     }
 
     if (replyTo) {
@@ -379,12 +399,14 @@ async function handleSubmitCompose(e) {
     } else {
       await createPost({ authorId: me?.id || 'me', content, images: USE_BACKEND ? imageUrls : composeImages });
     }
+
     closeModal();
 
     const r = parseRoute();
     if (r.page === 'home') renderHome(getActiveTab());
     else if (r.page === 'profile') renderProfile(r.uid);
     else if (r.page === 'post') renderPostDetail(r.pid);
+
     toast('已发布');
   } catch (err) {
     console.error(err);
