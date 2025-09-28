@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MiniForum</title>
+  <link rel="stylesheet" href="./style.css" />
+  <link rel="icon" href="data:," />
+</head>
+<body>
+  <div id="app">
+    <!-- 顶部导航 -->
+    <header class="app-header">
+      <div class="brand">MiniForum</div>
+      <div class="search">
+        <input id="searchInput" placeholder="搜索内容、用户…" />
+      </div>
+      <div class="user-entry" id="userEntry">
+        <!-- 未登录：显示登录按钮；已登录：显示头像 -->
+        <button class="btn primary" id="btnLogin">登录/注册</button>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <!-- 侧边导航（桌面） -->
+      <nav class="sidebar" id="sideNav">
+        <button class="nav-item" data-route="#/home">首页</button>
+        <button class="nav-item" data-route="#/home?tab=following">关注</button>
+        <button class="nav-item" data-route="#/compose">发布</button>
+        <button class="nav-item" id="navMyProfile">我的主页</button>
+        <button class="nav-item" data-route="#/settings">设置</button>
+      </nav>
+
+      <!-- 主内容区域 -->
+      <section class="feed" id="feedView">
+        <div class="feed-tabs">
+          <button class="tab active" data-tab="forYou">推荐</button>
+          <button class="tab" data-tab="following">关注</button>
+        </div>
+        <div class="composer-inline">
+          <img class="avatar sm" id="composerAvatar" alt="avatar" />
+          <div class="composer-box">
+            <textarea id="composerText" rows="3" maxlength="5000" placeholder="有什么新鲜事？"></textarea>
+            <div class="composer-tools">
+              <label class="btn ghost">
+                <input id="composerImageInput" type="file" accept="image/*" multiple hidden />
+                添加图片
+              </label>
+              <div id="composerPreview" class="media-grid"></div>
+              <div class="spacer"></div>
+              <button class="btn" id="btnClearDraft">清空</button>
+              <button class="btn primary" id="btnPost">发布</button>
+            </div>
+          </div>
+        </div>
+        <div id="feedList"></div>
+        <div class="feed-more">
+          <button class="btn ghost" id="btnLoadMore">加载更多</button>
+        </div>
+      </section>
+
+      <!-- 右侧推荐栏 -->
+      <aside class="aside">
+        <div class="card">
+          <div class="card-title">可能感兴趣的人</div>
+          <div id="suggestions"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">热门话题</div>
+          <div class="chips">
+            <span class="chip">#前端</span>
+            <span class="chip">#Cloudflare</span>
+            <span class="chip">#设计</span>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <!-- 个人主页 -->
+    <section class="profile" id="profileView" hidden>
+      <div class="profile-banner">
+        <img id="profileBanner" alt="banner" />
+        <label class="btn tiny ghost banner-edit" id="btnEditBanner">更换头图<input id="inputBanner" type="file" accept="image/*" hidden></label>
+      </div>
+      <div class="profile-header">
+        <div class="profile-avatar-wrap">
+          <img class="avatar xl" id="profileAvatar" alt="avatar" />
+          <label class="btn tiny ghost avatar-edit" id="btnEditAvatar">更换头像<input id="inputAvatar" type="file" accept="image/*" hidden></label>
+        </div>
+        <div class="meta">
+          <div class="nickname" id="profileNickname"></div>
+          <div class="handle" id="profileHandle"></div>
+          <div class="stats">
+            <span><b id="statFollowing">0</b> 正在关注</span>
+            <span><b id="statFollowers">0</b> 粉丝</span>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn" id="btnEditProfile">编辑资料</button>
+          <button class="btn primary" id="btnFollow">关注</button>
+        </div>
+      </div>
+      <div class="profile-bio" id="profileBio"></div>
+      <div class="profile-tabs">
+        <button class="tab active" data-tab="posts">动态</button>
+        <button class="tab" data-tab="likes" disabled>喜欢（稍后）</button>
+      </div>
+      <div class="profile-list" id="profilePosts"></div>
+    </section>
+
+    <!-- 页脚 -->
+    <footer class="app-footer">
+      <div>© MiniForum · <a href="#">隐私</a> · <a href="#">条款</a></div>
+    </footer>
+
+    <!-- 通用弹层 -->
+    <div class="overlay" id="overlay" hidden></div>
+
+    <!-- 浮动发布按钮（移动端） -->
+    <button class="fab" id="fabCompose" title="发布">＋</button>
+
+    <!-- 图片查看大图 -->
+    <div class="lightbox" id="lightbox" hidden>
+      <img id="lightboxImg" alt="preview" />
+    </div>
+  </div>
+
+  <script>
+    window.API_BASE = "/* TODO: 接后端时改成你的域名 */";
+  </script>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
