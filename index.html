@@ -9,57 +9,40 @@
 </head>
 <body>
   <div id="app">
-    <!-- 顶部导航 -->
+    <!-- 顶部导航（与 main.js 匹配的 id） -->
     <header class="app-header">
       <div class="brand">MiniForum</div>
       <div class="search">
         <input id="searchInput" placeholder="搜索内容、用户…" />
       </div>
-      <div class="user-entry" id="userEntry">
-        <!-- 未登录：显示登录按钮；已登录：显示头像 -->
-        <button class="btn primary" id="btnLogin">登录/注册</button>
+      <div class="user-entry" id="user-entry">
+        <!-- main.js 会渲染：发帖按钮 + 头像 -->
       </div>
     </header>
 
     <main class="app-main">
-      <!-- 侧边导航（桌面） -->
-      <nav class="sidebar" id="sideNav">
-        <button class="nav-item" data-route="#/home">首页</button>
-        <button class="nav-item" data-route="#/home?tab=following">关注</button>
-        <button class="nav-item" data-route="#/compose">发布</button>
-        <button class="nav-item" id="navMyProfile">我的主页</button>
+      <!-- 左侧导航：和 main.js 的路由按钮对齐 -->
+      <nav class="sidebar">
+        <button class="nav-item" id="nav-home">首页</button>
+        <button class="nav-item" data-route="#/home?tab=following" id="nav-following">关注</button>
+        <button class="nav-item" id="btn-compose">发布</button>
+        <button class="nav-item" id="nav-me">我的主页</button>
         <button class="nav-item" data-route="#/settings">设置</button>
       </nav>
 
-      <!-- 主内容区域 -->
+      <!-- 主内容（首页 Feed） -->
       <section class="feed" id="feedView">
         <div class="feed-tabs">
-          <button class="tab active" data-tab="forYou">推荐</button>
-          <button class="tab" data-tab="following">关注</button>
+          <button class="tab active" id="tab-forYou" data-tab="forYou">推荐</button>
+          <button class="tab" id="tab-following" data-tab="following">关注</button>
         </div>
-        <div class="composer-inline">
-          <img class="avatar sm" id="composerAvatar" alt="avatar" />
-          <div class="composer-box">
-            <textarea id="composerText" rows="3" maxlength="5000" placeholder="有什么新鲜事？"></textarea>
-            <div class="composer-tools">
-              <label class="btn ghost">
-                <input id="composerImageInput" type="file" accept="image/*" multiple hidden />
-                添加图片
-              </label>
-              <div id="composerPreview" class="media-grid"></div>
-              <div class="spacer"></div>
-              <button class="btn" id="btnClearDraft">清空</button>
-              <button class="btn primary" id="btnPost">发布</button>
-            </div>
-          </div>
-        </div>
-        <div id="feedList"></div>
+        <div id="feed-list"></div>
         <div class="feed-more">
           <button class="btn ghost" id="btnLoadMore">加载更多</button>
         </div>
       </section>
 
-      <!-- 右侧推荐栏 -->
+      <!-- 右侧推荐栏（装饰） -->
       <aside class="aside">
         <div class="card">
           <div class="card-title">可能感兴趣的人</div>
@@ -76,58 +59,87 @@
       </aside>
     </main>
 
-    <!-- 个人主页 -->
-    <section class="profile" id="profileView" hidden>
-      <div class="profile-banner">
-        <img id="profileBanner" alt="banner" />
-        <label class="btn tiny ghost banner-edit" id="btnEditBanner">更换头图<input id="inputBanner" type="file" accept="image/*" hidden></label>
-      </div>
-      <div class="profile-header">
-        <div class="profile-avatar-wrap">
-          <img class="avatar xl" id="profileAvatar" alt="avatar" />
-          <label class="btn tiny ghost avatar-edit" id="btnEditAvatar">更换头像<input id="inputAvatar" type="file" accept="image/*" hidden></label>
-        </div>
-        <div class="meta">
-          <div class="nickname" id="profileNickname"></div>
-          <div class="handle" id="profileHandle"></div>
-          <div class="stats">
-            <span><b id="statFollowing">0</b> 正在关注</span>
-            <span><b id="statFollowers">0</b> 粉丝</span>
-          </div>
-        </div>
-        <div class="actions">
-          <button class="btn" id="btnEditProfile">编辑资料</button>
-          <button class="btn primary" id="btnFollow">关注</button>
-        </div>
-      </div>
-      <div class="profile-bio" id="profileBio"></div>
-      <div class="profile-tabs">
-        <button class="tab active" data-tab="posts">动态</button>
-        <button class="tab" data-tab="likes" disabled>喜欢（稍后）</button>
-      </div>
-      <div class="profile-list" id="profilePosts"></div>
-    </section>
+    <!-- 个人主页视图（main.js 会动态渲染到 #feed-list；保留此区块可选） -->
+    <section class="profile" id="profileView" hidden></section>
 
     <!-- 页脚 -->
     <footer class="app-footer">
       <div>© MiniForum · <a href="#">隐私</a> · <a href="#">条款</a></div>
     </footer>
 
-    <!-- 通用弹层 -->
-    <div class="overlay" id="overlay" hidden></div>
+    <!-- 全局遮罩 & 弹层容器（必须，main.js 依赖） -->
+    <div class="overlay" id="overlay">
+      <!-- 发帖弹层 -->
+      <div class="modal" id="modal-compose">
+        <div class="modal-head">
+          <div class="title">发布内容</div>
+          <button class="btn-close" aria-label="关闭">×</button>
+        </div>
+        <form id="compose-form" class="modal-body">
+          <textarea id="compose-content" rows="4" maxlength="5000" placeholder="写点什么吧…"></textarea>
+          <div class="uploader">
+            <label class="btn ghost">
+              <input id="compose-images" type="file" accept="image/*" multiple hidden />
+              选择图片（最多 3 张）
+            </label>
+            <button type="button" class="btn" id="compose-clear-images">清空图片</button>
+          </div>
+          <div id="compose-previews" class="media-grid"></div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-close">取消</button>
+            <button type="submit" class="btn primary">发布</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 编辑资料弹层 -->
+      <div class="modal" id="modal-edit">
+        <div class="modal-head">
+          <div class="title">编辑资料</div>
+          <button class="btn-close" aria-label="关闭">×</button>
+        </div>
+        <form id="edit-form" class="modal-body">
+          <label>昵称 <input id="edit-nick" maxlength="24" /></label>
+          <label>简介 <textarea id="edit-bio" rows="3" maxlength="200"></textarea></label>
+          <div class="uploader">
+            <div>
+              <div>头像</div>
+              <img id="edit-avatar-preview" class="avatar lg" alt="avatar" />
+              <input id="edit-avatar" type="file" accept="image/*" />
+            </div>
+            <div>
+              <div>封面</div>
+              <img id="edit-cover-preview" class="banner" alt="cover" />
+              <input id="edit-cover" type="file" accept="image/*" />
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-close">取消</button>
+            <button type="submit" class="btn primary">保存</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 图片查看弹层 -->
+      <div class="modal" id="modal-image">
+        <div class="modal-head">
+          <div class="title">预览</div>
+          <button class="btn-close" aria-label="关闭">×</button>
+        </div>
+        <div class="modal-body">
+          <img class="img-view" alt="preview" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast"></div>
 
     <!-- 浮动发布按钮（移动端） -->
     <button class="fab" id="fabCompose" title="发布">＋</button>
-
-    <!-- 图片查看大图 -->
-    <div class="lightbox" id="lightbox" hidden>
-      <img id="lightboxImg" alt="preview" />
-    </div>
   </div>
 
-  <script>
-    window.API_BASE = "/* TODO: 接后端时改成你的域名 */";
-  </script>
+  <!-- 你的后端域名由 main.js 内部常量 API_BASE 决定，这里无需再设置 window.API_BASE -->
   <script type="module" src="./main.js"></script>
 </body>
 </html>
