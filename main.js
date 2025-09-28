@@ -83,21 +83,26 @@ function normalizePhone(p) {
 }
 
 async function ensureLogin() {
-  if (!USE_BACKEND) return; // 本地演示时不强制登录
+  if (!USE_BACKEND) return;
   try {
     const me = await api("/me");
     if (me && me.user) return; // 已登录
-  } catch (e) {
-    // ignore，继续下一步
-  }
+  } catch (_) {}
+
   // 未登录 -> 触发短信流程
-  const phone = prompt("请输入手机号（国际格式，例如 +8613800138000）：");
+  let phone = prompt("请输入手机号（可填 11 位国内号或 +国际区号）：");
   if (!phone) return;
+
+  // 关键：前端先规范化
+  try { phone = normalizePhone(phone); }
+  catch { toast("手机号格式不正确"); return; }
+
   await api("/auth/request_code", { method: "POST", body: JSON.stringify({ phone }) });
   toast("验证码已发送（开发阶段请在 wrangler tail 日志查看）");
+
   const code = prompt("请输入 6 位验证码：");
   if (!code) return;
-  // 首次需要昵称
+
   const nickname = prompt("首次登录，请输入你的昵称：") || "新用户";
   await api("/auth/verify_code", { method: "POST", body: JSON.stringify({ phone, code, nickname }) });
   toast("登录成功");
@@ -484,22 +489,25 @@ async function renderHeaderUser() {
 function getActiveTab() { return $('.feed-tabs .tab.active')?.dataset.tab || 'forYou'; }
 
 async function renderHome(tab = 'forYou') {
-  await awaitMeIdCache();
-
+  // 有些页面元素在初始时未渲染出来，加上 ?.
   $$('.feed-tabs .tab').forEach(t => t.classList.remove('active'));
-  $(`.feed-tabs .tab[data-tab="${tab}"]`).classList.add('active');
+  $(`.feed-tabs .tab[data-tab="${tab}"]`)?.classList.add('active');
 
   const box = $('#feed-list');
   box.innerHTML = `<div class="empty">加载中...</div>`;
 
-  let list = [];
   try {
-    list = (tab === 'forYou') ? await getForYouFeed() : await getFollowingFeed();
+    // 关键：先拿到当前登录用户（用于判断“删除按钮是否展示”等）
+    const me = await awaitMeIdCache();
+
+    const list = (tab === 'forYou') ? await getForYouFeed() : await getFollowingFeed();
     if (!list.length) {
       box.innerHTML = `<div class="empty">这里还没有内容。去关注一些人，或者发第一条吧！</div>`;
       return;
     }
-    box.innerHTML = list.map(renderPostCard).join('');
+
+    // 传入 me
+    box.innerHTML = list.map(p => renderPostCard(p, me)).join('');
     bindPostCardEvents(box);
   } catch (e) {
     box.innerHTML = `<div class="empty">加载失败：${escapeHtml(e.message)}</div>`;
@@ -507,11 +515,15 @@ async function renderHome(tab = 'forYou') {
 }
 
 /* 帖子卡片（根贴） */
-function renderPostCard(p) {
+function renderPostCard(p, me) {
   const nick = USE_BACKEND ? (p.authorNick || '用户') : getUserLocal(p.authorId).nickname;
   const avatar = USE_BACKEND ? p.authorAvatar : (getUserLocal(p.authorId).avatar || '');
-  const avatarHTML = avatar ? `<img src="${avatar}" alt="${escapeHtml(nick)}">`
+  const avatarHTML = avatar
+    ? `<img src="${avatar}" alt="${escapeHtml(nick)}">`
     : `<div class="avatar-ph" aria-label="${escapeHtml(nick)}">${escapeHtml(nick.slice(0,1).toUpperCase())}</div>`;
+
+  const canDelete = !!(me && me.id === p.authorId);
+  const likeCount = p.likes ?? 0;
 
   return `
     <article class="post" data-id="${p.id}">
@@ -522,12 +534,11 @@ function renderPostCard(p) {
           <span class="time">· ${fmtTime(p.createdAt)}</span>
         </div>
         ${renderContent(p)}
-          <div class="actions">
+        <div class="actions">
           <button class="act reply">评论</button>
           <button class="act detail">详情</button>
-          <button class="act like" data-like="${p.id}">❤ ${p.likes ?? 0}</button>
-          ${ (USE_BACKEND ? (awaitMeIdCache()?.id === p.authorId) : (getMeLocal().id === p.authorId) )
-              ? `<button class="act danger" data-del="${p.id}">删除</button>` : "" }
+          <button class="act like" data-like="${p.id}">❤ ${likeCount}</button>
+          ${canDelete ? `<button class="act danger" data-del="${p.id}">删除</button>` : ""}
           ${renderFollowBtn(p.authorId)}
         </div>
       </div>
@@ -661,7 +672,8 @@ async function renderProfile(uid) {
     if (!items.length) {
       list.innerHTML = `<div class="empty">还没有发布内容</div>`;
     } else {
-      list.innerHTML = items.map(p => USE_BACKEND ? renderPostCard(p) : renderPostCard(p)).join('');
+      const me = await awaitMeIdCache();
+      list.innerHTML = items.map(p => renderPostCard(p, me)).join('');
       bindPostCardEvents(list);
     }
   } catch (e) {
