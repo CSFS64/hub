@@ -586,6 +586,30 @@ function bindPostCardEvents(container) {
       }
     });
   });
+    // 点赞
+  container.querySelectorAll('[data-like]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.getAttribute('data-like');
+      try {
+        await likePost(id);
+        // 简单刷新
+        renderHome(getActiveTab());
+      } catch(e){ toast('点赞失败：'+e.message); }
+    });
+  });
+
+  // 删除（仅作者）
+  container.querySelectorAll('[data-del]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.getAttribute('data-del');
+      if (!confirm('确定删除这条帖子？该操作不可恢复')) return;
+      try {
+        await deletePost(id);
+        renderHome(getActiveTab());
+        toast('已删除');
+      } catch(e){ toast('删除失败：'+e.message); }
+    });
+  });
 }
 
 /* =========================
