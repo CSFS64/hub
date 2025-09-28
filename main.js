@@ -741,3 +741,73 @@ function openImageViewer(src) {
   $('#overlay').classList.add('open'); $('#modal-image').classList.add('open');
   $('#modal-image .img-view').src = src;
 }
+
+let inlineImages = []; // [{file, url(base64)}]
+
+function handleInlineImages(e) {
+  const files = Array.from(e.target.files || []);
+  const all = inlineImages.length + files.length;
+  if (all > 3) { toast('最多选择 3 张图片'); return; }
+  files.forEach(f => {
+    if (!/^image\//.test(f.type)) return;
+    const rd = new FileReader();
+    rd.onload = () => {
+      inlineImages.push({ file: f, url: rd.result });
+      renderInlinePreviews();
+    };
+    rd.readAsDataURL(f);
+  });
+}
+
+function renderInlinePreviews() {
+  const box = $('#composerPreview');
+  if (!box) return;
+  box.innerHTML = inlineImages.map((img, i) => `
+    <div class="img-cell">
+      <img src="${img.url}" alt="preview"/>
+      <button class="img-del" data-i="${i}" aria-label="删除">×</button>
+    </div>
+  `).join('');
+  box.querySelectorAll('.img-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const i = +btn.dataset.i; inlineImages.splice(i,1); renderInlinePreviews();
+    });
+  });
+}
+
+function clearInlineDraft() {
+  $('#composerText').value = '';
+  inlineImages = [];
+  renderInlinePreviews();
+  $('#composerImageInput').value = '';
+}
+
+async function handleSubmitInline() {
+  await ensureLogin();
+
+  const me = await getMe();
+  const content = ($('#composerText')?.value || '').trim();
+  if (!content && inlineImages.length === 0) {
+    toast('内容或图片至少有一项'); return;
+  }
+
+  try {
+    let imageUrls = [];
+    if (USE_BACKEND && inlineImages.length) {
+      for (const it of inlineImages) {
+        const url = await uploadImage(it.file);
+        imageUrls.push(url);
+      }
+    } else {
+      imageUrls = inlineImages.map(x => x.url);
+    }
+
+    await createPost({ authorId: me?.id || 'me', content, images: USE_BACKEND ? imageUrls : inlineImages });
+    clearInlineDraft();
+    renderHome(getActiveTab());
+    toast('已发布');
+  } catch (err) {
+    console.error(err);
+    toast('发布失败：' + err.message);
+  }
+}
