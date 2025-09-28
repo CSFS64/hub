@@ -512,9 +512,12 @@ function renderPostCard(p) {
           <span class="time">· ${fmtTime(p.createdAt)}</span>
         </div>
         ${renderContent(p)}
-        <div class="actions">
+          <div class="actions">
           <button class="act reply">评论</button>
           <button class="act detail">详情</button>
+          <button class="act like" data-like="${p.id}">❤ ${p.likes ?? 0}</button>
+          ${ (USE_BACKEND ? (awaitMeIdCache()?.id === p.authorId) : (getMeLocal().id === p.authorId) )
+              ? `<button class="act danger" data-del="${p.id}">删除</button>` : "" }
           ${renderFollowBtn(p.authorId)}
         </div>
       </div>
