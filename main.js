@@ -507,7 +507,7 @@ async function renderHome(tab = 'forYou') {
     }
 
     // 传入 me
-    box.innerHTML = list.map(p => renderPostCard(p, me)).join('');
+    box.innerHTML = list.map(p => renderPostCard(p, me)).join("");
     bindPostCardEvents(box);
   } catch (e) {
     box.innerHTML = `<div class="empty">加载失败：${escapeHtml(e.message)}</div>`;
