@@ -4,46 +4,65 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>MiniForum</title>
-  <link rel="stylesheet" href="./style.css" />
   <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
   <div id="app">
-    <!-- 顶部导航（与 main.js 匹配的 id） -->
-    <header class="app-header">
-      <div class="brand">MiniForum</div>
-      <div class="search">
-        <input id="searchInput" placeholder="搜索内容、用户…" />
-      </div>
-      <div class="user-entry" id="user-entry">
-        <!-- main.js 会渲染：发帖按钮 + 头像 -->
+    <!-- 顶部导航 -->
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">MiniForum</div>
+        <div class="search">
+          <input id="searchInput" placeholder="搜索内容、用户…" />
+        </div>
+        <div class="user-entry" id="user-entry"></div>
       </div>
     </header>
 
-    <main class="app-main">
-      <!-- 左侧导航：和 main.js 的路由按钮对齐 -->
-      <nav class="sidebar">
-        <button class="nav-item" id="nav-home">首页</button>
-        <button class="nav-item" data-route="#/home?tab=following" id="nav-following">关注</button>
-        <button class="nav-item" id="btn-compose">发布</button>
-        <button class="nav-item" id="nav-me">我的主页</button>
-        <button class="nav-item" data-route="#/settings">设置</button>
-      </nav>
+    <main class="layout">
+      <!-- 左侧导航 -->
+      <aside class="leftnav">
+        <button class="nav-btn" id="nav-home">🏠 首页</button>
+        <button class="nav-btn" id="nav-following">👥 关注</button>
+        <button class="nav-btn" id="btn-compose">✍️ 发布</button>
+        <button class="nav-btn" id="nav-me">🙋 我的主页</button>
+        <button class="nav-btn" disabled>⚙️ 设置</button>
+      </aside>
 
-      <!-- 主内容（首页 Feed） -->
-      <section class="feed" id="feedView">
-        <div class="feed-tabs">
+      <!-- 中栏：时间线 -->
+      <section class="center">
+        <div class="tabs">
           <button class="tab active" id="tab-forYou" data-tab="forYou">推荐</button>
           <button class="tab" id="tab-following" data-tab="following">关注</button>
         </div>
+
+        <!-- 置顶发布框（推特式） -->
+        <div class="composer card">
+          <img class="avatar sm" id="composerAvatar" alt="me" />
+          <div class="composer-body">
+            <textarea id="composerText" rows="3" maxlength="5000" placeholder="有什么新鲜事？"></textarea>
+            <div class="composer-tools">
+              <label class="btn ghost">
+                <input id="composerImageInput" type="file" accept="image/*" multiple hidden />
+                添加图片
+              </label>
+              <div class="spacer"></div>
+              <button class="btn" id="btnClearDraft">清空</button>
+              <button class="btn primary" id="btnPost">发布</button>
+            </div>
+            <div id="composerPreview" class="media-grid"></div>
+          </div>
+        </div>
+
         <div id="feed-list"></div>
-        <div class="feed-more">
+        <div class="loadmore">
           <button class="btn ghost" id="btnLoadMore">加载更多</button>
         </div>
       </section>
 
-      <!-- 右侧推荐栏（装饰） -->
-      <aside class="aside">
+      <!-- 右侧探索 -->
+      <aside class="rightcol">
         <div class="card">
           <div class="card-title">可能感兴趣的人</div>
           <div id="suggestions"></div>
@@ -59,15 +78,9 @@
       </aside>
     </main>
 
-    <!-- 个人主页视图（main.js 会动态渲染到 #feed-list；保留此区块可选） -->
-    <section class="profile" id="profileView" hidden></section>
+    <footer class="footer">© MiniForum · <a href="#">隐私</a> · <a href="#">条款</a></footer>
 
-    <!-- 页脚 -->
-    <footer class="app-footer">
-      <div>© MiniForum · <a href="#">隐私</a> · <a href="#">条款</a></div>
-    </footer>
-
-    <!-- 全局遮罩 & 弹层容器（必须，main.js 依赖） -->
+    <!-- 通用遮罩/弹层 -->
     <div class="overlay" id="overlay" hidden>
       <!-- 发帖弹层 -->
       <div class="modal" id="modal-compose">
@@ -92,7 +105,7 @@
         </form>
       </div>
 
-      <!-- 编辑资料弹层 -->
+      <!-- 编辑资料 -->
       <div class="modal" id="modal-edit">
         <div class="modal-head">
           <div class="title">编辑资料</div>
@@ -101,14 +114,14 @@
         <form id="edit-form" class="modal-body">
           <label>昵称 <input id="edit-nick" maxlength="24" /></label>
           <label>简介 <textarea id="edit-bio" rows="3" maxlength="200"></textarea></label>
-          <div class="uploader">
+          <div class="uploader grid2">
             <div>
-              <div>头像</div>
+              <div class="label">头像</div>
               <img id="edit-avatar-preview" class="avatar lg" alt="avatar" />
               <input id="edit-avatar" type="file" accept="image/*" />
             </div>
             <div>
-              <div>封面</div>
+              <div class="label">封面</div>
               <img id="edit-cover-preview" class="banner" alt="cover" />
               <input id="edit-cover" type="file" accept="image/*" />
             </div>
@@ -120,7 +133,7 @@
         </form>
       </div>
 
-      <!-- 图片查看弹层 -->
+      <!-- 大图预览 -->
       <div class="modal" id="modal-image">
         <div class="modal-head">
           <div class="title">预览</div>
@@ -135,11 +148,10 @@
     <!-- Toast -->
     <div id="toast"></div>
 
-    <!-- 浮动发布按钮（移动端） -->
+    <!-- 移动端悬浮发布 -->
     <button class="fab" id="fabCompose" title="发布">＋</button>
   </div>
 
-  <!-- 你的后端域名由 main.js 内部常量 API_BASE 决定，这里无需再设置 window.API_BASE -->
   <script type="module" src="./main.js"></script>
 </body>
 </html>
