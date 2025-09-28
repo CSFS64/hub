@@ -870,3 +870,21 @@ async function handleSubmitInline() {
     toast('发布失败：' + err.message);
   }
 }
+
+async function likePost(id) {
+  if (!USE_BACKEND) {
+    const p = DB.posts.find(x=>String(x.id)===String(id));
+    if (p) { p.likes = (p.likes||0)+1; Storage.save(DB); }
+    return;
+  }
+  await api(`/posts/${id}/like`, { method: "POST" });
+}
+
+async function deletePost(id) {
+  if (!USE_BACKEND) {
+    DB.posts = DB.posts.filter(p=>String(p.id)!==String(id) && String(p.replyToId)!==String(id));
+    Storage.save(DB);
+    return;
+  }
+  await api(`/posts/${id}`, { method: "DELETE" });
+}
