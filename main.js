@@ -524,6 +524,11 @@ function renderPostCard(p, me) {
 
   const canDelete = !!(me && me.id === p.authorId);
   const likeCount = p.likes ?? 0;
+  const isLiked = p.likedByUser;  // 假设你在返回的 `p` 对象中增加了 `likedByUser` 字段来表示当前用户是否点赞
+
+  // 修改样式和显示
+  const likeButtonClass = isLiked ? 'liked' : '';
+  const likeButtonText = isLiked ? '取消点赞' : `❤ ${likeCount}`;
 
   return `
     <article class="post" data-id="${p.id}">
@@ -537,7 +542,7 @@ function renderPostCard(p, me) {
         <div class="actions">
           <button class="act reply">评论</button>
           <button class="act detail">详情</button>
-          <button class="act like" data-like="${p.id}">❤ ${likeCount}</button>
+          <button class="act like ${likeButtonClass}" data-like="${p.id}">${likeButtonText}</button>
           ${canDelete ? `<button class="act danger" data-del="${p.id}">删除</button>` : ""}
           ${renderFollowBtn(p.authorId)}
         </div>
@@ -588,7 +593,6 @@ function bindPostCardEvents(container) {
     btn.addEventListener('click', async () => {
       const uid = btn.dataset.follow;
       try {
-        // 简化：再次点击视为切换，后端没有状态接口，这里直接尝试 follow，再尝试 unfollow。
         await follow(uid).catch(async () => { await unfollow(uid); });
         toast('已执行关注/取关');
         renderHome(getActiveTab());
@@ -597,28 +601,40 @@ function bindPostCardEvents(container) {
       }
     });
   });
-    // 点赞
-  container.querySelectorAll('[data-like]').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
+
+  // 点赞功能
+  container.querySelectorAll('.act.like').forEach(btn => {
+    btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-like');
       try {
-        await likePost(id);
-        // 简单刷新
+        const post = await likePost(id);
+        const isLiked = post.liked; // 后端返回的点赞状态
+        const likes = post.likes; // 更新后的点赞数量
+        
+        // 更新UI
+        btn.classList.toggle('liked', isLiked);
+        btn.textContent = isLiked ? `取消点赞` : `❤ ${likes}`;
+        
+        // 刷新列表
         renderHome(getActiveTab());
-      } catch(e){ toast('点赞失败：'+e.message); }
+      } catch (e) {
+        toast('点赞失败：' + e.message);
+      }
     });
   });
 
   // 删除（仅作者）
-  container.querySelectorAll('[data-del]').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
+  container.querySelectorAll('[data-del]').forEach(btn => {
+    btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-del');
       if (!confirm('确定删除这条帖子？该操作不可恢复')) return;
       try {
         await deletePost(id);
         renderHome(getActiveTab());
         toast('已删除');
-      } catch(e){ toast('删除失败：'+e.message); }
+      } catch (e) {
+        toast('删除失败：' + e.message);
+      }
     });
   });
 }
