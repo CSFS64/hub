@@ -201,15 +201,16 @@ async function createReply({ authorId, parentId, content, images }) {
     const r = { id: uuid(), authorId, content, images: images || [], createdAt: now(), replyToId: parentId, threadRootId, likes: 0, reposts: 0, replies: 0 };
     DB.posts.unshift(r); parent.replies += 1; Storage.save(DB); return r;
   }
-  const r = await api(`/posts/${parentId}/reply`, { method: "POST", body: JSON.stringify({ content, images }) });
+  const r = await api(`/api/posts/${encodeURIComponent(parentId)}/reply`, {
+    method: "POST",
+    body: JSON.stringify({ content, images })
+  });
   return { id: r.id };
 }
 
 /* 线程 */
 async function getThreadChainBackend(rootId) {
-  const r = await api(`/posts/${rootId}/thread`);
-  // r.root, r.chain[], r.replies[]
-  // 线程展示只用 r.chain
+  const r = await api(`/api/posts/${encodeURIComponent(rootId)}/thread`);
   return r.chain || [];
 }
 
@@ -253,19 +254,17 @@ async function uploadImage(file) {
 
 /* 将后端 posts 行适配为前端渲染需要的结构 */
 function normalizePostRow(row) {
-  // 后端返回：p.* + u.nickname, u.avatar
-  // 我们需要：{ id, authorId, authorNick, authorAvatar, content, images:[{url}], createdAt, replyToId, threadRootId, ... }
   const imgs = Array.isArray(row.images)
     ? row.images
     : (() => { try { return JSON.parse(row.images || "[]"); } catch { return []; } })();
 
-  // 关键：稳妥映射后端主键，避免 undefined/null
+  // 关键：更稳妥地解析 post 的主键
   const postId =
     row.post_id ??
     row.postId ??
     row.pid ??
     row.p_id ??
-    row.id; // 最后才用 id
+    row.id;
 
   return {
     id: postId != null ? String(postId) : null,
@@ -610,9 +609,9 @@ function bindPostCardEvents(container) {
   container.querySelectorAll('[data-like]').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
       const id = btn.getAttribute('data-like');
+      if (!id) { toast('这条帖子缺少有效 ID'); return; }
       try {
         await likePost(id);
-        // 简单刷新
         renderHome(getActiveTab());
       } catch(e){ toast('点赞失败：'+e.message); }
     });
@@ -620,17 +619,17 @@ function bindPostCardEvents(container) {
 
   // 删除（仅作者）
   container.querySelectorAll('[data-del]').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-      const id = btn.getAttribute('data-del');
-      if (!confirm('确定删除这条帖子？该操作不可恢复')) return;
-      try {
-        await deletePost(id);
-        renderHome(getActiveTab());
-        toast('已删除');
-      } catch(e){ toast('删除失败：'+e.message); }
-    });
+  btn.addEventListener('click', async ()=>{
+    const id = btn.getAttribute('data-del');
+    if (!id) { toast('这条帖子缺少有效 ID'); return; }
+    if (!confirm('确定删除这条帖子？该操作不可恢复')) return;
+    try {
+      await deletePost(id);
+      renderHome(getActiveTab());
+      toast('已删除');
+    } catch(e){ toast('删除失败：'+e.message); }
   });
-}
+});
 
 /* =========================
  * 个人主页
@@ -898,7 +897,7 @@ async function likePost(id) {
     if (p) { p.likes = (p.likes||0)+1; Storage.save(DB); }
     return;
   }
-  await api(`/posts/${id}/like`, { method: "POST" });
+  await api(`/api/posts/${encodeURIComponent(id)}/like`, { method: "POST" });
 }
 
 async function deletePost(id) {
@@ -907,5 +906,5 @@ async function deletePost(id) {
     Storage.save(DB);
     return;
   }
-  await api(`/posts/${id}`, { method: "DELETE" });
+  await api(`/api/posts/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
