@@ -484,6 +484,8 @@ async function renderHeaderUser() {
 function getActiveTab() { return $('.feed-tabs .tab.active')?.dataset.tab || 'forYou'; }
 
 async function renderHome(tab = 'forYou') {
+  await awaitMeIdCache();
+
   $$('.feed-tabs .tab').forEach(t => t.classList.remove('active'));
   $(`.feed-tabs .tab[data-tab="${tab}"]`).classList.add('active');
 
