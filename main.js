@@ -258,13 +258,8 @@ function normalizePostRow(row) {
     ? row.images
     : (() => { try { return JSON.parse(row.images || "[]"); } catch { return []; } })();
 
-  // 关键：更稳妥地解析 post 的主键
-  const postId =
-    row.post_id ??
-    row.postId ??
-    row.pid ??
-    row.p_id ??
-    row.id;
+  const postId = row.post_id ?? row.postId ?? row.pid ?? row.p_id ?? row.id;
+  id: postId != null ? String(postId) : null,
 
   return {
     id: postId != null ? String(postId) : null,
