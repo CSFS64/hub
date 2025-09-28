@@ -258,18 +258,23 @@ function normalizePostRow(row) {
     ? row.images
     : (() => { try { return JSON.parse(row.images || "[]"); } catch { return []; } })();
 
-  const postId = row.post_id ?? row.postId ?? row.pid ?? row.p_id ?? row.id;
+  // 统一拿到 id，然后做强兜底
+  const rawId =
+    row.id ?? row.post_id ?? row.postId ?? row.pid ?? row.p_id;
+
+  const idStr = rawId == null ? null : String(rawId).trim();
+  const safeId = idStr === "" ? null : idStr;
 
   return {
-    id: postId != null ? String(postId) : null,
+    id: safeId,                                  // <== 关键：保证不是 ""，要么是字符串要么是 null
     authorId: row.author_id,
     authorNick: row.nickname || "",
     authorAvatar: row.avatar || "",
     content: row.content || "",
     images: imgs.map(u => ({ url: u })),
     createdAt: row.created_at,
-    replyToId: row.reply_to_id ? String(row.reply_to_id) : null,
-    threadRootId: row.thread_root_id ? String(row.thread_root_id) : null,
+    replyToId: row.reply_to_id != null ? String(row.reply_to_id) : null,
+    threadRootId: row.thread_root_id != null ? String(row.thread_root_id) : null,
     likes: row.likes || 0,
     reposts: row.reposts || 0,
     replies: row.replies || 0
@@ -525,7 +530,7 @@ function renderPostCard(p, me) {
 
   const canDelete = !!(me && me.id === p.authorId);
   const likeCount = p.likes ?? 0;
-  const hasValidId = p?.id !== undefined && p?.id !== null && String(p?.id).trim() !== "";
+  const hasValidId = typeof p?.id === 'string' && p.id.trim() !== '';
 
   return `
     <article class="post" data-id="${p.id}">
@@ -599,32 +604,39 @@ function bindPostCardEvents(container) {
       }
     });
   });
-    // 点赞
+  // 点赞
   container.querySelectorAll('[data-like]').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
-      const id = btn.getAttribute('data-like');
-      if (!id) { toast('这条帖子缺少有效 ID'); return; }
+      const idRaw = btn.getAttribute('data-like');
+      const id = (idRaw ?? '').trim();
+      if (!id || id === 'null' || id === 'undefined') {
+        toast('这条帖子缺少有效 ID'); 
+        return;
+      }
       try {
         await likePost(id);
         renderHome(getActiveTab());
       } catch(e){ toast('点赞失败：'+e.message); }
     });
   });
-
-  // 删除（仅作者）
+  
+  // 删除
   container.querySelectorAll('[data-del]').forEach(btn=>{
-  btn.addEventListener('click', async ()=>{
-    const id = btn.getAttribute('data-del');
-    if (!id) { toast('这条帖子缺少有效 ID'); return; }
-    if (!confirm('确定删除这条帖子？该操作不可恢复')) return;
-    try {
-      await deletePost(id);
-      renderHome(getActiveTab());
-      toast('已删除');
-    } catch(e){ toast('删除失败：'+e.message); }
+    btn.addEventListener('click', async ()=>{
+      const idRaw = btn.getAttribute('data-del');
+      const id = (idRaw ?? '').trim();
+      if (!id || id === 'null' || id === 'undefined') {
+        toast('这条帖子缺少有效 ID'); 
+        return;
+      }
+      if (!confirm('确定删除这条帖子？该操作不可恢复')) return;
+      try {
+        await deletePost(id);
+        renderHome(getActiveTab());
+        toast('已删除');
+      } catch(e){ toast('删除失败：'+e.message); }
+    });
   });
-});
-
 }
 
 /* =========================
