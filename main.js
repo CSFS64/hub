@@ -531,7 +531,7 @@ function renderPostCard(p, me) {
 
   const canDelete = !!(me && me.id === p.authorId);
   const likeCount = p.likes ?? 0;
-  const hasValidId = !!p?.id;
+  const hasValidId = p?.id !== undefined && p?.id !== null && String(p?.id).trim() !== "";
 
   return `
     <article class="post" data-id="${p.id}">
@@ -545,8 +545,8 @@ function renderPostCard(p, me) {
         <div class="actions">
           <button class="act reply">评论</button>
           <button class="act detail">详情</button>
-          ${hasValidId ? `<button class="act like" data-like="${p.id}">❤ ${likeCount}</button>` : ""}
-          ${canDelete && hasValidId ? `<button class="act danger" data-del="${p.id}">删除</button>` : ""}
+          <button class="act like" data-like="${p?.id ?? ''}">❤ ${likeCount}</button>
+          ${canDelete ? `<button class="act danger" data-del="${p?.id ?? ''}">删除</button>` : ""}
           ${renderFollowBtn(p.authorId)}
         </div>
       </div>
