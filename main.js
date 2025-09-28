@@ -474,7 +474,7 @@ async function renderHeaderUser() {
   $('#user-entry').innerHTML = `
     <button class="btn ghost" id="btn-compose">发帖</button>
     <div class="user-mini" title="我的主页">
-      <div class="avatar small">${avatarHTML}</div>
+      <div class="avatar sm">${avatarHTML}</div>
       <span class="nick">${escapeHtml(me?.nickname || '')}</span>
     </div>
   `;
@@ -641,7 +641,7 @@ async function renderProfile(uid) {
       <section class="profile">
         <div class="cover">${user.cover ? `<img src="${user.cover}" alt="cover">` : `<div class="cover-ph">上传封面</div>`}</div>
         <div class="profile-row">
-          <div class="avatar large">${avatarHTML}</div>
+          <div class="avatar xl">${avatarHTML}</div>
           <div class="meta">
             <div class="nick">${escapeHtml(user.nickname)}</div>
             <div class="bio">${escapeHtml(user.bio || '')}</div>
@@ -744,7 +744,7 @@ function renderThreadItemLocal(t) {
   const u = getUserLocal(t.authorId);
   return `
     <div class="thread-item" data-id="${t.id}">
-      <div class="avatar small">${u.avatar ? `<img src="${u.avatar}">` : `<div class="avatar-ph">${escapeHtml(u.nickname.slice(0,1).toUpperCase())}</div>`}</div>
+      <div class="avatar sm">${u.avatar ? `<img src="${u.avatar}">` : `<div class="avatar-ph">${escapeHtml(u.nickname.slice(0,1).toUpperCase())}</div>`}</div>
       <div class="body">
         <div class="meta"><span class="nick clickable" data-user="${u.id}">${escapeHtml(u.nickname)}</span><span class="time">· ${fmtTime(t.createdAt)}</span></div>
         ${renderContent(t)}
@@ -756,7 +756,7 @@ function renderReplyItemLocal(p) {
   const u = getUserLocal(p.authorId);
   return `
     <div class="reply-item" data-id="${p.id}">
-      <div class="avatar small">${u.avatar ? `<img src="${u.avatar}">` : `<div class="avatar-ph">${escapeHtml(u.nickname.slice(0,1).toUpperCase())}</div>`}</div>
+      <div class="avatar sm">${u.avatar ? `<img src="${u.avatar}">` : `<div class="avatar-ph">${escapeHtml(u.nickname.slice(0,1).toUpperCase())}</div>`}</div>
       <div class="body">
         <div class="meta"><span class="nick clickable" data-user="${u.id}">${escapeHtml(u.nickname)}</span><span class="time">· ${fmtTime(p.createdAt)}</span></div>
         ${renderContent(p)}
@@ -773,7 +773,7 @@ function renderThreadItem(tnorm) {
   const avatarHTML = avatar ? `<img src="${avatar}">` : `<div class="avatar-ph">${escapeHtml(nick.slice(0,1).toUpperCase())}</div>`;
   return `
     <div class="thread-item" data-id="${tnorm.id}">
-      <div class="avatar small">${avatarHTML}</div>
+      <div class="avatar sm">${avatarHTML}</div>
       <div class="body">
         <div class="meta"><span class="nick clickable" data-user="${tnorm.authorId}">${escapeHtml(nick)}</span><span class="time">· ${fmtTime(tnorm.createdAt)}</span></div>
         ${renderContent(tnorm)}
