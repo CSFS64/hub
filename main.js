@@ -398,16 +398,45 @@ async function renderApp() {
 
 /* 头部用户区 */
 async function renderHeaderUser() {
-  const me = await getMe();
-  const avatarHTML = me?.avatar ? `<img src="${me.avatar}" alt="${escapeHtml(me.nickname || '')}">`
-    : `<div class="avatar-ph" aria-label="${escapeHtml(me?.nickname || '我')}">${escapeHtml((me?.nickname || '我').slice(0,1).toUpperCase())}</div>`;
+  let me = null;
+  if (USE_BACKEND) {
+    try { const r = await api("/me"); me = r.user || null; } catch (_) {}
+  } else {
+    me = getMeLocal();
+  }
+
+  if (!me) {
+    // 未登录：显示登录按钮
+    $('#user-entry').innerHTML = `
+      <button class="btn primary" id="btn-login">登录/注册</button>
+    `;
+    $('#btn-login')?.addEventListener('click', async () => {
+      try {
+        await ensureLogin();     // 走短信验证码
+        await renderHeaderUser();// 登录后刷新头部
+        renderHome(getActiveTab());
+      } catch (e) {
+        toast('登录失败：' + e.message);
+      }
+    });
+    return;
+  }
+
+  // 已登录：展示“发帖 + 头像”
+  const avatarHTML = me?.avatar
+    ? `<img src="${me.avatar}" alt="${escapeHtml(me.nickname || '')}">`
+    : `<div class="avatar-ph" aria-label="${escapeHtml(me?.nickname || '我')}">
+         ${escapeHtml((me?.nickname || '我').slice(0,1).toUpperCase())}
+       </div>`;
+
   $('#user-entry').innerHTML = `
     <button class="btn ghost" id="btn-compose">发帖</button>
     <div class="user-mini" title="我的主页">
       <div class="avatar small">${avatarHTML}</div>
-      <span class="nick">${escapeHtml(me?.nickname || '未登录')}</span>
+      <span class="nick">${escapeHtml(me?.nickname || '')}</span>
     </div>
   `;
+
   $('#btn-compose').addEventListener('click', () => openComposeModal());
   $('.user-mini').addEventListener('click', () => { if (me?.id) location.hash = Routes.profile(me.id); });
 }
