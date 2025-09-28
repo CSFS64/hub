@@ -515,36 +515,37 @@ async function renderHome(tab = 'forYou') {
 }
 
 /* 帖子卡片（根贴） */
-function renderPostCard(p, me) {
-  const nick = USE_BACKEND ? (p.authorNick || '用户') : getUserLocal(p.authorId).nickname;
-  const avatar = USE_BACKEND ? p.authorAvatar : (getUserLocal(p.authorId).avatar || '');
-  const avatarHTML = avatar
-    ? `<img src="${avatar}" alt="${escapeHtml(nick)}">`
-    : `<div class="avatar-ph" aria-label="${escapeHtml(nick)}">${escapeHtml(nick.slice(0,1).toUpperCase())}</div>`;
+document.body.addEventListener("click", async (e) => {
+  if (e.target.classList.contains("like")) {
+    const postId = e.target.dataset.like
+    if (!postId) {
+      console.error("❌ 点赞缺少 postId")
+      return
+    }
+    try {
+      await api(`/posts/${postId}/like`, { method: "POST" })
+      // 成功后更新 UI
+      const current = parseInt(e.target.textContent.replace(/[^\d]/g, "")) || 0
+      e.target.textContent = `❤ ${current + 1}`
+    } catch (err) {
+      alert("点赞失败: " + err.message)
+    }
+  }
 
-  const canDelete = !!(me && me.id === p.authorId);
-  const likeCount = p.likes ?? 0;
-
-  return `
-    <article class="post" data-id="${p.id}">
-      <div class="avatar">${avatarHTML}</div>
-      <div class="body">
-        <div class="meta">
-          <span class="nick clickable" data-user="${p.authorId}">${escapeHtml(nick)}</span>
-          <span class="time">· ${fmtTime(p.createdAt)}</span>
-        </div>
-        ${renderContent(p)}
-        <div class="actions">
-          <button class="act reply">评论</button>
-          <button class="act detail">详情</button>
-          <button class="act like" data-like="${p.id}">❤ ${likeCount}</button>
-          ${canDelete ? `<button class="act danger" data-del="${p.id}">删除</button>` : ""}
-          ${renderFollowBtn(p.authorId)}
-        </div>
-      </div>
-    </article>
-  `;
-}
+  if (e.target.classList.contains("danger")) {
+    const postId = e.target.dataset.del
+    if (!postId) {
+      console.error("❌ 删除缺少 postId")
+      return
+    }
+    try {
+      await api(`/posts/${postId}`, { method: "DELETE" })
+      e.target.closest("article.post")?.remove()
+    } catch (err) {
+      alert("删除失败: " + err.message)
+    }
+  }
+})
 
 function renderContent(p) {
   const text = `<div class="text">${linkify(escapeHtml(p.content))}</div>`;
