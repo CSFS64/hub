@@ -580,15 +580,19 @@ function bindPostCardEvents(container) {
   container.querySelectorAll('.nick.clickable').forEach(el => {
     el.addEventListener('click', () => { const uid = el.dataset.user; location.hash = Routes.profile(uid); });
   });
+
   container.querySelectorAll('.avatar img').forEach(img => {
     img.addEventListener('click', () => openImageViewer(img.src));
   });
+
   container.querySelectorAll('.act.reply').forEach(btn => {
     btn.addEventListener('click', () => { const post = btn.closest('.post'); openComposeModal(post.dataset.id); });
   });
+
   container.querySelectorAll('.act.detail').forEach(btn => {
     btn.addEventListener('click', () => { const post = btn.closest('.post'); location.hash = Routes.post(post.dataset.id); });
   });
+
   container.querySelectorAll('.act.follow').forEach(btn => {
     btn.addEventListener('click', async () => {
       const uid = btn.dataset.follow;
@@ -606,15 +610,17 @@ function bindPostCardEvents(container) {
   container.querySelectorAll('.act.like').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-like');
+      if (!id) return; // 确保 id 是有效的
+
       try {
         const post = await likePost(id);
         const isLiked = post.liked; // 后端返回的点赞状态
-        const likes = post.likes; // 更新后的点赞数量
-        
+        const likes = post.likes || 0; // 确保 likes 是有效的
+
         // 更新UI
         btn.classList.toggle('liked', isLiked);
         btn.textContent = isLiked ? `取消点赞` : `❤ ${likes}`;
-        
+
         // 刷新列表
         renderHome(getActiveTab());
       } catch (e) {
