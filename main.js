@@ -619,9 +619,10 @@ function setupExpandableComposer(textSel, counterSel, upsellSel, limit=280){
   if(!ta) return;
 
   const autosize = ()=>{
+    ta.style.overflowY = 'hidden';     // 关键：禁用内部滚动（再兜底一遍）
     ta.style.height = 'auto';
-    // 上限防止无限拉长，可按需调整（600px ~ 8~10行）
-    ta.style.height = Math.min(ta.scrollHeight, 600) + 'px';
+    // 上限放大一点，避免长文时还会出现内部滚动（也可根据喜好调整）
+    ta.style.height = Math.min(ta.scrollHeight, 1000) + 'px';
   };
 
   const update = ()=>{
