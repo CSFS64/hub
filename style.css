@@ -272,3 +272,49 @@ body{
   padding-top: 8px;
 }
 
+/* 线程视图（单帖页）：左头像列 56px，右正文列自适应 */
+.post-thread { background: var(--bg); }
+.post-thread .row {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  column-gap: 12px;
+  padding: 12px 16px;
+}
+.post-thread .row + .row { border-top: 1px solid var(--line); } /* 分割线 */
+
+.post-thread .rail {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: #ddd; object-fit: cover;
+  grid-column: 1;
+}
+.post-thread .body { grid-column: 2; }
+
+/* 原帖正文更醒目，且有左侧引线（像推特） */
+.post-thread .detail .head { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+.post-thread .detail .text { font-size: 17px; line-height: 1.55; margin: 8px 0 6px; }
+.post-thread .detail .body { position: relative; }
+.post-thread .detail .body::before{
+  content:""; position:absolute; left:-16px; top:44px; bottom:10px; width:2px; background: var(--line);
+}
+.post-thread .pics img { max-width: 100%; border-radius: 12px; margin-top: 10px; }
+
+/* 操作区 */
+.post-thread .actions { display: flex; gap: 22px; margin-top: 10px; color: var(--muted); }
+.post-thread .action { cursor: pointer; display:inline-flex; align-items:center; gap:6px; }
+.post-thread .action.like.liked { color:#e0245e; }
+
+/* 回复输入区（行内） */
+.reply-inline { display:flex; align-items:flex-start; gap:12px; }
+.reply-inline textarea{
+  flex:1; min-height: 56px; resize: none;
+  border: none; outline: none; background: transparent; color: var(--fg);
+  font-size: 15px; padding: 10px 12px; border-radius: 999px;
+  border: 1px solid var(--line);
+}
+.reply-inline textarea::placeholder{ color: var(--muted); }
+.reply-inline .btn { margin-left: 8px; }
+
+/* 评论项文本 */
+.post-thread .comment .head { font-weight: 600; font-size: 15px; margin-bottom: 2px; }
+.post-thread .comment .text { font-size: 15px; line-height: 1.5; }
+
