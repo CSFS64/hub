@@ -379,3 +379,97 @@ body{
 }
 /* 确保回复行不受竖线影响 */
 .post-thread .row.composer .body::before{ content: none; }
+
+/* ===== Reply Modal: softer shadow + layout ===== */
+.modal{ border:none; background: rgba(0,0,0,.45); }
+.reply-card{
+  width:min(680px, 96vw);
+  background:var(--bg); color:var(--fg);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:0;                    /* 由内部栅格撑开 */
+  position:relative;
+  /* 更柔和的多层阴影（像推特） */
+  box-shadow:
+    0 16px 48px rgba(0,0,0,.28),
+    0 2px 8px rgba(0,0,0,.12);
+}
+.reply-card .close{
+  position:absolute; top:10px; right:10px;
+}
+
+/* 两行线程：左 56px 头像轨道，右正文；行距 12px */
+.reply-thread{
+  display:grid;
+  grid-template-columns:56px 1fr;
+  row-gap:12px; column-gap:12px;
+  padding:16px;
+}
+.reply-thread .rail{
+  grid-column:1; position:relative;
+  display:flex; justify-content:center;
+}
+.reply-thread .rail .avatar{
+  width:40px; height:40px; border-radius:50%; background:#ddd; object-fit:cover;
+}
+
+/* 连接竖线：从第1行头像底部连到第2行头像顶部 */
+.reply-thread .rail:first-of-type::after{
+  content:""; position:absolute; left:50%;
+  width:2px; transform:translateX(-50%);
+  top:48px;                      /* 40px头像 + 8px间距 */
+  bottom:-12px;                  /* 延伸到下一行顶部上方一点 */
+  background:var(--line);
+  pointer-events:none;
+}
+/* 最后一行不再延伸线条 */
+.reply-thread .rail.me::after{ display:none; }
+
+.reply-thread .body{ grid-column:2; }
+
+/* 上方原帖文字块更像推特小摘要 */
+.quoted-detail .head{ font-weight:700; font-size:15px; margin-bottom:4px; }
+.quoted-detail .text{
+  font-size:16px; line-height:1.5; margin-top:6px; white-space:pre-wrap;
+}
+
+/* 无边框编辑器（沿用你在单帖页的样式） */
+.reply-inline{ display:flex; align-items:flex-start; gap:12px; }
+.reply-editor{ flex:1; display:flex; flex-direction:column; }
+.reply-editor textarea{
+  display:block; width:100%;
+  border:none; outline:none; background:transparent; color:var(--fg);
+  box-sizing:border-box;
+  padding:12px 0;
+  font-size:16px; line-height:1.5;
+  resize:none;
+  overflow-y:hidden;   /* 禁止内部滚动，交给 JS 调整 height */
+  height:auto; min-height:28px;
+  transition:height .15s ease, padding .15s ease;
+}
+.reply-editor textarea::placeholder{
+  color:var(--muted); opacity:.75; font-weight:600; font-size:16px; text-align:left;
+}
+.reply-editor:focus-within textarea{
+  min-height:64px; padding:14px 0;  /* 聚焦轻微展开 */
+}
+
+.reply-tools{
+  display:flex; align-items:center; justify-content:flex-end;
+  gap:8px; padding-top:8px;
+}
+.char-counter{
+  min-width:28px; height:28px; padding:0 8px;
+  border-radius:999px; display:flex; align-items:center; justify-content:center;
+  background:#f0f3f4; color:#606a73; font-weight:700; font-size:13px;
+}
+:root.dark .char-counter{ background:#1b1e20; color:#8b98a5; }
+.char-counter.over{ background:#ffe8e8; color:#c81e1e; }
+:root.dark .char-counter.over{ background:#3a0d0d; color:#ff7373; }
+
+.upsell{
+  display:none; margin-top:8px; border:1px solid var(--line);
+  border-radius:12px; padding:10px 12px; color:var(--muted); font-size:14px;
+}
+.upsell.show{ display:block; }
+
