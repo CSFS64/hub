@@ -108,6 +108,23 @@
     </form>
   </dialog>
 
+  <!-- Reply Modal -->
+<dialog id="replyDialog" class="modal">
+  <div class="modal-card reply-card">
+    <button class="icon-btn close" onclick="$.closeReply()">✖</button>
+
+    <!-- 被回复的原帖（引用区） -->
+    <div id="replyHost" class="quoted"></div>
+
+    <!-- 输入区 -->
+    <div class="composer-inline" style="margin-top:8px;">
+      <img class="avatar" id="replyAvatar" alt="" style="width:40px;height:40px;border-radius:50%;background:#ddd;">
+      <textarea id="replyText" rows="3" placeholder="写下你的回复…（Enter 发送，Ctrl+Enter 换行）" style="resize:none;"></textarea>
+      <button id="btnReply" class="btn btn-primary">回复</button>
+    </div>
+  </div>
+</dialog>
+
   <!-- Toast -->
   <div id="toast" class="toast" hidden></div>
 
