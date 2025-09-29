@@ -504,8 +504,6 @@ body{
 }
 .upsell.show{ display:block; }
 
-/* 覆盖遮罩（保留） */
-.modal{ border:none; background:rgba(0,0,0,.50); }
 .modal::backdrop{
   background: rgba(0,0,0,.50);
   backdrop-filter: blur(2px) saturate(110%);
