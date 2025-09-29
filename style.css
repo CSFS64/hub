@@ -221,19 +221,7 @@ body{
 .reply-inline .avatar{
   width:44px; height:44px; border-radius:50%; background:#ddd; flex-shrink:0;
 }
-.reply-inline textarea{
-  flex:1; min-height:44px;
-  border:1px solid var(--line); border-radius:999px;
-  padding:12px 16px; resize:none; outline:none;
-  background:transparent; color:var(--fg);
-  font-size:15px; line-height:22px;
-}
-/* placeholder: larger, semi-bold, left-aligned, vertically centered */
-.reply-inline textarea::placeholder{
-  color:var(--muted); opacity:.75;
-  font-size:16px; font-weight:600; text-align:left;
-  line-height:44px;           /* creates centered feel within the 44px box */
-}
+
 .reply-inline .btn{
   display:inline-flex; align-items:center; justify-content:center;
   height:40px; padding:0 14px; border-radius:999px; font-weight:600;
@@ -284,16 +272,7 @@ body{
   font-size:16px; line-height:24px; color:var(--fg);
   transition: min-height .15s ease, padding .15s ease;
 }
-.reply-editor:focus-within textarea{
-  min-height:80px;               /* 聚焦轻微展开（动画） */
-  padding:10px 0;
-}
 
-/* 工具栏：计数 + 回复按钮 */
-.reply-tools{
-  display:flex; align-items:center; justify-content:flex-end;
-  gap:8px; padding-top:8px;
-}
 .char-counter{
   min-width:28px; height:28px; padding:0 8px;
   border-radius:999px; display:flex; align-items:center; justify-content:center;
@@ -302,18 +281,6 @@ body{
 :root.dark .char-counter{ background:#1b1e20; color:#8b98a5; }
 .char-counter.over{ background:#ffe8e8; color:#c81e1e; }
 :root.dark .char-counter.over{ background:#3a0d0d; color:#ff7373; }
-
-/* 超限 Upsell 提示 */
-.upsell{
-  display:none; margin-top:8px; border:1px solid var(--line);
-  border-radius:12px; padding:10px 12px; color:var(--muted); font-size:14px;
-}
-.upsell.show{ display:block; }
-
-/* 占位文案更像推特：左对齐、稍大半粗、在视觉上更显眼 */
-.reply-editor textarea::placeholder{
-  color:var(--muted); opacity:.75; font-weight:600; font-size:16px; text-align:left;
-}
 
 /* 让整行元素中心线对齐（头像 / 输入 / 按钮） */
 .post-thread .row.composer{ align-items:center; }
@@ -377,3 +344,79 @@ body{
   font-size: 16px;
   text-align: left;
 }
+
+/* ===== 单帖页：唯一版本的回复编辑区样式 ===== */
+
+/* 行（头像/正文列）本身允许增长，且不隐藏溢出 */
+.post-thread .row.composer{ 
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+.post-thread .row.composer .body{
+  height: auto;
+  overflow: visible;
+}
+
+/* 竖线只作用于正文，不要影响回复行，也不会拦截事件 */
+.post-thread .detail .body{ position: relative; z-index: 0; }
+.post-thread .detail .body::before{
+  content:"";
+  position:absolute;
+  left:-16px; top:44px; bottom:10px; width:2px;
+  background:var(--line);
+  z-index:0;
+  pointer-events:none;        /* 关键：不拦截鼠标/输入事件 */
+}
+.post-thread .row.composer .body::before{ content:none; }
+
+/* 回复栏布局 */
+.reply-inline{
+  display:flex; align-items:center; gap:12px;
+}
+.reply-inline .avatar{
+  width:44px; height:44px; border-radius:50%; background:#ddd; flex-shrink:0;
+}
+
+/* 仅保留 .reply-editor 这一套，textarea 无边框、无内部滚动，由 JS 控高 */
+.reply-editor{
+  flex:1; display:flex; flex-direction:column; position:relative; z-index:2;
+}
+.reply-editor textarea{
+  display:block; width:100%;
+  border:none; outline:none; background:transparent; color:var(--fg);
+  box-sizing:border-box;
+
+  padding:12px 0;            /* 视觉上的展开 */
+  font-size:16px; line-height:1.5;
+  resize:none;
+
+  overflow-y:hidden !important;  /* 不出现内部滚动条 */
+  height:auto !important;        /* 交给 JS 设置高度 */
+  min-height:28px;               /* 初始紧凑 */
+  transition:height .15s ease, padding .15s ease;
+}
+.reply-editor textarea::placeholder{
+  color:var(--muted); opacity:.75; font-weight:600; font-size:16px; text-align:left;
+}
+
+/* 工具栏和 upsell */
+.reply-tools{
+  display:flex; align-items:center; justify-content:flex-end;
+  gap:8px; padding-top:8px; position:relative; z-index:2;
+}
+.char-counter{
+  min-width:28px; height:28px; padding:0 8px;
+  border-radius:999px; display:flex; align-items:center; justify-content:center;
+  background:#f0f3f4; color:#606a73; font-weight:700; font-size:13px;
+}
+:root.dark .char-counter{ background:#1b1e20; color:#8b98a5; }
+.char-counter.over{ background:#ffe8e8; color:#c81e1e; }
+:root.dark .char-counter.over{ background:#3a0d0d; color:#ff7373; }
+
+.upsell{
+  display:none; margin-top:8px; border:1px solid var(--line);
+  border-radius:12px; padding:10px 12px; color:var(--muted); font-size:14px;
+  position:relative; z-index:2;
+}
+.upsell.show{ display:block; }
