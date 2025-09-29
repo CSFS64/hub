@@ -150,3 +150,12 @@ body{
   .right-rail{ display:none; }
   .topbar{ position: sticky; top: 0; }
 }
+
+/* 卡片可点击 & 悬浮微加深 */
+.card.clickable{ cursor: pointer; transition: background-color .15s ease, filter .15s ease; }
+.card.clickable:hover{ background: var(--hover); filter: brightness(0.98); }
+
+/* 防止操作区也触发整卡点击 */
+.card .actions .action{ pointer-events: auto; }
+.card .actions{ pointer-events: none; }
+.card .actions .action, .card .del, .card .open, .card .like{ pointer-events: auto; }
