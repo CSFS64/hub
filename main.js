@@ -544,7 +544,7 @@ function renderPostPage(p){
 
             <div class="reply-tools">
               <div class="char-counter" id="replyCounter">280</div>
-              <button id="btnCommentPage" class="btn btn-primary">Reply</button>
+              <button type="button" id="btnCommentPage" class="btn btn-primary">评论</button>
             </div>
 
             <div class="upsell" id="replyUpsell">
