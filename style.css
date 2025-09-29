@@ -381,18 +381,41 @@ body{
 .post-thread .row.composer .body::before{ content: none; }
 
 /* ===== Reply Modal: softer shadow + layout ===== */
-.modal{ border:none; background: rgba(0,0,0,.45); }
+.modal{
+  border: none;
+  background: rgba(0,0,0,.50);
+  backdrop-filter: blur(2px) saturate(110%);
+}
+/* 覆盖遮罩：更柔和，带一点模糊 */
+.modal{
+  border: none;
+  background: rgba(0,0,0,.50);
+  backdrop-filter: blur(2px) saturate(110%);
+}
+
+/* Reply 弹窗卡片：移除硬边框，改成多层软阴影 */
 .reply-card{
-  width:min(680px, 96vw);
-  background:var(--bg); color:var(--fg);
-  border:1px solid var(--line);
-  border-radius:16px;
-  padding:0;                    /* 由内部栅格撑开 */
-  position:relative;
-  /* 更柔和的多层阴影（像推特） */
+  width: min(680px, 96vw);
+  background: var(--bg);
+  color: var(--fg);
+
+  /* 去掉硬边框，改为极浅的发光边缘 */
+  border: none;
+  outline: 1px solid rgba(0,0,0,.06);        /* 亮色主题下轻微描边 */
+}
+:root.dark .reply-card{
+  outline: 1px solid rgba(255,255,255,.06);  /* 暗色主题下轻微描边 */
+}
+
+/* 软阴影（负 spread 让边缘更糯；多层叠加更自然） */
+.reply-card{
   box-shadow:
-    0 16px 48px rgba(0,0,0,.28),
-    0 2px 8px rgba(0,0,0,.12);
+    0 32px 96px -12px rgba(0,0,0,.45),   /* 大范围主阴影，柔 */
+    0 12px 28px -12px rgba(0,0,0,.30),   /* 中层过渡 */
+    0  2px  8px   0px rgba(0,0,0,.15);   /* 贴边的小阴影，提层次 */
+  border-radius: 16px;
+  padding: 0;
+  position: relative;
 }
 .reply-card .close{
   position:absolute; top:10px; right:10px;
