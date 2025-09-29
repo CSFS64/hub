@@ -73,10 +73,6 @@ function cacheDom(){
   $.imgPreview = document.getElementById("imgPreview");
   $.btnPublish = document.getElementById("btnPublish");
   $.meAvatar = document.getElementById("meAvatar");
-  $.postDialog = document.getElementById("postDialog");
-  $.postDetail = document.getElementById("postDetail");
-  $.commentText = document.getElementById("commentText");
-  $.btnComment = document.getElementById("btnComment");
   $.authDialog = document.getElementById("authDialog");
   $.btnSendOtp = document.getElementById("btnSendOtp");
   $.btnPhoneLogin = document.getElementById("btnPhoneLogin");
@@ -240,64 +236,6 @@ function handleRoute(){
 function goToPost(id){
   location.hash = `#/post/${id}`;
 }
-
-/* ====== Post Detail & Comments ====== */
-$.closePost = ()=> $.postDialog.close();
-async function openPost(id){
-  try{
-    const me = session.get()?.user || null;
-    const d = await api(`/posts/${id}`, { method:"GET", auth: !!me });
-    $.postDetail.innerHTML = renderPostDetail(d);
-    $.postDialog.showModal();
-    $.btnComment.onclick = async ()=>{
-      const user = await ensureLogin(); if(!user) return;
-      const text = ($.commentText.value||"").trim();
-      if(!text) return toast("评论不能为空");
-      try{
-        await api(`/posts/${id}/comments`, { method:"POST", body:{ text } });
-        $.commentText.value = "";
-        openPost(id); // refresh
-      }catch(e){ toast(e.message || "评论失败"); }
-    };
-  }catch(e){ toast(e.message || "打开失败"); }
-}
-function renderPostDetail(p){
-  const imgs = (p.images||[]).map(src=>`<img src="${esc(src)}" loading="lazy" alt="">`).join("");
-  const comments = (p.comments||[]).map(c=>htm`
-    <div class="card">
-      <img class="avatar" src="${esc(c.author.avatar||'data:,')}" alt="">
-      <div class="content">
-        <div class="head"><span class="name">${esc(c.author.nickname||c.author.username||"用户")}</span>
-        <span class="meta">· ${timeAgo(c.created_at)}</span></div>
-        <div class="text">${esc(c.text||"")}</div>
-      </div>
-    </div>
-  `).join("");
-  return htm`
-  <article class="card">
-    <img class="avatar" src="${esc(p.author.avatar||'data:,')}" alt="">
-    <div class="content">
-      <div class="head"><span class="name">${esc(p.author.nickname||p.author.username||"用户")}</span>
-      <span class="meta">· ${timeAgo(p.created_at)}</span></div>
-      <div class="text">${esc(p.text||"")}</div>
-      <div class="pics">${imgs}</div>
-      <div class="actions">
-        <div class="action like ${p.liked?'liked':''}" onclick="$.toggleLikeDetail('${p.id}', this)">❤️ <span>${p.likes||0}</span></div>
-      </div>
-    </div>
-  </article>
-  <div class="panel"><h3>评论</h3>${comments || `<div class="empty">暂无评论</div>`}</div>
-  `;
-}
-$.toggleLikeDetail = async (id, el)=>{
-  const me = await ensureLogin(); if(!me) return;
-  const liked = el.classList.contains("liked");
-  try{
-    await api(`/posts/${id}/like`, { method: liked?"DELETE":"POST" });
-    el.classList.toggle("liked");
-    const num = el.querySelector("span"); num.textContent = (+num.textContent || 0) + (liked?-1:1);
-  }catch(e){ toast(e.message||"失败"); }
-};
 
 /* ====== Auth ====== */
 function bindAuth(){
