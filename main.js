@@ -544,7 +544,7 @@ function renderPostPage(p){
 
             <div class="reply-tools">
               <div class="char-counter" id="replyCounter">280</div>
-              <button type="button" id="btnCommentPage" class="btn btn-primary">评论</button>
+              <button type="button" id="btnCommentPage" class="btn btn-primary">Reply</button>
             </div>
 
             <div class="upsell" id="replyUpsell">
@@ -564,86 +564,115 @@ function renderPostPage(p){
 function bindPostPageEvents(p){
   // 顶部栏：返回 & 右侧“回复”按钮
   const backTop = document.getElementById("btnBackTop");
-  if(backTop) backTop.onclick = ()=> history.back();
-  const replyTop = document.getElementById("btnReplyTop");
-  if(replyTop) replyTop.onclick = ()=> $.openReply(p.id);
+  if (backTop) backTop.onclick = () => history.back();
 
-  // 原有点赞
-  const likeEl = document.querySelector(".post-page .action.like") 
-              || document.querySelector(".post-thread .action.like");
-  if(likeEl){
-    likeEl.onclick = async ()=>{
-      const me = await ensureLogin(); if(!me) return;
+  const replyTop = document.getElementById("btnReplyTop");
+  if (replyTop) replyTop.onclick = () => $.openReply(p.id);
+
+  // —— 正文点赞（单帖页）——
+  const likeEl = document.querySelector(".post-thread .row.detail .action.like");
+  if (likeEl) {
+    likeEl.onclick = async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const me = await ensureLogin(); if (!me) return;
+
       const liked = likeEl.classList.contains("liked");
       try{
-        await api(`/posts/${p.id}/like`, { method: liked?"DELETE":"POST" });
+        await api(`/posts/${p.id}/like`, { method: liked ? "DELETE" : "POST" });
         likeEl.classList.toggle("liked");
         const num = likeEl.querySelector("span");
-        num.textContent = (+num.textContent || 0) + (liked?-1:1);
-      }catch(e){ toast(e.message||"失败"); }
+        num.textContent = (+num.textContent || 0) + (liked ? -1 : 1);
+      }catch(err){ toast(err.message || "失败"); }
     };
   }
 
-  // 底部“回复”按钮（页面内直接发）
-  const btn = document.getElementById("btnCommentPage");
-  const ta  = document.getElementById("commentTextPage");
-  if(btn && ta){
-    btn.onclick = async ()=>{
-      const me = await ensureLogin(); if(!me) return;
-      const text = (ta.value||"").trim();
-  
-      // 280 超限检查
-      if(text.length === 0) return toast("回复不能为空");
-      if(text.length > 280){
+  // —— 无边框回复框：自动增高 + 字数计数 + 超限 Upsell —— //
+  setupExpandableComposer('#commentTextPage', '#replyCounter', '#replyUpsell', 280);
+
+  // Enter 发送（Ctrl/Cmd/Shift+Enter 换行）
+  const ta = document.getElementById('commentTextPage');
+  if (ta) {
+    ta.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' && !ev.ctrlKey && !ev.metaKey && !ev.shiftKey) {
+        ev.preventDefault();
+        const btn = document.getElementById('btnCommentPage');
+        if (btn) btn.click();
+      }
+    });
+  }
+
+  // —— Reply 按钮：事件委托（避免重渲染失效）——
+  if (!$.postDelegationBound) {
+    $.postDelegationBound = true;
+
+    $.feed.addEventListener('click', async (e) => {
+      const replyBtn = e.target.closest('#btnCommentPage');
+      if (!replyBtn) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const me = await ensureLogin(); if (!me) return;
+
+      const textEl = document.getElementById('commentTextPage');
+      if (!textEl) return;
+
+      const text = (textEl.value || '').trim();
+      if (text.length === 0) { toast('回复不能为空'); return; }
+
+      // 超限处理
+      if (text.length > 280) {
         document.getElementById('replyUpsell')?.classList.add('show');
-        toast("超出 280 字，精简后再发");
+        toast('超出 280 字，精简后再发');
         return;
       }
-  
+
+      // 当前帖子 id 从路由取，最稳
+      const match = location.hash.match(/^#\/post\/([0-9a-f]{24})$/i);
+      const postId = match ? match[1] : p?.id;
+      if (!postId) { toast('未找到帖子 ID'); return; }
+
       try{
-        await api(`/posts/${p.id}/comments`, { method:"POST", body:{ text } });
-        ta.value = "";
-        showPostPage(p.id); // 刷新
-      }catch(e){ toast(e.message||"评论失败"); }
-    };
+        await api(`/posts/${postId}/comments`, { method:'POST', body:{ text } });
+        textEl.value = '';
+        toast('已回复');
+        showPostPage(postId); // 刷新评论列表
+      }catch(err){ toast(err.message || '评论失败'); }
+    });
   }
 
-  // 启用无边框编辑框的自动增高与计数
-  setupExpandableComposer('#commentTextPage', '#replyCounter', '#replyUpsell', 280);
-  
+  // ===== 内部工具：无边框编辑框自适应 =====
   function setupExpandableComposer(textSel, counterSel, upsellSel, limit = 280){
     const ta = document.querySelector(textSel);
     const counter = document.querySelector(counterSel);
     const upsell = document.querySelector(upsellSel);
     if(!ta) return;
-  
-    // 自动高度
+
     const autosize = ()=>{
       ta.style.height = 'auto';
       ta.style.overflowY = 'hidden';
       ta.style.height = Math.min(ta.scrollHeight, 1000) + 'px';
     };
-  
-    // 更新计数 + 超限提示
+
     const update = ()=>{
       autosize();
       const len = ta.value.length;
       const remain = limit - len;
-      if(counter){
+      if (counter){
         counter.textContent = remain;
         counter.classList.toggle('over', remain < 0);
       }
-      if(upsell){
+      if (upsell){
         upsell.classList.toggle('show', remain < 0);
       }
     };
-  
-    // 事件绑定
+
     ta.addEventListener('input', update);
     ta.addEventListener('focus', update);
     window.addEventListener('resize', autosize, { passive: true });
-  
+
     // 初次执行
     update();
-  }  // ← 这里是 setupExpandableComposer 的结尾
+  }
 }
