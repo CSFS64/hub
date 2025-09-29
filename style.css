@@ -1,84 +1,111 @@
+/* =========================
+   Theme Variables
+   ========================= */
 :root{
-  --bg: #ffffff;
-  --fg: #0f1419;
-  --muted: #536471;
-  --line: #eff3f4;
-  --primary: #1d9bf0;
-  --primary-ink: #fff;
-  --card: #fff;
-  --hover: #f7f9f9;
-  --danger: #ef4444;
+  --bg:#ffffff;
+  --fg:#0f1419;
+  --muted:#536471;
+  --line:#eff3f4;
+  --primary:#1d9bf0;
+  --primary-ink:#fff;
+  --card:#fff;
+  --hover:#f7f9f9;
+  --danger:#ef4444;
 }
-
 :root.dark{
-  --bg: #000000;
-  --fg: #e7e9ea;
-  --muted: #8b98a5;
-  --line: #2f3336;
-  --primary: #1d9bf0;
-  --primary-ink: #fff;
-  --card: #0a0a0a;
-  --hover: #111315;
+  --bg:#000000;
+  --fg:#e7e9ea;
+  --muted:#8b98a5;
+  --line:#2f3336;
+  --primary:#1d9bf0;
+  --primary-ink:#fff;
+  --card:#0a0a0a;
+  --hover:#111315;
 }
 
-*{ box-sizing: border-box; }
+/* =========================
+   Reset / Base
+   ========================= */
+*{ box-sizing:border-box; }
 html,body{ height:100%; }
 body{
   margin:0;
-  font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, PingFang SC, Microsoft Yahei, Helvetica, Arial, sans-serif;
-  background: var(--bg); color: var(--fg);
+  font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans","Liberation Sans",PingFang SC,Microsoft Yahei,Helvetica,sans-serif;
+  background:var(--bg);
+  color:var(--fg);
 }
 
+/* =========================
+   App Layout
+   ========================= */
 .app{
   display:grid;
-  grid-template-columns: 260px minmax(0,680px) 360px;
-  gap: 0;
-  max-width: 1400px;
-  margin: 0 auto;
+  grid-template-columns:260px minmax(0,680px) 360px;
+  gap:0;
+  max-width:1400px;
+  margin:0 auto;
 }
 
-/* left */
+/* =========================
+   Left Nav
+   ========================= */
 .left-nav{
-  position: sticky; top:0;
-  height: 100vh; padding: 16px 12px;
-  border-right: 1px solid var(--line);
+  position:sticky; top:0;
+  height:100vh;
+  padding:16px 12px;
+  border-right:1px solid var(--line);
 }
 .brand{ display:flex; align-items:center; gap:8px; padding:8px; border-radius:999px; width:max-content; }
-.brand .logo{ width:28px; height:28px; fill: var(--primary); }
+.brand .logo{ width:28px; height:28px; fill:var(--primary); }
 .brand h1{ font-size:20px; margin:0; }
-
 .nav-items{ margin:12px 0 16px; display:flex; flex-direction:column; gap:4px; }
 .nav-item{
-  padding:12px 14px; border-radius:999px; cursor:pointer; display:flex; gap:10px; align-items:center;
+  padding:12px 14px; border-radius:999px; cursor:pointer;
+  display:flex; gap:10px; align-items:center;
 }
-.nav-item:hover{ background: var(--hover); }
+.nav-item:hover{ background:var(--hover); }
 .nav-item.is-active{ font-weight:700; }
-.btn{ border:1px solid var(--line); background: var(--card); color:var(--fg); padding:8px 14px; border-radius:999px; cursor:pointer; }
+
+.btn{ border:1px solid var(--line); background:var(--card); color:var(--fg); padding:8px 14px; border-radius:999px; cursor:pointer; }
 .btn:hover{ background:var(--hover); }
-.btn-primary{ background: var(--primary); color: var(--primary-ink); border-color: var(--primary); }
-.btn-primary:hover{ filter: brightness(1.02); }
+.btn-primary{ background:var(--primary); color:var(--primary-ink); border-color:var(--primary); }
+.btn-primary:hover{ filter:brightness(1.02); }
 .btn-full{ width:100%; margin-top:10px; }
+
 .icon-btn{ border:none; background:transparent; cursor:pointer; padding:6px; border-radius:8px; }
 .icon-btn:hover{ background:var(--hover); }
 
-.me-block{ margin-top:12px; padding:10px; border:1px solid var(--line); border-radius:16px;}
+.me-block{ margin-top:12px; padding:10px; border:1px solid var(--line); border-radius:16px; }
 .me-block .small{ color:var(--muted); font-size:12px; }
 
-/* main */
-.main{ border-right: 1px solid var(--line); min-height: 100vh; }
+/* =========================
+   Main Column
+   ========================= */
+.main{ border-right:1px solid var(--line); min-height:100vh; }
+
+/* Global top tabs bar (home/following) */
 .topbar{
-  position: sticky; top:0; z-index: 3;
-  background: var(--bg); border-bottom:1px solid var(--line);
-  display:flex; align-items:center; justify-content:space-between; padding:8px 12px;
+  position:sticky; top:0; z-index:3;
+  background:var(--bg);
+  border-bottom:1px solid var(--line);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 12px;
 }
 .tabs{ display:flex; gap:12px; }
-.tab{ background:transparent; border:none; padding:10px 8px; font-weight:600; cursor:pointer; color:var(--muted); }
+.tab{
+  background:transparent; border:none; padding:10px 8px; font-weight:600; cursor:pointer; color:var(--muted);
+}
 .tab.is-active{ color:var(--fg); border-bottom:3px solid var(--primary); }
 .tabs.small .tab{ padding:8px 6px; }
 
-.searchbar{ display:flex; align-items:center; gap:6px; border:1px solid var(--line); padding:6px 10px; border-radius:20px; min-width: 220px;}
+/* Search */
+.searchbar{
+  display:flex; align-items:center; gap:6px;
+  border:1px solid var(--line); padding:6px 10px; border-radius:20px; min-width:220px;
+}
 .searchbar input{ border:none; outline:none; background:transparent; color:var(--fg); width:180px; }
 
+/* Composer (home) */
 .composer{ display:flex; gap:10px; padding:12px; border-bottom:1px solid var(--line); }
 .composer .avatar{ width:40px; height:40px; border-radius:50%; background:#ddd; }
 .composer-body{ flex:1; }
@@ -90,9 +117,11 @@ body{
 .preview{ display:flex; gap:6px; flex-wrap:wrap; }
 .preview img{ width:96px; height:96px; object-fit:cover; border-radius:12px; border:1px solid var(--line); }
 
+/* Feed & Card */
 .feed{ display:flex; flex-direction:column; }
 .card{
   display:flex; gap:10px; padding:12px; border-bottom:1px solid var(--line);
+  transition:background .15s ease;
 }
 .card .avatar{ width:42px; height:42px; border-radius:50%; background:#ddd; }
 .card .content{ flex:1; min-width:0; }
@@ -102,42 +131,134 @@ body{
 .card .text{ margin:6px 0 8px; white-space:pre-wrap; word-break:break-word; }
 .card .pics{ display:flex; gap:6px; flex-wrap:wrap; }
 .card .pics img{ border-radius:12px; border:1px solid var(--line); width:100%; max-width:260px; height:auto; }
-.card .actions{ display:flex; gap:16px; align-items:center; color:var(--muted); margin-top:8px; }
-.card .actions .action{ display:flex; align-items:center; gap:6px; cursor:pointer; padding:6px 8px; border-radius:999px;}
-.card .actions .action:hover{ background: var(--hover); }
-.action.liked{ color: var(--primary); }
+.card .actions{ display:flex; gap:16px; align-items:center; color:var(--muted); margin-top:8px; pointer-events:none; }
+.card .actions .action{ display:flex; align-items:center; gap:6px; cursor:pointer; padding:6px 8px; border-radius:999px; pointer-events:auto; }
+.card .actions .action:hover{ background:var(--hover); }
+.card.clickable{ cursor:pointer; }
+.card.clickable:hover{ background:var(--hover); }
+.action.liked{ color:var(--primary); }
 
-.empty, .loading{ text-align:center; padding:24px; color:var(--muted); }
+.empty,.loading{ text-align:center; padding:24px; color:var(--muted); }
 
-/* right */
+/* =========================
+   Right Rail
+   ========================= */
 .right-rail{ padding:16px; }
-.panel{ border:1px solid var(--line); border-radius:16px; padding:12px; margin-bottom:12px; background: var(--card); }
+.panel{ border:1px solid var(--line); border-radius:16px; padding:12px; margin-bottom:12px; background:var(--card); }
 .panel h3{ margin:4px 0 8px; }
 .suggestions .who{ display:flex; align-items:center; gap:8px; padding:8px; border-radius:12px; }
-.suggestions .who:hover{ background: var(--hover); }
+.suggestions .who:hover{ background:var(--hover); }
 .suggestions .who .avatar{ width:36px; height:36px; border-radius:50%; background:#ddd; }
 .suggestions .who .meta{ font-size:12px; color:var(--muted); }
 
-/* modal */
-.modal{ border:none; background: rgba(0,0,0,.4); }
-.modal::backdrop{ background: rgba(0,0,0,.4); }
-.modal-card{ width:min(680px, 92vw); background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:16px; padding:12px; position:relative; }
+/* =========================
+   Modals (auth / reply)
+   ========================= */
+.modal{ border:none; background:rgba(0,0,0,.4); }
+.modal::backdrop{ background:rgba(0,0,0,.4); }
+.modal-card{ width:min(680px,92vw); background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:16px; padding:12px; position:relative; }
 .modal-card .close{ position:absolute; top:8px; right:8px; }
-.detail-composer{ display:flex; gap:8px; margin-top:10px; }
-.detail-composer textarea{ flex:1; border:1px solid var(--line); border-radius:12px; padding:8px; background:transparent; color:var(--fg); }
-.auth-card{ width:min(520px, 92vw); background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:16px; padding:16px; position:relative; }
+
+.auth-card{ width:min(520px,92vw); background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:16px; padding:16px; position:relative; }
 .auth-card label{ display:block; margin:8px 0 4px; color:var(--muted); }
 .auth-card input{ width:100%; border:1px solid var(--line); border-radius:10px; padding:10px; background:transparent; color:var(--fg); }
 .auth-card .row{ display:flex; gap:8px; margin-top:10px; }
 .pane{ margin-top:6px; }
 
-/* toast */
-.toast{ position: fixed; left:50%; transform: translateX(-50%); bottom:24px; background: var(--fg); color: var(--bg); padding:10px 14px; border-radius:12px; font-weight:600; box-shadow:0 10px 30px rgba(0,0,0,.35); }
+/* Reply modal quoted block */
+.reply-card{ width:min(680px,96vw); background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:16px; padding:12px; position:relative; }
+.reply-card .close{ position:absolute; top:8px; right:8px; }
+.quoted{ border-left:3px solid var(--line); padding-left:12px; margin:6px 0 8px; }
+.quoted .head{ font-weight:600; font-size:15px; margin-bottom:4px; }
+.quoted .text{ white-space:pre-wrap; line-height:1.5; }
 
-/* responsive */
+/* =========================
+   Thread Page (single post)
+   ========================= */
+/* top bar of post page */
+.post-topbar{
+  height:52px; display:flex; align-items:center; justify-content:space-between;
+  padding:0 12px; border-bottom:1px solid var(--line); background:var(--bg);
+}
+.post-topbar .title{ font-weight:800; font-size:18px; }
+.btn-ghost{
+  border:1px solid var(--line); background:transparent; color:var(--fg);
+  padding:8px 14px; border-radius:999px; cursor:pointer; font-weight:600;
+}
+.btn-ghost:hover{ background:var(--hover); }
+
+/* grid rows with avatar rail (56px) */
+.post-thread{ background:var(--bg); }
+.post-thread .row{
+  display:grid; grid-template-columns:56px 1fr; column-gap:12px; padding:12px 16px;
+}
+.post-thread .row + .row{ border-top:1px solid var(--line); }
+.post-thread .rail{ width:40px; height:40px; border-radius:50%; background:#ddd; object-fit:cover; grid-column:1; }
+.post-thread .body{ grid-column:2; }
+
+/* original post block */
+.post-thread .detail .head{ font-weight:700; font-size:15px; margin-bottom:4px; }
+.post-thread .detail .text{ font-size:17px; line-height:1.55; margin:8px 0 6px; }
+.post-thread .detail .body{ position:relative; }
+.post-thread .detail .body::before{
+  content:""; position:absolute; left:-16px; top:44px; bottom:10px; width:2px; background:var(--line);
+}
+.post-thread .pics img{ max-width:100%; border-radius:12px; margin-top:10px; }
+.post-thread .actions{ display:flex; gap:22px; margin-top:10px; color:var(--muted); }
+.post-thread .action{ cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+.post-thread .action.like.liked{ color:#e0245e; }
+
+/* timestamp row under the post */
+.post-thread .meta-row{
+  display:grid; grid-template-columns:56px 1fr; column-gap:12px;
+  padding:12px 16px; border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+}
+.post-thread .timestamp{ color:var(--muted); font-size:14px; }
+
+/* inline reply composer (bottom) */
+.post-thread .row.composer{ align-items:center; }              /* avatar/grid items vertically centered */
+.reply-inline{ display:flex; align-items:center; gap:12px; }
+.reply-inline .avatar{
+  width:44px; height:44px; border-radius:50%; background:#ddd; flex-shrink:0;
+}
+.reply-inline textarea{
+  flex:1; min-height:44px;
+  border:1px solid var(--line); border-radius:999px;
+  padding:12px 16px; resize:none; outline:none;
+  background:transparent; color:var(--fg);
+  font-size:15px; line-height:22px;
+}
+/* placeholder: larger, semi-bold, left-aligned, vertically centered */
+.reply-inline textarea::placeholder{
+  color:var(--muted); opacity:.75;
+  font-size:16px; font-weight:600; text-align:left;
+  line-height:44px;           /* creates centered feel within the 44px box */
+}
+.reply-inline .btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  height:40px; padding:0 14px; border-radius:999px; font-weight:600;
+}
+
+/* comments list */
+.post-thread .comment .head{ font-weight:600; font-size:15px; margin-bottom:2px; }
+.post-thread .comment .text{ font-size:15px; line-height:1.5; }
+
+/* =========================
+   Toast
+   ========================= */
+.toast{
+  position:fixed; left:50%; transform:translateX(-50%);
+  bottom:24px; background:var(--fg); color:var(--bg);
+  padding:10px 14px; border-radius:12px; font-weight:600;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+}
+
+/* =========================
+   Responsive
+   ========================= */
 @media (max-width:1200px){
   .right-rail{ display:none; }
-  .app{ grid-template-columns: 72px minmax(0,680px); }
+  .app{ grid-template-columns:72px minmax(0,680px); }
   .brand h1{ display:none; }
   .nav-item span{ display:none; }
   .btn-full{ display:none; }
@@ -145,260 +266,8 @@ body{
 }
 @media (max-width:680px){
   .left-nav{ display:none; }
-  .app{ grid-template-columns: 1fr; }
+  .app{ grid-template-columns:1fr; }
   .main{ border-right:none; }
   .right-rail{ display:none; }
-  .topbar{ position: sticky; top: 0; }
+  .topbar{ position:sticky; top:0; }
 }
-
-/* 卡片可点击 & 悬浮微加深 */
-.card.clickable{ cursor: pointer; transition: background-color .15s ease, filter .15s ease; }
-.card.clickable:hover{ background: var(--hover); filter: brightness(0.98); }
-
-/* 防止操作区也触发整卡点击 */
-.card .actions .action{ pointer-events: auto; }
-.card .actions{ pointer-events: none; }
-.card .actions .action, .card .del, .card .open, .card .like{ pointer-events: auto; }
-
-/* 单帖页卡片更像推特 */
-.post-page .detail {
-  padding: 16px;
-  border-bottom: 1px solid var(--line);
-}
-.post-page .detail .head {
-  font-weight: 600;
-  font-size: 15px;
-  margin-bottom: 6px;
-}
-.post-page .detail .text {
-  font-size: 17px;
-  line-height: 1.5;
-  margin: 12px 0;
-}
-.post-page .detail .pics img {
-  max-width: 100%;
-  border-radius: 12px;
-  margin-top: 12px;
-}
-
-/* 操作区 */
-.post-page .detail .actions {
-  display: flex;
-  gap: 24px;
-  margin-top: 12px;
-  color: var(--muted);
-  font-size: 14px;
-}
-.post-page .detail .actions .action {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.post-page .detail .actions .action.liked {
-  color: #e0245e;
-}
-
-/* 评论区 */
-.post-page .comments {
-  margin-top: 8px;
-}
-.post-page .comments .card {
-  border-bottom: 1px solid var(--line);
-  padding: 12px 16px;
-}
-.post-page .comments .card .text {
-  font-size: 15px;
-  margin-top: 4px;
-}
-
-/* —— 回复弹窗 —— */
-.reply-card{ width:min(680px, 96vw); background:var(--bg); color:var(--fg);
-  border:1px solid var(--line); border-radius:16px; padding:12px; position:relative; }
-.reply-card .close{ position:absolute; top:8px; right:8px; }
-
-/* 引用的原帖样式（左侧竖线） */
-.quoted{
-  border-left: 3px solid var(--line);
-  padding-left: 12px;
-  margin: 6px 0 8px;
-}
-.quoted .head{ font-weight:600; font-size:15px; margin-bottom:4px; }
-.quoted .text{ white-space:pre-wrap; line-height:1.5; }
-
-/* 让评论按钮 hover 有手势、卡片 hover 加深（如果你还没加） */
-.card{ transition: background .15s ease; }
-.card.clickable{ cursor: pointer; }
-.card.clickable:hover{ background: var(--hover); }
-
-/* 回复弹窗里的输入区 */
-.reply-composer {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 8px 0;
-}
-.reply-composer .avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: #ddd;
-  flex-shrink: 0;
-}
-.reply-composer .input-wrap {
-  flex: 1;
-}
-.reply-composer textarea {
-  width: 100%;
-  min-height: 60px;
-  resize: none;
-  border: none;
-  outline: none;
-  font-size: 15px;
-  line-height: 1.4;
-  background: transparent;
-  color: var(--fg);
-  padding: 8px 0;
-}
-.reply-composer textarea::placeholder {
-  color: var(--muted);
-}
-
-/* 底部按钮对齐到右侧 */
-.reply-actions {
-  display: flex;
-  justify-content: flex-end;
-  border-top: 1px solid var(--line);
-  padding-top: 8px;
-}
-
-/* 线程视图（单帖页）：左头像列 56px，右正文列自适应 */
-.post-thread { background: var(--bg); }
-.post-thread .row {
-  display: grid;
-  grid-template-columns: 56px 1fr;
-  column-gap: 12px;
-  padding: 12px 16px;
-}
-.post-thread .row + .row { border-top: 1px solid var(--line); } /* 分割线 */
-
-.post-thread .rail {
-  width: 40px; height: 40px; border-radius: 50%;
-  background: #ddd; object-fit: cover;
-  grid-column: 1;
-}
-.post-thread .body { grid-column: 2; }
-
-/* 原帖正文更醒目，且有左侧引线（像推特） */
-.post-thread .detail .head { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
-.post-thread .detail .text { font-size: 17px; line-height: 1.55; margin: 8px 0 6px; }
-.post-thread .detail .body { position: relative; }
-.post-thread .detail .body::before{
-  content:""; position:absolute; left:-16px; top:44px; bottom:10px; width:2px; background: var(--line);
-}
-.post-thread .pics img { max-width: 100%; border-radius: 12px; margin-top: 10px; }
-
-/* 操作区 */
-.post-thread .actions { display: flex; gap: 22px; margin-top: 10px; color: var(--muted); }
-.post-thread .action { cursor: pointer; display:inline-flex; align-items:center; gap:6px; }
-.post-thread .action.like.liked { color:#e0245e; }
-
-/* 回复输入区（行内） */
-.reply-inline { display:flex; align-items:flex-start; gap:12px; }
-.reply-inline textarea{
-  flex:1; min-height: 56px; resize: none;
-  border: none; outline: none; background: transparent; color: var(--fg);
-  font-size: 15px; padding: 10px 12px; border-radius: 999px;
-  border: 1px solid var(--line);
-}
-.reply-inline textarea::placeholder{ color: var(--muted); }
-.reply-inline .btn { margin-left: 8px; }
-
-/* 评论项文本 */
-.post-thread .comment .head { font-weight: 600; font-size: 15px; margin-bottom: 2px; }
-.post-thread .comment .text { font-size: 15px; line-height: 1.5; }
-
-/* ===== 单帖页 顶部栏 ===== */
-.post-topbar{
-  height: 52px;
-  display:flex; align-items:center; justify-content:space-between;
-  padding: 0 12px; border-bottom:1px solid var(--line); background:var(--bg);
-}
-.post-topbar .title{ font-weight:800; font-size:18px; }
-.icon-btn{
-  border:none; background:transparent; cursor:pointer; font-size:20px; line-height:1;
-  color:var(--fg); padding:6px 8px; border-radius:999px;
-}
-.icon-btn:hover{ background: var(--hover); }
-
-.btn-ghost{
-  border:1px solid var(--line); background:transparent; color:var(--fg);
-  padding:8px 14px; border-radius:999px; cursor:pointer; font-weight:600;
-}
-.btn-ghost:hover{ background: var(--hover); }
-
-/* ===== 单帖页 时间行 ===== */
-.post-thread .meta-row{
-  display:grid; grid-template-columns: 56px 1fr; column-gap:12px;
-  padding:12px 16px; border-top:1px solid var(--line); border-bottom:1px solid var(--line);
-}
-.post-thread .timestamp{
-  color: var(--muted);
-  font-size: 14px;
-}
-
-/* ===== 底部回复栏（水平居中 + 占位在中间更醒目） ===== */
-.reply-inline{ display:flex; align-items:center; gap:12px; }
-.reply-inline .avatar{ width:40px;height:40px;border-radius:50%;background:#ddd; }
-.reply-inline textarea{
-  flex:1; min-height:48px; resize:none; outline:none; border:1px solid var(--line);
-  border-radius:999px; background:transparent; color:var(--fg);
-  padding:12px 16px; font-size:15px; line-height:22px;
-}
-/* 占位时居中、加粗、稍大并降低不透明度；输入后恢复左对齐 */
-.reply-inline textarea::placeholder{ color:var(--muted); }
-.reply-inline textarea:placeholder-shown{
-  text-align:center; font-weight:700; font-size:16px; opacity:.7;
-}
-.reply-inline .btn{ margin-left:8px; }
-
-/* 让“Post your reply”靠左、稍大、半粗、半透明 */
-.reply-inline textarea{
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
-  font-size: 15px;          /* 正文字号 */
-  line-height: 22px;
-  padding: 12px 16px;       /* 让文本在输入框里垂直居中 */
-}
-.reply-inline textarea::placeholder{
-  color: var(--muted);
-  opacity: .75;
-  font-weight: 600;         /* 半粗 */
-  font-size: 16px;          /* 比正文略大一点，更像推特 */
-  text-align: left;         /* 靠左 */
-}
-/* 之前把占位居中的规则覆盖（确保不再居中） */
-.reply-inline textarea:placeholder-shown{
-  text-align: left;
-  opacity: .75;
-  font-weight: 600;
-  font-size: 16px;
-}
-
-/* 让头像 / 输入框 / 按钮的“中心线”对齐 */
-.post-thread .row.composer{           /* 只影响回复这一行 */
-  align-items: center;                 /* 网格行内垂直居中（解决头像偏上） */
-}
-.reply-inline{ align-items: center; }  /* flex 内也再兜底居中 */
-.reply-inline .avatar{
-  width: 44px; height: 44px;          /* 稍大一点更像推特 */
-  border-radius: 50%; background:#ddd;
-}
-.reply-inline textarea{
-  min-height: 44px;                    /* 与头像等高，中心自然对齐 */
-}
-.reply-inline .btn{
-  display:inline-flex; align-items:center; justify-content:center;
-  height: 40px;                        /* 让按钮看起来也垂直居中 */
-  padding: 0 14px; border-radius: 999px;
-}
-
