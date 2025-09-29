@@ -337,3 +337,43 @@ body{
   transition: height .15s ease, padding .15s ease;
 }
 
+/* ===== 回复编辑区兜底：不做内部滚动，容器随内容长高 ===== */
+.reply-editor{ position: relative; z-index: 2; }           /* 确保不被上面的元素压住 */
+.reply-editor textarea{
+  display: block;
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--fg);
+
+  /* 核心三行：禁用内部滚动、让 JS 控高、避免盒模型干扰 */
+  overflow-y: hidden !important;
+  height: auto !important;
+  box-sizing: border-box;
+
+  line-height: 1.5;
+  font-size: 16px;
+  padding: 12px 0;
+  resize: none;
+}
+
+/* 单帖页左侧“引线”只用于正文，不作用在 composer 行 */
+.post-thread .row.detail .body::before{ z-index: 0; }
+.post-thread .row.composer .body::before{ content: none; }
+
+/* 容器允许长高，且不要任何 max-height/overflow 限制 */
+.post-thread .row.composer{ position: relative; z-index: 1; }
+.post-thread .row.composer .body{ height: auto; overflow: visible; }
+
+/* 计数和高级提示的层级也抬高，避免被覆盖 */
+.reply-tools, .upsell{ position: relative; z-index: 2; }
+
+/* 占位样式（像推特） */
+.reply-editor textarea::placeholder{
+  color: var(--muted);
+  opacity: .75;
+  font-weight: 600;
+  font-size: 16px;
+  text-align: left;
+}
