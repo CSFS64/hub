@@ -50,14 +50,16 @@ async function api(path, {method="GET", body=null, auth=true, raw=false, headers
 }
 
 /* ====== Boot ====== */
+/* ====== Boot ====== */
 window.addEventListener("DOMContentLoaded", () => {
   cacheDom();
   bindNav();
   bindComposer();
   bindAuth();
   renderMeBlock();
-  loadFeed("for_you");
   applyTheme();
+  handleRoute();                 // ← 用路由决定是首页还是单帖页
+  window.addEventListener("hashchange", handleRoute);
 });
 
 /* ====== DOM cache ====== */
@@ -158,7 +160,7 @@ function renderCard(p){
   const me = session.get()?.user;
   const deletable = me && me.id===p.author.id;
   return htm`
-  <article class="card" data-id="${esc(p.id)}">
+  <article class="card clickable" data-id="${esc(p.id)}">
     <img class="avatar" src="${esc(p.author.avatar||'data:,')}" alt="">
     <div class="content">
       <div class="head">
@@ -175,15 +177,29 @@ function renderCard(p){
     </div>
   </article>`;
 }
+
 function bindCardEvents(){
+  // 整卡点击进入详情
+  document.querySelectorAll(".card.clickable").forEach(card=>{
+    card.onclick = (e)=>{
+      // 如果点的是动作区里的按钮，则不跳转
+      if (e.target.closest(".action")) return;
+      const id = card.dataset.id;
+      goToPost(id);
+    };
+  });
+
+  // 原有动作绑定，同时阻止冒泡
   document.querySelectorAll(".card .open").forEach(b=>{
     b.onclick = (e)=>{
+      e.stopPropagation();
       const id = e.target.closest(".card").dataset.id;
-      openPost(id);
+      goToPost(id);
     };
   });
   document.querySelectorAll(".card .like").forEach(b=>{
     b.onclick = async (e)=>{
+      e.stopPropagation();
       const me = await ensureLogin(); if(!me) return;
       const card = e.target.closest(".card");
       const id = card.dataset.id;
@@ -197,6 +213,7 @@ function bindCardEvents(){
   });
   document.querySelectorAll(".card .del").forEach(b=>{
     b.onclick = async (e)=>{
+      e.stopPropagation();
       const id = e.target.closest(".card").dataset.id;
       if(!id || id==='null' || id==='undefined' || id.length!==24){ toast("这条帖子数据异常，已过滤"); return; }
       if(!confirm("确定删除这条帖子吗？")) return;
@@ -206,6 +223,22 @@ function bindCardEvents(){
       }catch(err){ toast(err.message || "删除失败"); }
     };
   });
+}
+
+/* ====== Router ====== */
+function handleRoute(){
+  const m = location.hash.match(/^#\/post\/([0-9a-f]{24})$/i);
+  if (m) {
+    showPostPage(m[1]);
+  } else {
+    // 默认首页（恢复 UI）
+    document.getElementById("composeInline").style.display = "";
+    document.querySelector(".topbar .tabs").style.display = "";
+    loadFeed(getCurrentTab());
+  }
+}
+function goToPost(id){
+  location.hash = `#/post/${id}`;
 }
 
 /* ====== Post Detail & Comments ====== */
@@ -431,3 +464,95 @@ async function doSearch(){
 
 /* ====== Small helpers ====== */
 function getAvatarPlaceholder(name=""){ return "data:,"; }
+
+async function showPostPage(id){
+  // 单帖页隐藏顶部 tabs / 发帖栏
+  document.getElementById("composeInline").style.display = "none";
+  document.querySelector(".topbar .tabs").style.display = "none";
+  $.loading.hidden = false; $.empty.hidden = true; $.feed.innerHTML = "";
+  try{
+    const d = await api(`/posts/${id}`, { method:"GET", auth: !!session.get() });
+    $.feed.innerHTML = renderPostPage(d);
+    bindPostPageEvents(d);
+  }catch(e){
+    $.feed.innerHTML = `<div class="empty">加载失败：${esc(e.message||'')}</div>`;
+  }finally{
+    $.loading.hidden = true;
+  }
+}
+
+function renderPostPage(p){
+  const imgs = (p.images||[]).map(src=>`<img src="${esc(src)}" loading="lazy" alt="">`).join("");
+  const comments = (p.comments||[]).map(c=>htm`
+    <article class="card">
+      <img class="avatar" src="${esc(c.author.avatar||'data:,')}" alt="">
+      <div class="content">
+        <div class="head">
+          <span class="name">${esc(c.author.nickname||c.author.username||"用户")}</span>
+          <span class="meta">· ${timeAgo(c.created_at)}</span>
+        </div>
+        <div class="text">${esc(c.text||"")}</div>
+      </div>
+    </article>
+  `).join("");
+
+  return htm`
+  <div class="post-page">
+    <article class="card detail">
+      <img class="avatar" src="${esc(p.author.avatar||'data:,')}" alt="">
+      <div class="content">
+        <div class="head">
+          <span class="name">${esc(p.author.nickname||p.author.username||"用户")}</span>
+          <span class="meta">· ${timeAgo(p.created_at)}</span>
+        </div>
+        <div class="text">${esc(p.text||"")}</div>
+        <div class="pics">${imgs}</div>
+        <div class="actions" style="margin-top:12px;">
+          <div class="action like ${p.liked?'liked':''}" data-id="${esc(p.id)}">❤️ <span>${p.likes||0}</span></div>
+          <div class="action back" onclick="history.back()">↩ 返回</div>
+        </div>
+      </div>
+    </article>
+
+    <div class="comments">
+      <div class="composer-inline">
+        <textarea id="commentTextPage" rows="3" placeholder="写下你的评论…"></textarea>
+        <button id="btnCommentPage" class="btn">评论</button>
+      </div>
+      ${comments || `<div class="empty">暂无评论</div>`}
+    </div>
+  </div>`;
+}
+
+function bindPostPageEvents(p){
+  // 点赞（页面版）
+  const likeEl = document.querySelector(".post-page .action.like");
+  if(likeEl){
+    likeEl.onclick = async ()=>{
+      const me = await ensureLogin(); if(!me) return;
+      const liked = likeEl.classList.contains("liked");
+      try{
+        await api(`/posts/${p.id}/like`, { method: liked?"DELETE":"POST" });
+        likeEl.classList.toggle("liked");
+        const num = likeEl.querySelector("span");
+        num.textContent = (+num.textContent || 0) + (liked?-1:1);
+      }catch(e){ toast(e.message||"失败"); }
+    };
+  }
+  // 评论（页面版）
+  const btn = document.getElementById("btnCommentPage");
+  const ta  = document.getElementById("commentTextPage");
+  if(btn && ta){
+    btn.onclick = async ()=>{
+      const me = await ensureLogin(); if(!me) return;
+      const text = (ta.value||"").trim();
+      if(!text) return toast("评论不能为空");
+      try{
+        await api(`/posts/${p.id}/comments`, { method:"POST", body:{ text } });
+        ta.value = "";
+        showPostPage(p.id); // 刷新
+      }catch(e){ toast(e.message||"评论失败"); }
+    };
+  }
+}
+
