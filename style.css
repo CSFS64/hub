@@ -230,3 +230,45 @@ body{
 .card{ transition: background .15s ease; }
 .card.clickable{ cursor: pointer; }
 .card.clickable:hover{ background: var(--hover); }
+
+/* 回复弹窗里的输入区 */
+.reply-composer {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 0;
+}
+.reply-composer .avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #ddd;
+  flex-shrink: 0;
+}
+.reply-composer .input-wrap {
+  flex: 1;
+}
+.reply-composer textarea {
+  width: 100%;
+  min-height: 60px;
+  resize: none;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  line-height: 1.4;
+  background: transparent;
+  color: var(--fg);
+  padding: 8px 0;
+}
+.reply-composer textarea::placeholder {
+  color: var(--muted);
+}
+
+/* 底部按钮对齐到右侧 */
+.reply-actions {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
