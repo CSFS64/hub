@@ -239,43 +239,89 @@ function renderQuoted(p){
 }
 
 /** 打开回复弹窗并绑定提交 */
+/** 打开回复弹窗并绑定提交（带两头像 + 自动增高 + 计数） */
 $.openReply = async (postId)=>{
   const me = await ensureLogin(); if(!me) return;
   try{
     const d = await api(`/posts/${postId}`, { method:"GET", auth:true });
+
+    // 上方原帖内容
     $.replyHost.innerHTML = renderQuoted(d);
-    $.replyAvatar.src = esc(session.get()?.user?.avatar || "data:,");
-    $.replyText.value = "";
+
+    // 两侧头像
+    const authorAv = document.getElementById('replyAuthorAvatar');
+    const myAv     = document.getElementById('replyMyAvatar');
+    if(authorAv) authorAv.src = esc(d.author?.avatar || "data:,");
+    if(myAv)     myAv.src     = esc(session.get()?.user?.avatar || "data:,");
+
+    // 清空输入并打开
+    const ta = document.getElementById('replyText');
+    const counter = document.getElementById('replyModalCounter');
+    const upsell  = document.getElementById('replyModalUpsell');
+    if(ta) ta.value = "";
+
     $.replyDialog.showModal();
 
-    // 提交
-    $.btnReply.onclick = async ()=>{
-      const text = ($.replyText.value||"").trim();
-      if(!text) return toast("回复不能为空");
-      try{
-        await api(`/posts/${postId}/comments`, { method:"POST", body:{ text } });
-        $.closeReply();
-        // 刷新当前视图
-        if (location.hash === `#/post/${postId}`) { showPostPage(postId); }
-        else { goToPost(postId); } // 发送后跳到该帖页面
-        toast("已回复");
-      }catch(e){ toast(e.message || "发送失败"); }
+    // 自动高度 + 计数 + 超限提示
+    const LIMIT = 280;
+    const autosize = ()=>{
+      if(!ta) return;
+      ta.style.height = 'auto';
+      ta.style.overflowY = 'hidden';
+      ta.style.height = Math.min(ta.scrollHeight, 1000) + 'px';
     };
+    const update = ()=>{
+      if(!ta) return;
+      autosize();
+      const remain = LIMIT - ta.value.length;
+      if(counter){
+        counter.textContent = remain;
+        counter.classList.toggle('over', remain < 0);
+      }
+      if(upsell){
+        upsell.classList.toggle('show', remain < 0);
+      }
+    };
+    ta?.addEventListener('input', update);
+    ta?.addEventListener('focus', update);
+    window.addEventListener('resize', autosize, { passive:true });
+    update(); // 初次
 
-    // Enter 发送，Ctrl+Enter 换行
-    $.replyText.onkeydown = (ev)=>{
-      if(ev.key==="Enter" && !ev.ctrlKey && !ev.shiftKey){
-        ev.preventDefault(); $.btnReply.click();
+    // 提交
+    const btn = document.getElementById('btnReply');
+    if(btn){
+      btn.onclick = async ()=>{
+        const text = (ta?.value || "").trim();
+        if(!text) return toast("回复不能为空");
+        if(text.length > LIMIT){ toast("超出 280 字，精简后再发"); upsell?.classList.add('show'); return; }
+        try{
+          await api(`/posts/${postId}/comments`, { method:"POST", body:{ text } });
+          $.closeReply();
+          // 若当前在该帖页面则刷新，否则跳帖页面
+          if (location.hash === `#/post/${postId}`) { showPostPage(postId); }
+          else { goToPost(postId); }
+          toast("已回复");
+        }catch(e){ toast(e.message || "发送失败"); }
+      };
+    }
+
+    // Enter 发送，Ctrl/Cmd+Enter 换行
+    ta?.addEventListener('keydown', (ev)=>{
+      if(ev.key==="Enter" && !ev.ctrlKey && !ev.metaKey && !ev.shiftKey){
+        ev.preventDefault(); btn?.click();
       }
       if(ev.key==="Enter" && (ev.ctrlKey || ev.metaKey)){
         ev.preventDefault();
-        const t = $.replyText, s = t.selectionStart, v = t.value;
-        t.value = v.slice(0,s) + "\n" + v.slice(s);
-        t.selectionStart = t.selectionEnd = s+1;
+        const s = ta.selectionStart, v = ta.value;
+        ta.value = v.slice(0,s) + "\n" + v.slice(s);
+        ta.selectionStart = ta.selectionEnd = s+1;
+        update();
       }
-    };
+    });
 
-  }catch(e){ toast(e.message || "打开失败"); }
+  }catch(e){
+    toast(e.message || "打开失败");
+  }
 };
 
 /* ====== Router ====== */
