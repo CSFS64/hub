@@ -1,566 +1,433 @@
-/* =========================
- * 切换：后端/本地
- * ========================= */
-const USE_BACKEND = true; // 后端写好前，可设为 false 先演示
-const API_BASE = "https://mini-forum-backend.20060303jjc.workers.dev"; // ← 改成你的 Worker 域名
-const MAX_IMAGES = 3;
+/* ====== ENV ====== */
+const USE_BACKEND = true;
+const API_BASE = "https://mini-forum-backend.20060303jjc.workers.dev"; // ← 改成你的
+const FRONTEND_PROFILE_PREFIX = "#/user/"; // 简单 hash 路由
 
-/* =========================
- * 全局状态（简单 SPA ）
- * ========================= */
-const $ = (sel, root = document) => root.querySelector(sel);
-const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-
-const state = {
-  me: null,          // 当前已登录用户
-  token: null,       // JWT
-  feed: [],          // 首页“推荐”
-  followingFeed: [], // “关注”流
-  viewing: "home",   // home | following | me | post
-  postDetail: null,  // 当前查看的帖子
-  profileUser: null, // 当前查看的个人主页用户
+/* ====== State ====== */
+const $ = {};
+const session = {
+  get(){ try{ return JSON.parse(localStorage.getItem("mini_forum_session")||"null"); }catch{ return null; } },
+  set(v){ localStorage.setItem("mini_forum_session", JSON.stringify(v)); },
+  clear(){ localStorage.removeItem("mini_forum_session"); }
 };
 
-/* =========================
- * 工具
- * ========================= */
-function toast(msg, ms = 1800) {
-  const el = $("#toast");
-  el.textContent = msg;
-  el.classList.add("show");
-  setTimeout(() => el.classList.remove("show"), ms);
+/* ====== Utils ====== */
+function htm(strings,...vals){ return strings.map((s,i)=>s+(vals[i]??"")).join(""); }
+function esc(s=""){ return s.replace(/[&<>"]/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[m])); }
+function timeAgo(iso){
+  if(!iso) return "";
+  const t = new Date(iso).getTime();
+  if(isNaN(t)) return "";
+  const s = Math.floor((Date.now()-t)/1000);
+  if (s<60) return `${s}s`;
+  const m = Math.floor(s/60); if (m<60) return `${m}m`;
+  const h = Math.floor(m/60); if (h<24) return `${h}h`;
+  const d = Math.floor(h/24); if (d<7) return `${d}d`;
+  return new Date(iso).toLocaleDateString();
 }
+function toast(msg, ms=1800){
+  const el = document.getElementById("toast");
+  el.textContent = msg; el.hidden = false;
+  clearTimeout($.toastT);
+  $.toastT = setTimeout(()=> el.hidden = true, ms);
+}
+function fileToDataURL(f){ return new Promise(r=>{ const fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(f); }); }
 
-function setAuthVisible(isAuthed) {
-  $("#btnAuth").classList.toggle("hidden", isAuthed);
-  $("#btnLogout").classList.toggle("hidden", !isAuthed);
-}
+/* ====== API ====== */
+async function api(path, {method="GET", body=null, auth=true, raw=false, headers={}}={}){
+  const url = USE_BACKEND ? API_BASE + path : path;
+  const h = { ...headers };
+  if(!(body instanceof FormData)) h["content-type"] = h["content-type"] || "application/json";
+  if(auth && session.get()?.token) h["authorization"] = "Bearer " + session.get().token;
 
-function saveSession() {
-  localStorage.setItem("mini_forum_session", JSON.stringify({
-    token: state.token,
-    me: state.me,
-  }));
-}
-function loadSession() {
-  try {
-    const raw = localStorage.getItem("mini_forum_session");
-    if (!raw) return;
-    const { token, me } = JSON.parse(raw);
-    state.token = token; state.me = me;
-    setAuthVisible(!!token);
-  } catch {}
-}
-
-async function api(path, { method = "GET", body, formData, auth = true } = {}) {
-  if (!USE_BACKEND) return mockApi(path, { method, body, formData });
-  const headers = new Headers();
-  if (!formData) headers.set("content-type", "application/json; charset=utf-8");
-  if (auth && state.token) headers.set("authorization", `Bearer ${state.token}`);
-  const res = await fetch(`${API_BASE}${path}`, {
-    method,
-    headers,
-    body: formData ? formData : (body ? JSON.stringify(body) : undefined),
-    credentials: "omit",
+  const res = await fetch(url, {
+    method, headers:h, body: body ? (body instanceof FormData ? body : JSON.stringify(body)) : undefined
   });
-  if (!res.ok) {
-    const detail = await safeJson(res);
-    throw new Error(detail?.error || `HTTP ${res.status}`);
-  }
-  return safeJson(res);
-}
-async function safeJson(res) {
-  const ct = res.headers.get("content-type") || "";
-  if (ct.includes("application/json")) return await res.json();
-  const text = await res.text();
-  try { return JSON.parse(text); } catch { return { ok: true, text }; }
+  if(raw) return res;
+  const data = await res.json().catch(()=> ({}));
+  if(!res.ok) throw new Error(data.error || res.statusText || "请求失败");
+  return data;
 }
 
-/* =========================
- * 事件绑定
- * ========================= */
+/* ====== Boot ====== */
 window.addEventListener("DOMContentLoaded", () => {
-  bindTopbar();
-  bindDialogs();
-  loadSession();
-  routeTo("home"); // 默认进首页
+  cacheDom();
+  bindNav();
+  bindComposer();
+  bindAuth();
+  renderMeBlock();
+  loadFeed("for_you");
+  applyTheme();
 });
 
-function bindTopbar() {
-  $("#btnHome").onclick = () => routeTo("home");
-  $("#btnFollowing").onclick = () => routeTo("following");
-  $("#btnProfile").onclick = () => {
-    if (!state.me) return openAuth();
-    openProfile(state.me.id);
-  };
-  $("#btnNewPost").onclick = () => openPostDialog();
-  $("#btnAuth").onclick = () => openAuth();
-  $("#btnLogout").onclick = () => logout();
-  $("#searchInput").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") doSearch(e.target.value.trim());
-  });
+/* ====== DOM cache ====== */
+function cacheDom(){
+  $.feed = document.getElementById("feed");
+  $.loading = document.getElementById("loading");
+  $.empty = document.getElementById("emptyHint");
+  $.tabs = document.querySelectorAll(".topbar .tab");
+  $.postText = document.getElementById("postText");
+  $.postImages = document.getElementById("postImages");
+  $.imgPreview = document.getElementById("imgPreview");
+  $.btnPublish = document.getElementById("btnPublish");
+  $.meAvatar = document.getElementById("meAvatar");
+  $.postDialog = document.getElementById("postDialog");
+  $.postDetail = document.getElementById("postDetail");
+  $.commentText = document.getElementById("commentText");
+  $.btnComment = document.getElementById("btnComment");
+  $.authDialog = document.getElementById("authDialog");
+  $.btnSendOtp = document.getElementById("btnSendOtp");
+  $.btnPhoneLogin = document.getElementById("btnPhoneLogin");
+  $.btnPasswordLogin = document.getElementById("btnPasswordLogin");
+  $.toggleTheme = document.getElementById("toggleTheme");
+  document.getElementById("openComposer").onclick = () => $.postText?.focus();
+  document.getElementById("btnSearch").onclick = doSearch;
+  $.toggleTheme.onclick = toggleTheme;
 }
 
-function bindDialogs() {
-  const authDialog = $("#authDialog");
-  // 切换标签
-  $$(".tab", authDialog).forEach(btn => {
-    btn.onclick = () => {
-      $$(".tab", authDialog).forEach(b => b.classList.toggle("active", b===btn));
-      const key = btn.dataset.tab;
-      $$(".tabpanel", authDialog).forEach(p => p.classList.toggle("active", p.dataset.panel === key));
+/* ====== Theme ====== */
+function applyTheme(){
+  const saved = localStorage.getItem("theme") || (matchMedia('(prefers-color-scheme: dark)').matches ? "dark":"light");
+  document.documentElement.classList.toggle("dark", saved==="dark");
+}
+function toggleTheme(){
+  const dark = !document.documentElement.classList.contains("dark");
+  localStorage.setItem("theme", dark?"dark":"light"); applyTheme();
+}
+
+/* ====== Nav / Tabs ====== */
+function bindNav(){
+  document.querySelectorAll(".left-nav .nav-item").forEach(a=>{
+    a.onclick = ()=>{
+      document.querySelectorAll(".left-nav .nav-item").forEach(n=>n.classList.remove("is-active"));
+      a.classList.add("is-active");
+      const link = a.getAttribute("data-link");
+      if(link==="home"){ setActiveTab("for_you"); loadFeed("for_you"); }
+      if(link==="following"){ setActiveTab("following"); loadFeed("following"); }
+      if(link==="profile"){ gotoMyProfile(); }
+      if(link==="search"){ document.getElementById("q").focus(); }
     };
   });
+  $.tabs.forEach(t=>{
+    t.onclick = ()=>{ setActiveTab(t.dataset.tab); loadFeed(t.dataset.tab); };
+  });
+}
+function setActiveTab(tab){
+  $.tabs.forEach(t=>t.classList.toggle("is-active", t.dataset.tab===tab));
+}
 
-  $("#btnLogin").onclick = async (e) => {
-    e.preventDefault();
-    try {
-      const account = $("#loginAccount").value.trim();
-      const password = $("#loginPassword").value;
-      const data = await api("/auth/login", { method:"POST", body: { account, password }, auth:false });
-      onAuthSuccess(data);
-      authDialog.close();
-      toast("登录成功");
-    } catch (err) { toast(err.message || "登录失败"); }
+/* ====== Composer ====== */
+function bindComposer(){
+  $.postImages.onchange = async ()=>{
+    $.imgPreview.innerHTML = "";
+    const files = [...$.postImages.files].slice(0,3);
+    for(const f of files){ const url = await fileToDataURL(f); const img = new Image(); img.src=url; $.imgPreview.append(img); }
   };
-  $("#btnSendOtpLogin").onclick = () => sendOtp($("#phoneLoginNumber").value.trim());
-  $("#btnPhoneLogin").onclick = async (e) => {
-    e.preventDefault();
-    try {
-      const phone = $("#phoneLoginNumber").value.trim();
-      const code = $("#phoneLoginCode").value.trim();
-      const data = await api("/auth/login_phone", { method:"POST", body: { phone, code }, auth:false });
-      onAuthSuccess(data);
-      authDialog.close();
-      toast("登录成功");
-    } catch (err) { toast(err.message || "登录失败"); }
-  };
-
-  $("#btnSendOtpSignup").onclick = () => sendOtp($("#signupPhone").value.trim());
-  $("#btnSignup").onclick = async (e) => {
-    e.preventDefault();
-    try {
-      const phone = $("#signupPhone").value.trim();
-      const code = $("#signupCode").value.trim();
-      const nickname = $("#signupNickname").value.trim();
-      const password = $("#signupPassword").value;
-      const data = await api("/auth/signup", { method:"POST", body: { phone, code, nickname, password }, auth:false });
-      onAuthSuccess(data);
-      authDialog.close();
-      toast("注册成功");
-    } catch (err) { toast(err.message || "注册失败"); }
-  };
-
-  // 发帖
-  const postDialog = $("#postDialog");
-  $("#postSubmit").onclick = async (e) => {
-    e.preventDefault();
-    try {
-      if (!state.me) { openAuth(); return; }
-      const text = $("#postText").value.trim();
-      if (!text && !filesSelected()) { toast("内容或图片至少一项"); return; }
-      const fd = new FormData();
-      fd.append("text", text);
-      for (const id of ["postImg1","postImg2","postImg3"]) {
-        const f = $("#"+id).files?.[0];
-        if (f) fd.append("images", f, f.name);
-      }
-      await api("/posts", { method:"POST", formData: fd });
-      toast("发布成功");
-      postDialog.close();
-      clearPostDialog();
-      refreshFeed();
-    } catch (err) { toast(err.message || "发布失败"); }
-  };
+  $.btnPublish.onclick = publish;
+}
+async function publish(){
+  const me = await ensureLogin(); if(!me) return;
+  const text = ($.postText.value||"").trim();
+  if(!text && $.postImages.files.length===0) return toast("写点什么吧");
+  const fd = new FormData();
+  fd.append("text", text.slice(0,500));
+  [...$.postImages.files].slice(0,3).forEach(f=> fd.append("images", f));
+  try{
+    await api("/posts", { method:"POST", body: fd });
+    $.postText.value=""; $.postImages.value=""; $.imgPreview.innerHTML="";
+    toast("发布成功"); loadFeed(getCurrentTab());
+  }catch(e){ toast(e.message || "发布失败"); }
 }
 
-function filesSelected() {
-  return ["postImg1","postImg2","postImg3"].some(id => $("#"+id).files?.length);
+/* ====== Feed ====== */
+function getCurrentTab(){ return [...$.tabs].find(t=>t.classList.contains("is-active"))?.dataset.tab || "for_you"; }
+async function loadFeed(tab="for_you"){
+  $.loading.hidden=false; $.empty.hidden=true; $.feed.innerHTML="";
+  try{
+    const data = await api(`/feed?tab=${encodeURIComponent(tab)}`, { method:"GET", auth:false });
+    const items = data.items || [];
+    if(items.length===0){ $.empty.hidden=false; }
+    $.feed.innerHTML = items.map(renderCard).join("");
+    bindCardEvents();
+    hydrateSuggestions(items);
+  }catch(e){ toast(e.message || "加载失败"); }
+  finally{ $.loading.hidden=true; }
 }
-
-/* =========================
- * 视图路由
- * ========================= */
-async function routeTo(view) {
-  state.viewing = view;
-  $$(".nav-btn").forEach(b => b.classList.toggle("active", b.dataset.view === view || (view==="home" && b.id==="btnHome")));
-  $("#feedView").classList.add("hidden");
-  $("#profileView").classList.add("hidden");
-  $("#postDetailView").classList.add("hidden");
-
-  if (view === "home") {
-    $("#feedView").classList.remove("hidden");
-    await refreshFeed();
-  } else if (view === "following") {
-    $("#feedView").classList.remove("hidden");
-    await refreshFollowing();
-  }
-}
-
-async function refreshFeed() {
-  const data = await api("/feed?tab=for_you", { method:"GET", auth:falseIfNoToken() });
-  state.feed = data.items || [];
-  renderFeed("#feedView", state.feed);
-}
-async function refreshFollowing() {
-  const data = await api("/feed?tab=following", { method:"GET", auth:falseIfNoToken() });
-  state.followingFeed = data.items || [];
-  renderFeed("#feedView", state.followingFeed);
-}
-function falseIfNoToken() {
-  return !!state.token;
-}
-
-/* =========================
- * 渲染
- * ========================= */
-function renderFeed(containerSel, list){
-  const el = $(containerSel);
-  el.innerHTML = `<h2>${state.viewing==="following"?"关注":"推荐"}</h2>` +
-    list.map(renderPostCard).join("") || "<div class='card'>暂无内容</div>";
-  bindPostActionButtons(el);
-}
-
-function renderPostCard(p){
-  const me = state.me;
-  const liked = !!p.liked;
-  const canDelete = me && me.id === p.author.id;
-  const imgs = (p.images||[]).map(src => `<img src="${src}" alt="" style="max-width:100%; border:1px solid var(--border); border-radius:12px; margin-top:8px">`).join("");
-  return `
-  <article class="card" data-post="${p.id}">
-    <div class="row">
-      <img class="avatar" src="${p.author.avatar || 'https://avatar.iran.liara.run/public'}" alt="">
-      <div class="content">
-        <div><strong class="link" data-user="${p.author.id}" style="cursor:pointer">${escapeHtml(p.author.nickname || p.author.username)}</strong>
-          <span class="meta"> · @${escapeHtml(p.author.username)} · ${timeAgo(p.created_at)}</span></div>
-        ${p.text ? `<blockquote>${escapeHtml(p.text)}</blockquote>` : ""}
-        ${imgs}
-        <div class="actions">
-          <button class="btn-detail" data-id="${p.id}">评论(${p.comments_count||0})</button>
-          <button class="btn-like ${liked?'liked':''}" data-id="${p.id}">赞(${p.likes||0})</button>
-          <button class="btn-follow" data-user="${p.author.id}">${p.author.following ? "已关注" : "关注"}</button>
-          ${canDelete ? `<button class="btn-delete danger" data-id="${p.id}">删除</button>` : ""}
-        </div>
+function renderCard(p){
+  const imgs = (p.images||[]).map(src=>`<img src="${esc(src)}" loading="lazy" alt="">`).join("");
+  const me = session.get()?.user;
+  const deletable = me && me.id===p.author.id;
+  return htm`
+  <article class="card" data-id="${esc(p.id)}">
+    <img class="avatar" src="${esc(p.author.avatar||'data:,')}" alt="">
+    <div class="content">
+      <div class="head">
+        <span class="name">${esc(p.author.nickname || p.author.username || "用户")}</span>
+        <span class="meta">· ${timeAgo(p.created_at)}</span>
+      </div>
+      <div class="text">${esc(p.text||"")}</div>
+      <div class="pics">${imgs}</div>
+      <div class="actions">
+        <div class="action open">💬 <span>${p.comments_count||0}</span></div>
+        <div class="action like ${p.liked?'liked':''}">❤️ <span>${p.likes||0}</span></div>
+        ${deletable ? `<div class="action del" title="删除">🗑️</div>` : ""}
       </div>
     </div>
   </article>`;
 }
-
-function bindPostActionButtons(root=document){
-  // 进入详情
-  $$(".btn-detail", root).forEach(b => b.onclick = () => openPostDetail(b.dataset.id));
-  // 点赞
-  $$(".btn-like", root).forEach(b => b.onclick = () => toggleLike(b.dataset.id, b));
-  // 删除
-  $$(".btn-delete", root).forEach(b => b.onclick = () => deletePost(b.dataset.id));
-  // 关注
-  $$(".btn-follow", root).forEach(b => b.onclick = () => toggleFollow(b.dataset.user, b));
-  // 点击用户名进入主页
-  $$(".link[data-user]", root).forEach(a => a.onclick = () => openProfile(a.dataset.user));
+function bindCardEvents(){
+  document.querySelectorAll(".card .open").forEach(b=>{
+    b.onclick = (e)=>{
+      const id = e.target.closest(".card").dataset.id;
+      openPost(id);
+    };
+  });
+  document.querySelectorAll(".card .like").forEach(b=>{
+    b.onclick = async (e)=>{
+      const me = await ensureLogin(); if(!me) return;
+      const card = e.target.closest(".card");
+      const id = card.dataset.id;
+      const liked = b.classList.contains("liked");
+      try{
+        await api(`/posts/${id}/like`, { method: liked?"DELETE":"POST" });
+        b.classList.toggle("liked");
+        const num = b.querySelector("span"); num.textContent = (+num.textContent || 0) + (liked?-1:1);
+      }catch(err){ toast(err.message || "失败"); }
+    };
+  });
+  document.querySelectorAll(".card .del").forEach(b=>{
+    b.onclick = async (e)=>{
+      const id = e.target.closest(".card").dataset.id;
+      if(!id || id==='null' || id==='undefined' || id.length!==24){ toast("这条帖子数据异常，已过滤"); return; }
+      if(!confirm("确定删除这条帖子吗？")) return;
+      try{
+        await api(`/posts/${id}`, { method:"DELETE" });
+        toast("已删除"); loadFeed(getCurrentTab());
+      }catch(err){ toast(err.message || "删除失败"); }
+    };
+  });
 }
 
-/* =========================
- * 详情页 & 评论
- * ========================= */
-async function openPostDetail(id){
-  const data = await api(`/posts/${id}`, { method:"GET", auth:falseIfNoToken() });
-  state.postDetail = data;
-  $("#feedView").classList.add("hidden");
-  $("#profileView").classList.add("hidden");
-  const v = $("#postDetailView");
-  v.classList.remove("hidden");
-  v.innerHTML = `
-    <div class="card">${renderPostCard(data)}</div>
+/* ====== Post Detail & Comments ====== */
+$.closePost = ()=> $.postDialog.close();
+async function openPost(id){
+  try{
+    const me = session.get()?.user || null;
+    const d = await api(`/posts/${id}`, { method:"GET", auth: !!me });
+    $.postDetail.innerHTML = renderPostDetail(d);
+    $.postDialog.showModal();
+    $.btnComment.onclick = async ()=>{
+      const user = await ensureLogin(); if(!user) return;
+      const text = ($.commentText.value||"").trim();
+      if(!text) return toast("评论不能为空");
+      try{
+        await api(`/posts/${id}/comments`, { method:"POST", body:{ text } });
+        $.commentText.value = "";
+        openPost(id); // refresh
+      }catch(e){ toast(e.message || "评论失败"); }
+    };
+  }catch(e){ toast(e.message || "打开失败"); }
+}
+function renderPostDetail(p){
+  const imgs = (p.images||[]).map(src=>`<img src="${esc(src)}" loading="lazy" alt="">`).join("");
+  const comments = (p.comments||[]).map(c=>htm`
     <div class="card">
-      <h3>评论 · ${data.comments?.length||0}</h3>
-      <div id="comments">${(data.comments||[]).map(renderComment).join("") || "<div class='meta'>还没有评论</div>"}</div>
-      <div class="row" style="margin-top:8px">
-        <img class="avatar" src="${state.me?.avatar || 'https://avatar.iran.liara.run/public'}" alt="">
-        <div class="content">
-          <textarea id="replyText" placeholder="发表你的看法…"></textarea>
-          <div class="actions" style="justify-content:flex-end">
-            <button class="primary" id="sendReply">回复</button>
-          </div>
-        </div>
+      <img class="avatar" src="${esc(c.author.avatar||'data:,')}" alt="">
+      <div class="content">
+        <div class="head"><span class="name">${esc(c.author.nickname||c.author.username||"用户")}</span>
+        <span class="meta">· ${timeAgo(c.created_at)}</span></div>
+        <div class="text">${esc(c.text||"")}</div>
       </div>
     </div>
+  `).join("");
+  return htm`
+  <article class="card">
+    <img class="avatar" src="${esc(p.author.avatar||'data:,')}" alt="">
+    <div class="content">
+      <div class="head"><span class="name">${esc(p.author.nickname||p.author.username||"用户")}</span>
+      <span class="meta">· ${timeAgo(p.created_at)}</span></div>
+      <div class="text">${esc(p.text||"")}</div>
+      <div class="pics">${imgs}</div>
+      <div class="actions">
+        <div class="action like ${p.liked?'liked':''}" onclick="$.toggleLikeDetail('${p.id}', this)">❤️ <span>${p.likes||0}</span></div>
+      </div>
+    </div>
+  </article>
+  <div class="panel"><h3>评论</h3>${comments || `<div class="empty">暂无评论</div>`}</div>
   `;
-  bindPostActionButtons(v);
-  $("#sendReply").onclick = async () => {
-    if (!state.me) return openAuth();
-    const text = $("#replyText").value.trim();
-    if (!text) return toast("请输入内容");
-    await api(`/posts/${id}/comments`, { method:"POST", body:{ text } });
-    toast("已发布评论");
-    openPostDetail(id); // 重新拉取
+}
+$.toggleLikeDetail = async (id, el)=>{
+  const me = await ensureLogin(); if(!me) return;
+  const liked = el.classList.contains("liked");
+  try{
+    await api(`/posts/${id}/like`, { method: liked?"DELETE":"POST" });
+    el.classList.toggle("liked");
+    const num = el.querySelector("span"); num.textContent = (+num.textContent || 0) + (liked?-1:1);
+  }catch(e){ toast(e.message||"失败"); }
+};
+
+/* ====== Auth ====== */
+function bindAuth(){
+  // 打开登录面板（若未登录时点发帖/点赞等）
+  $.openAuth = ()=> $.authDialog.showModal();
+  $.closeAuth = ()=> $.authDialog.close();
+  // 切换手机/密码 Tab
+  document.querySelectorAll("#authDialog .tab").forEach(t=>{
+    t.onclick = ()=>{
+      document.querySelectorAll("#authDialog .tab").forEach(x=>x.classList.remove("is-active"));
+      t.classList.add("is-active");
+      const mode = t.dataset.auth;
+      document.getElementById("phonePane").hidden = mode!=="phone";
+      document.getElementById("passPane").hidden = mode!=="password";
+    };
+  });
+  // 发送验证码
+  $.btnSendOtp.onclick = async ()=>{
+    const phone = document.getElementById("phone").value.trim();
+    if(!phone) return toast("请输入手机号");
+    try{
+      const res = await api("/auth/send_otp",{method:"POST", body:{phone}, auth:false});
+      toast(res?.dev_code ? `开发验证码：${res.dev_code}` : "验证码已发送");
+    }catch(e){ toast(e.message || "发送失败"); }
+  };
+  // 手机登录/注册
+  $.btnPhoneLogin.onclick = async ()=>{
+    const phone = document.getElementById("phone").value.trim();
+    const code = document.getElementById("otp").value.trim();
+    const nickname = document.getElementById("nickname").value.trim();
+    if(!phone || !code) return toast("请填写手机号和验证码");
+    try{
+      // 尝试直接用 login_phone；若用户不存在且后端未自动创建则 fallback signup
+      let data;
+      try{
+        data = await api("/auth/login_phone",{method:"POST", body:{phone, code}, auth:false});
+      }catch{
+        data = await api("/auth/signup",{method:"POST", body:{phone, code, nickname, password: (Math.random()+1).toString(36).slice(2)} , auth:false});
+      }
+      session.set(data); renderMeBlock(); $.closeAuth(); toast("登录成功");
+      loadFeed(getCurrentTab());
+    }catch(e){ toast(e.message || "登录失败"); }
+  };
+  // 账号密码登录
+  $.btnPasswordLogin.onclick = async ()=>{
+    const account = document.getElementById("account").value.trim();
+    const password = document.getElementById("password").value;
+    if(!account || !password) return toast("请填写账号与密码");
+    try{
+      const data = await api("/auth/login",{method:"POST", body:{account, password}, auth:false});
+      session.set(data); renderMeBlock(); $.closeAuth(); toast("登录成功");
+      loadFeed(getCurrentTab());
+    }catch(e){ toast(e.message || "登录失败"); }
   };
 }
-
-function renderComment(c){
-  return `
-    <div class="row" style="margin:10px 0">
-      <img class="avatar" src="${c.author.avatar || 'https://avatar.iran.liara.run/public'}">
-      <div class="content">
-        <div><strong class="link" data-user="${c.author.id}" style="cursor:pointer">${escapeHtml(c.author.nickname || c.author.username)}</strong>
-          <span class="meta"> · @${escapeHtml(c.author.username)} · ${timeAgo(c.created_at)}</span></div>
-        ${c.text ? `<blockquote>${escapeHtml(c.text)}</blockquote>` : ""}
-      </div>
-    </div>
-  `;
+async function ensureLogin(){
+  const s = session.get();
+  if(s?.token) return s.user;
+  $.openAuth(); return null;
 }
-
-/* =========================
- * 个人主页
- * ========================= */
-async function openProfile(userId){
-  const data = await api(`/users/${userId}`, { method:"GET", auth:falseIfNoToken() });
-  state.profileUser = data.user;
-  state.viewing = "me";
-  $("#feedView").classList.add("hidden");
-  $("#postDetailView").classList.add("hidden");
-  const el = $("#profileView");
-  el.classList.remove("hidden");
-  const u = data.user;
-  el.innerHTML = `
-    <section class="card">
-      <div class="row">
-        <img class="avatar" src="${u.avatar || 'https://avatar.iran.liara.run/public'}">
-        <div class="content">
-          <div><strong>${escapeHtml(u.nickname || u.username)}</strong> <span class="meta"> @${escapeHtml(u.username)}</span></div>
-          ${u.bio ? `<div class="meta" style="margin-top:4px">${escapeHtml(u.bio)}</div>` : ""}
-          <div class="grid-2" style="margin-top:8px">
-            <div class="stat">关注 ${u.following_count||0}</div>
-            <div class="stat">粉丝 ${u.followers_count||0}</div>
-          </div>
-          ${ state.me && state.me.id !== u.id
-              ? `<div class="actions" style="margin-top:8px">
-                    <button class="btn-follow" data-user="${u.id}">${u.following ? "已关注" : "关注"}</button>
-                 </div>`
-              : "" }
+function renderMeBlock(){
+  const me = session.get()?.user;
+  const box = document.getElementById("meBlock");
+  const avatar = me?.avatar || "data:,";
+  if(me){
+    box.innerHTML = `
+      <div style="display:flex; gap:10px; align-items:center;">
+        <img class="avatar" src="${esc(avatar)}" style="width:40px;height:40px;border-radius:50%;background:#ddd;" alt="">
+        <div>
+          <div><b>${esc(me.nickname || me.username || "用户")}</b></div>
+          <div class="small">${esc(me.phone || "")}</div>
         </div>
       </div>
-    </section>
-    <section>
-      <h2>帖子</h2>
-      ${ (data.posts||[]).map(renderPostCard).join("") || "<div class='card'>暂无帖子</div>" }
-    </section>
-  `;
-  bindPostActionButtons(el);
-}
-
-/* =========================
- * 动作：发帖/删帖/点赞/关注
- * ========================= */
-function openPostDialog(){
-  if (!state.me) return openAuth();
-  clearPostDialog();
-  $("#postDialog").showModal();
-}
-function clearPostDialog(){
-  $("#postText").value = "";
-  ["postImg1","postImg2","postImg3"].forEach(id => $("#"+id).value = "");
-}
-async function deletePost(postId){
-  if (!confirm("确定删除这条帖子？")) return;
-  await api(`/posts/${postId}`, { method:"DELETE" });
-  toast("已删除");
-  // 刷新当前视图
-  if (!$("#feedView").classList.contains("hidden")) {
-    state.viewing === "following" ? refreshFollowing() : refreshFeed();
-  } else if (!$("#profileView").classList.contains("hidden")) {
-    openProfile(state.profileUser.id);
-  } else if (!$("#postDetailView").classList.contains("hidden")) {
-    routeTo("home");
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button class="btn" onclick="$.logout()">退出</button>
+      </div>`;
+  }else{
+    box.innerHTML = `<button class="btn btn-full" onclick="$.openAuth()">登录 / 注册</button>`;
   }
-}
-async function toggleLike(postId, btn){
-  if (!state.me) return openAuth();
-  const liked = btn.classList.contains("liked");
-  await api(`/posts/${postId}/like`, { method: liked ? "DELETE" : "POST" });
-  // 简单前端更新
-  const text = btn.textContent;
-  const num = (text.match(/\d+/)||[0])[0]|0;
-  btn.textContent = `赞(${liked? num-1: num+1})`;
-  btn.classList.toggle("liked", !liked);
-}
-async function toggleFollow(userId, btn){
-  if (!state.me) return openAuth();
-  const followed = btn.textContent.includes("已关注");
-  await api(`/users/${userId}/follow`, { method: followed ? "DELETE":"POST" });
-  btn.textContent = followed ? "关注" : "已关注";
+  $.logout = ()=>{ session.clear(); location.reload(); };
 }
 
-/* =========================
- * 搜索（非常简单：交由后端）
- * ========================= */
-async function doSearch(q){
-  if (!q) return;
-  const res = await api(`/search?q=${encodeURIComponent(q)}`, { method:"GET", auth:falseIfNoToken() });
-  // 简单把结果渲染成 feed 样式
-  $("#feedView").classList.remove("hidden");
-  $("#profileView").classList.add("hidden");
-  $("#postDetailView").classList.add("hidden");
-  $("#feedView").innerHTML = `<h2>搜索结果</h2>` + (res.items||[]).map(renderPostCard).join("") || "<div class='card'>没有找到</div>";
-  bindPostActionButtons($("#feedView"));
+/* ====== User Profile / Suggestions / Search ====== */
+async function gotoMyProfile(){
+  const me = session.get()?.user;
+  if(!me) { $.openAuth(); return; }
+  openUser(me.id);
 }
-
-/* =========================
- * 认证
- * ========================= */
-function openAuth(){ $("#authDialog").showModal(); }
-async function sendOtp(phone){
-  if (!phone) return toast("请输入手机号");
+async function openUser(uid){
   try{
-    await api("/auth/send_otp", { method:"POST", body:{ phone }, auth:false });
-    toast("验证码已发送");
-  }catch(err){ toast(err.message || "发送失败"); }
+    const d = await api(`/users/${uid}`, { method:"GET", auth: !!session.get() });
+    $.feed.innerHTML = renderProfile(d);
+    bindProfileActions(d);
+  }catch(e){ toast(e.message||"打开失败"); }
 }
-function onAuthSuccess(data){
-  state.token = data.token;
-  state.me = data.user;
-  setAuthVisible(true);
-  saveSession();
-  refreshFeed();
+function renderProfile(d){
+  const u = d.user;
+  const me = session.get()?.user;
+  const followed = u.following;
+  const isMe = me && me.id===u.id;
+  const followBtn = isMe ? "" : `<button id="btnFollow" class="btn ${followed?'':'btn-primary'}">${followed?'已关注':'关注'}</button>`;
+
+  const posts = (d.posts||[]).map(renderCard).join("");
+  return `
+  <div class="panel" style="margin:12px;">
+    <div style="display:flex; gap:12px; align-items:center;">
+      <img class="avatar" src="${esc(u.avatar||'data:,')}" style="width:64px;height:64px;border-radius:50%;" alt="">
+      <div style="flex:1;">
+        <div style="font-weight:800; font-size:20px;">${esc(u.nickname || u.username || "用户")}</div>
+        <div class="muted">@${esc(u.username||'')}</div>
+        <div class="muted" style="margin-top:6px;">${esc(u.bio||'')}</div>
+        <div style="margin-top:8px; color:var(--muted);">
+          <b>${u.following_count||0}</b> 关注 · <b>${u.followers_count||0}</b> 粉丝
+        </div>
+      </div>
+      ${followBtn}
+    </div>
+  </div>
+  ${posts || `<div class="empty">还没有发布内容</div>`}
+  `;
 }
-function logout(){
-  state.token = null; state.me = null;
-  saveSession();
-  setAuthVisible(false);
-  toast("已退出");
-  routeTo("home");
+function bindProfileActions(d){
+  const btn = document.getElementById("btnFollow");
+  if(!btn) return;
+  btn.onclick = async ()=>{
+    const me = await ensureLogin(); if(!me) return;
+    const uid = d.user.id;
+    const followed = d.user.following;
+    try{
+      await api(`/users/${uid}/follow`, { method: followed?"DELETE":"POST" });
+      toast(followed?"已取关":"已关注");
+      openUser(uid);
+    }catch(e){ toast(e.message||"失败"); }
+  };
 }
-
-/* =========================
- * 小工具
- * ========================= */
-function timeAgo(iso){
-  const t = new Date(iso).getTime();
-  const s = Math.floor((Date.now()-t)/1000);
-  if (s<60) return `${s}秒前`;
-  const m = Math.floor(s/60); if (m<60) return `${m}分钟前`;
-  const h = Math.floor(m/60); if (h<24) return `${h}小时前`;
-  const d = Math.floor(h/24); if (d<7) return `${d}天前`;
-  return new Date(iso).toLocaleString();
-}
-function escapeHtml(s=""){
-  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-
-/* =========================
- * 本地演示 mock（后端未就绪时）
- * ========================= */
-async function mockApi(path, { method="GET", body, formData }={}){
-  // 极简模拟，数据落在 localStorage
-  const store = JSON.parse(localStorage.getItem("mf_mock") || `{"users":[],"posts":[],"seq":1}`);
-  const save = ()=>localStorage.setItem("mf_mock", JSON.stringify(store));
-  const ok = (d)=>Promise.resolve(d);
-
-  // 认证
-  if (path==="/auth/send_otp" && method==="POST") return ok({ ok:true });
-  if (path==="/auth/signup" && method==="POST"){
-    const id = String(store.seq++);
-    const username = "u"+id;
-    const user = { id, username, nickname: body.nickname, phone: body.phone };
-    store.users.push(user); save();
-    state.token = "mock."+id; state.me = user; saveSession();
-    return ok({ token: state.token, user });
+function hydrateSuggestions(items){
+  const sug = document.getElementById("suggestions");
+  const set = new Map();
+  for(const p of items){
+    if(!set.has(p.author.id)) set.set(p.author.id, p.author);
+    if(set.size>=5) break;
   }
-  if (path==="/auth/login" && method==="POST"){
-    const user = store.users.find(u => u.username===body.account || u.phone===body.account);
-    if (!user) throw new Error("账号不存在");
-    state.token = "mock."+user.id; state.me = user; saveSession();
-    return ok({ token: state.token, user });
-  }
-  if (path==="/auth/login_phone" && method==="POST"){
-    const user = store.users.find(u => u.phone===body.phone) || (() => {
-      const id = String(store.seq++); const username="u"+id;
-      const u = { id, username, nickname:"用户"+id, phone: body.phone }; store.users.push(u); return u;
-    })();
-    save(); state.token = "mock."+user.id; state.me = user; saveSession();
-    return ok({ token: state.token, user });
-  }
-
-  // Feed
-  if (path.startsWith("/feed")) {
-    const items = store.posts.slice().reverse();
-    return ok({ items });
-  }
-
-  // 发帖
-  if (path==="/posts" && method==="POST"){
-    const id = String(store.seq++);
-    const text = formData ? (formData.get("text")||"").toString() : (body?.text||"");
-    const images = [];
-    const p = { id, text, images, author: state.me, created_at: new Date().toISOString(), likes:0, comments_count:0 };
-    store.posts.push(p); save();
-    return ok(p);
-  }
-
-  if (path.startsWith("/posts/") && method==="DELETE"){
-    const id = path.split("/")[2];
-    const idx = store.posts.findIndex(x=>x.id===id);
-    if (idx>=0) store.posts.splice(idx,1); save();
-    return ok({ ok:true });
-  }
-
-  if (path.startsWith("/posts/") && path.endsWith("/like")){
-    const id = path.split("/")[2];
-    const p = store.posts.find(x=>x.id===id); if (!p) throw new Error("not found");
-    if (method==="POST") p.likes++; else p.likes=Math.max(0, p.likes-1);
-    save(); return ok({ ok:true });
-  }
-
-  if (path.startsWith("/posts/") && method==="GET"){
-    const id = path.split("/")[2];
-    const p = store.posts.find(x=>x.id===id);
-    return ok({ ...p, comments: p.comments||[] });
-  }
-
-  if (path.startsWith("/posts/") && path.endsWith("/comments") && method==="POST"){
-    const id = path.split("/")[2];
-    const p = store.posts.find(x=>x.id===id); if (!p) throw new Error("not found");
-    p.comments = p.comments || [];
-    p.comments.push({ id:String(store.seq++), text: body.text, created_at:new Date().toISOString(), author: state.me });
-    p.comments_count = p.comments.length; save();
-    return ok({ ok:true });
-  }
-
-  if (path.startsWith("/users/") && path.endsWith("/follow")){
-    return ok({ ok:true });
-  }
-
-  if (path.startsWith("/users/") && method==="GET"){
-    const id = path.split("/")[2];
-    const user = store.users.find(u=>u.id===id) || store.users[0];
-    const posts = store.posts.filter(p=>p.author.id===user.id).slice().reverse();
-    return ok({ user: { ...user, followers_count: 0, following_count: 0, following:false }, posts });
-  }
-
-  if (path.startsWith("/search")) {
-    const q = decodeURIComponent(path.split("?q=")[1]||"").toLowerCase();
-    const items = store.posts.filter(p => p.text?.toLowerCase().includes(q)).slice().reverse();
-    return ok({ items });
-  }
-
-  throw new Error("Mock 未实现的接口: " + method + " " + path);
+  sug.innerHTML = [...set.values()].map(u=>`
+    <div class="who">
+      <img class="avatar" src="${esc(u.avatar||'data:,')}" alt="">
+      <div style="flex:1;">
+        <div><b>${esc(u.nickname||u.username||"用户")}</b></div>
+        <div class="meta">@${esc(u.username||"")}</div>
+      </div>
+      <button class="btn btn-primary" onclick="openUser('${u.id}')">查看</button>
+    </div>
+  `).join("") || `<div class="muted">暂无推荐</div>`;
 }
 
-/* =========================
- * 与后端对齐的接口（建议）
- * =========================
-  POST   /auth/send_otp            { phone }
-  POST   /auth/signup              { phone, code, nickname, password }
-  POST   /auth/login               { account, password }           // account 可是 username 或 phone
-  POST   /auth/login_phone         { phone, code }
-  GET    /me
-  GET    /feed?tab=for_you|following
-  POST   /posts                    multipart/form-data: text, images[]
-  GET    /posts/:id
-  DELETE /posts/:id
-  POST   /posts/:id/like
-  DELETE /posts/:id/like
-  POST   /posts/:id/comments       { text }
-  GET    /users/:id
-  POST   /users/:id/follow
-  DELETE /users/:id/follow
-*/
+async function doSearch(){
+  const q = document.getElementById("q").value.trim();
+  if(!q) return;
+  try{
+    const data = await api(`/search?q=${encodeURIComponent(q)}`, { method:"GET", auth: !!session.get() });
+    $.feed.innerHTML = data.items.map(renderCard).join("") || `<div class="empty">未找到相关内容</div>`;
+    bindCardEvents();
+  }catch(e){ toast(e.message || "搜索失败"); }
+}
+
+/* ====== Small helpers ====== */
+function getAvatarPlaceholder(name=""){ return "data:,"; }
