@@ -271,3 +271,50 @@ body{
   .right-rail{ display:none; }
   .topbar{ position:sticky; top:0; }
 }
+
+/* ===== 推特式无边框编辑框（回复栏） ===== */
+.reply-inline{ display:flex; align-items:center; gap:12px; }
+.reply-editor{ flex:1; display:flex; flex-direction:column; }
+
+/* 无边框、默认小高度；focus 时动画展开；输入多行时 JS 自动增高 */
+.reply-editor textarea{
+  border:none; background:transparent; outline:none; resize:none;
+  padding:8px 0;
+  min-height:28px;               /* 初始紧凑 */
+  font-size:16px; line-height:24px; color:var(--fg);
+  transition: min-height .15s ease, padding .15s ease;
+}
+.reply-editor:focus-within textarea{
+  min-height:80px;               /* 聚焦轻微展开（动画） */
+  padding:10px 0;
+}
+
+/* 工具栏：计数 + 回复按钮 */
+.reply-tools{
+  display:flex; align-items:center; justify-content:flex-end;
+  gap:8px; padding-top:8px;
+}
+.char-counter{
+  min-width:28px; height:28px; padding:0 8px;
+  border-radius:999px; display:flex; align-items:center; justify-content:center;
+  background:#f0f3f4; color:#606a73; font-weight:700; font-size:13px;
+}
+:root.dark .char-counter{ background:#1b1e20; color:#8b98a5; }
+.char-counter.over{ background:#ffe8e8; color:#c81e1e; }
+:root.dark .char-counter.over{ background:#3a0d0d; color:#ff7373; }
+
+/* 超限 Upsell 提示 */
+.upsell{
+  display:none; margin-top:8px; border:1px solid var(--line);
+  border-radius:12px; padding:10px 12px; color:var(--muted); font-size:14px;
+}
+.upsell.show{ display:block; }
+
+/* 占位文案更像推特：左对齐、稍大半粗、在视觉上更显眼 */
+.reply-editor textarea::placeholder{
+  color:var(--muted); opacity:.75; font-weight:600; font-size:16px; text-align:left;
+}
+
+/* 让整行元素中心线对齐（头像 / 输入 / 按钮） */
+.post-thread .row.composer{ align-items:center; }
+
