@@ -318,3 +318,14 @@ body{
 /* 让整行元素中心线对齐（头像 / 输入 / 按钮） */
 .post-thread .row.composer{ align-items:center; }
 
+/* 让回复框永远不出现内部滚动，配合 JS 自动增高 */
+.reply-editor textarea{
+  overflow-y: hidden;     /* 关键：禁用内部滚动 */
+  height: auto;           /* 让 JS 控高生效 */
+}
+
+/* 防止上一行原帖的竖线“盖住”下面的回复输入行 */
+.post-thread .detail .body{ position: relative; z-index: 0; }
+.post-thread .detail .body::before{ z-index: 0; }   /* 竖线留在底层 */
+.post-thread .row.composer{ position: relative; z-index: 1; } /* 回复行在上层 */
+.reply-editor{ position: relative; z-index: 1; }
