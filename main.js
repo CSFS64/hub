@@ -612,35 +612,44 @@ function bindPostPageEvents(p){
 // 启用无边框编辑框的自动增高与计数
 setupExpandableComposer('#commentTextPage', '#replyCounter', '#replyUpsell', 280);
 
-function setupExpandableComposer(textSel, counterSel, upsellSel, limit=280){
+function setupExpandableComposer(textSel, counterSel, upsellSel, limit = 280){
   const ta = document.querySelector(textSel);
   const counter = document.querySelector(counterSel);
   const upsell = document.querySelector(upsellSel);
   if(!ta) return;
 
+  // 初始：行高 + 内边距让一行时看起来舒适
+  ta.rows = 1;
+
+  // 关键：用 rAF 确保在样式应用后再量 scrollHeight
   const autosize = ()=>{
-    ta.style.overflowY = 'hidden';     // 关键：禁用内部滚动（再兜底一遍）
+    ta.style.overflowY = 'hidden';
     ta.style.height = 'auto';
-    // 上限放大一点，避免长文时还会出现内部滚动（也可根据喜好调整）
-    ta.style.height = Math.min(ta.scrollHeight, 1000) + 'px';
+    requestAnimationFrame(()=>{
+      const h = Math.min(ta.scrollHeight, 1000);  // 你也可以把 1000 改更大
+      ta.style.height = h + 'px';
+    });
   };
 
   const update = ()=>{
     autosize();
     const len = ta.value.length;
     const remain = limit - len;
-    if(counter){
+    if (counter){
       counter.textContent = remain;
       counter.classList.toggle('over', remain < 0);
     }
-    if(upsell){
+    if (upsell){
       upsell.classList.toggle('show', remain < 0);
     }
   };
 
+  // 事件：输入、聚焦、窗口尺寸变更
   ta.addEventListener('input', update);
   ta.addEventListener('focus', update);
-  // 初次渲染
+  window.addEventListener('resize', autosize, { passive: true });
+
+  // 初次
   update();
 }
 }
