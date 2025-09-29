@@ -618,18 +618,34 @@ function setupExpandableComposer(textSel, counterSel, upsellSel, limit = 280){
   const upsell = document.querySelector(upsellSel);
   if(!ta) return;
 
-  // 初始：行高 + 内边距让一行时看起来舒适
-  ta.rows = 1;
-
-  // 关键：用 rAF 确保在样式应用后再量 scrollHeight
   const autosize = ()=>{
     ta.style.overflowY = 'hidden';
     ta.style.height = 'auto';
+    // 下一帧量真实高度，避免被前一条样式尚未应用影响
     requestAnimationFrame(()=>{
-      const h = Math.min(ta.scrollHeight, 1000);  // 你也可以把 1000 改更大
+      const h = Math.min(ta.scrollHeight, 1000); // 需要更长就把 1000 调大
       ta.style.height = h + 'px';
     });
   };
+
+  const update = ()=>{
+    autosize();
+    const len = ta.value.length;
+    const remain = limit - len;
+    if(counter){
+      counter.textContent = remain;
+      counter.classList.toggle('over', remain < 0);
+    }
+    if(upsell){
+      upsell.classList.toggle('show', remain < 0);
+    }
+  };
+
+  ta.addEventListener('input', update);
+  ta.addEventListener('focus', update);
+  window.addEventListener('resize', autosize, { passive: true });
+  update(); // 初次
+}
 
   const update = ()=>{
     autosize();
