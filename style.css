@@ -548,3 +548,39 @@ dialog {
   box-shadow: none;      /* 去掉默认的四角阴影 */
 }
 
+/* 彻底抹掉 <dialog> 的默认外观（黑角、描边、阴影） */
+dialog,
+.modal {
+  border: 0 !important;
+  outline: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;   /* 不要让 dialog 自己有圆角 */
+}
+dialog:focus,
+dialog:focus-visible {
+  outline: none !important;       /* 某些浏览器会给 focus 画外轮廓 */
+}
+
+/* 只让内部卡片负责圆角 + 阴影；裁掉内部内容避免锯齿叠影 */
+.reply-card {
+  border: none;
+  outline: none;
+  border-radius: 16px;
+  background: var(--bg);
+  color: var(--fg);
+  padding: 0;
+  position: relative;
+  overflow: clip; /* 或 overflow: hidden; 防止内容/阴影在圆角处溢出产生直角感 */
+  box-shadow:
+    0 32px 96px -12px rgba(0,0,0,.45),
+    0 12px 28px -12px rgba(0,0,0,.30),
+    0  2px  8px   0px rgba(0,0,0,.15);
+}
+
+/* 遮罩层只放在 backdrop 上 */
+.modal::backdrop {
+  background: rgba(0,0,0,.35);
+  backdrop-filter: blur(2px) saturate(110%);
+}
