@@ -618,16 +618,14 @@ function setupExpandableComposer(textSel, counterSel, upsellSel, limit = 280){
   const upsell = document.querySelector(upsellSel);
   if(!ta) return;
 
+  // 自动高度
   const autosize = ()=>{
-    ta.style.overflowY = 'hidden';
     ta.style.height = 'auto';
-    // 下一帧量真实高度，避免被前一条样式尚未应用影响
-    requestAnimationFrame(()=>{
-      const h = Math.min(ta.scrollHeight, 1000); // 需要更长就把 1000 调大
-      ta.style.height = h + 'px';
-    });
+    ta.style.overflowY = 'hidden';
+    ta.style.height = Math.min(ta.scrollHeight, 1000) + 'px';
   };
 
+  // 更新计数 + 超限提示
   const update = ()=>{
     autosize();
     const len = ta.value.length;
@@ -641,10 +639,13 @@ function setupExpandableComposer(textSel, counterSel, upsellSel, limit = 280){
     }
   };
 
+  // 事件绑定
   ta.addEventListener('input', update);
   ta.addEventListener('focus', update);
   window.addEventListener('resize', autosize, { passive: true });
-  update(); // 初次
+
+  // 初次执行
+  update();
 }
 
   const update = ()=>{
