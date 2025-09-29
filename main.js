@@ -423,15 +423,15 @@ function renderPostPage(p){
   const imgs = (p.images||[]).map(src=>`<img src="${esc(src)}" loading="lazy" alt="">`).join("");
   const comments = (p.comments||[]).map(c=>htm`
     <article class="card">
-      <img class="avatar" src="${esc(c.author.avatar||'data:,')}" alt="">
-      <div class="content">
-        <div class="head">
-          <span class="name">${esc(c.author.nickname||c.author.username||"用户")}</span>
-          <span class="meta">· ${timeAgo(c.created_at)}</span>
-        </div>
-        <div class="text">${esc(c.text||"")}</div>
+    <img class="avatar" src="${esc(c.author.avatar||'data:,')}" alt="">
+    <div class="content">
+      <div class="head">
+        <span class="name">${esc(c.author.nickname||c.author.username||"用户")}</span>
+        <span class="meta">· ${timeAgo(c.created_at)}</span>
       </div>
-    </article>
+      <div class="text">${esc(c.text||"")}</div>
+    </div>
+  </article>
   `).join("");
 
   return htm`
