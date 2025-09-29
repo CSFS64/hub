@@ -650,3 +650,4 @@ function setupExpandableComposer(textSel, counterSel, upsellSel, limit = 280){
   // 初次执行
   update();
 }
+}
