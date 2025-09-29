@@ -329,3 +329,11 @@ body{
 .post-thread .detail .body::before{ z-index: 0; }   /* 竖线留在底层 */
 .post-thread .row.composer{ position: relative; z-index: 1; } /* 回复行在上层 */
 .reply-editor{ position: relative; z-index: 1; }
+
+/* 聚焦轻微展开的“动画感觉”，但不压制 JS 的 height */
+.reply-editor:focus-within textarea{
+  /* 不再用 min-height；仅通过 padding 制造展开感 */
+  padding: 12px 0;
+  transition: height .15s ease, padding .15s ease;
+}
+
