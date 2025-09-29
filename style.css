@@ -498,3 +498,44 @@ body{
 }
 .upsell.show{ display:block; }
 
+/* 覆盖遮罩（保留） */
+.modal{ border:none; background:rgba(0,0,0,.50); }
+.modal::backdrop{
+  background: rgba(0,0,0,.50);
+  backdrop-filter: blur(2px) saturate(110%);
+}
+
+/* ❗把旧的 .modal-card 的边框去掉 —— 防止任何弹窗出现硬边 */
+.modal-card{
+  width:min(680px,92vw);
+  background:var(--bg);
+  color:var(--fg);
+  border:none;             /* 原来是 1px 实线，去掉 */
+  border-radius:16px;
+  padding:12px;
+  position:relative;
+  box-shadow:
+    0 32px 96px -12px rgba(0,0,0,.45),
+    0 12px 28px -12px rgba(0,0,0,.30),
+    0  2px  8px   0px rgba(0,0,0,.15);
+}
+
+/* Reply 弹窗卡片 —— 不要 outline，就用软阴影 */
+.reply-card{
+  width:min(680px,96vw);
+  background:var(--bg);
+  color:var(--fg);
+  border:none;
+  outline:none;            /* ← 去掉你先前加的细描边 */
+  border-radius:16px;
+  padding:0;
+  position:relative;
+  box-shadow:
+    0 32px 96px -12px rgba(0,0,0,.45),
+    0 12px 28px -12px rgba(0,0,0,.30),
+    0  2px  8px   0px rgba(0,0,0,.15);
+}
+:root.dark .reply-card{ outline:none; }
+
+/* 关闭按钮位置（保持） */
+.reply-card .close{ position:absolute; top:10px; right:10px; }
