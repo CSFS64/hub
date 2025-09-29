@@ -64,6 +64,11 @@ window.addEventListener("DOMContentLoaded", () => {
 
 /* ====== DOM cache ====== */
 function cacheDom(){
+  $.replyDialog = document.getElementById("replyDialog");
+  $.replyHost   = document.getElementById("replyHost");
+  $.replyText   = document.getElementById("replyText");
+  $.btnReply    = document.getElementById("btnReply");
+  $.replyAvatar = document.getElementById("replyAvatar");
   $.feed = document.getElementById("feed");
   $.loading = document.getElementById("loading");
   $.empty = document.getElementById("emptyHint");
@@ -190,9 +195,10 @@ function bindCardEvents(){
     b.onclick = (e)=>{
       e.stopPropagation();
       const id = e.target.closest(".card").dataset.id;
-      goToPost(id);
+      $.openReply(id);   // ← 原来是 goToPost(id)
     };
   });
+
   document.querySelectorAll(".card .like").forEach(b=>{
     b.onclick = async (e)=>{
       e.stopPropagation();
@@ -220,6 +226,57 @@ function bindCardEvents(){
     };
   });
 }
+
+//-----回复弹窗-----//
+$.closeReply = ()=> $.replyDialog.close();
+
+function renderQuoted(p){
+  const name = esc(p.author?.nickname || p.author?.username || "用户");
+  return `
+    <div class="head">${name} <span class="meta">· ${timeAgo(p.created_at)}</span></div>
+    <div class="text">${esc(p.text || "")}</div>
+  `;
+}
+
+/** 打开回复弹窗并绑定提交 */
+$.openReply = async (postId)=>{
+  const me = await ensureLogin(); if(!me) return;
+  try{
+    const d = await api(`/posts/${postId}`, { method:"GET", auth:true });
+    $.replyHost.innerHTML = renderQuoted(d);
+    $.replyAvatar.src = esc(session.get()?.user?.avatar || "data:,");
+    $.replyText.value = "";
+    $.replyDialog.showModal();
+
+    // 提交
+    $.btnReply.onclick = async ()=>{
+      const text = ($.replyText.value||"").trim();
+      if(!text) return toast("回复不能为空");
+      try{
+        await api(`/posts/${postId}/comments`, { method:"POST", body:{ text } });
+        $.closeReply();
+        // 刷新当前视图
+        if (location.hash === `#/post/${postId}`) { showPostPage(postId); }
+        else { goToPost(postId); } // 发送后跳到该帖页面
+        toast("已回复");
+      }catch(e){ toast(e.message || "发送失败"); }
+    };
+
+    // Enter 发送，Ctrl+Enter 换行
+    $.replyText.onkeydown = (ev)=>{
+      if(ev.key==="Enter" && !ev.ctrlKey && !ev.shiftKey){
+        ev.preventDefault(); $.btnReply.click();
+      }
+      if(ev.key==="Enter" && (ev.ctrlKey || ev.metaKey)){
+        ev.preventDefault();
+        const t = $.replyText, s = t.selectionStart, v = t.value;
+        t.value = v.slice(0,s) + "\n" + v.slice(s);
+        t.selectionStart = t.selectionEnd = s+1;
+      }
+    };
+
+  }catch(e){ toast(e.message || "打开失败"); }
+};
 
 /* ====== Router ====== */
 function handleRoute(){
@@ -454,8 +511,12 @@ function renderPostPage(p){
 
     <div class="comments">
       <div class="composer-inline">
-        <textarea id="commentTextPage" rows="3" placeholder="写下你的评论…"></textarea>
-        <button id="btnCommentPage" class="btn">评论</button>
+        <img class="avatar" src="${esc(session.get()?.user?.avatar || 'data:,')}" 
+             style="width:40px;height:40px;border-radius:50%;background:#ddd;" alt="">
+        <input type="text" placeholder="Post your reply" 
+               onclick="$.openReply('${p.id}')" readonly
+               style="flex:1;border:1px solid var(--line);border-radius:12px;padding:10px;background:transparent;color:var(--fg);cursor:text;">
+        <button class="btn btn-primary" onclick="$.openReply('${p.id}')">回复</button>
       </div>
       ${comments || `<div class="empty">暂无评论</div>`}
     </div>
