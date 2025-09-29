@@ -159,3 +159,56 @@ body{
 .card .actions .action{ pointer-events: auto; }
 .card .actions{ pointer-events: none; }
 .card .actions .action, .card .del, .card .open, .card .like{ pointer-events: auto; }
+
+/* 单帖页卡片更像推特 */
+.post-page .detail {
+  padding: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.post-page .detail .head {
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+.post-page .detail .text {
+  font-size: 17px;
+  line-height: 1.5;
+  margin: 12px 0;
+}
+.post-page .detail .pics img {
+  max-width: 100%;
+  border-radius: 12px;
+  margin-top: 12px;
+}
+
+/* 操作区 */
+.post-page .detail .actions {
+  display: flex;
+  gap: 24px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.post-page .detail .actions .action {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.post-page .detail .actions .action.liked {
+  color: #e0245e;
+}
+
+/* 评论区 */
+.post-page .comments {
+  margin-top: 8px;
+}
+.post-page .comments .card {
+  border-bottom: 1px solid var(--line);
+  padding: 12px 16px;
+}
+.post-page .comments .card .text {
+  font-size: 15px;
+  margin-top: 4px;
+}
+
