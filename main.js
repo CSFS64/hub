@@ -479,47 +479,52 @@ async function showPostPage(id){
 function renderPostPage(p){
   const imgs = (p.images||[]).map(src=>`<img src="${esc(src)}" loading="lazy" alt="">`).join("");
   const comments = (p.comments||[]).map(c=>htm`
-    <article class="card">
-    <img class="avatar" src="${esc(c.author.avatar||'data:,')}" alt="">
-    <div class="content">
-      <div class="head">
-        <span class="name">${esc(c.author.nickname||c.author.username||"用户")}</span>
-        <span class="meta">· ${timeAgo(c.created_at)}</span>
+    <div class="row comment">
+      <img class="rail avatar" src="${esc(c.author.avatar||'data:,')}" alt="">
+      <div class="body">
+        <div class="head">
+          <span class="name">${esc(c.author.nickname||c.author.username||"用户")}</span>
+          <span class="meta">· ${timeAgo(c.created_at)}</span>
+        </div>
+        <div class="text">${esc(c.text||"")}</div>
       </div>
-      <div class="text">${esc(c.text||"")}</div>
     </div>
-  </article>
   `).join("");
 
+  const meAvatar = esc(session.get()?.user?.avatar || "data:,");
   return htm`
-  <div class="post-page">
-    <article class="card detail">
-      <img class="avatar" src="${esc(p.author.avatar||'data:,')}" alt="">
-      <div class="content">
+  <div class="post-thread">
+    <!-- 原帖 -->
+    <div class="row detail">
+      <img class="rail avatar" src="${esc(p.author.avatar||'data:,')}" alt="">
+      <div class="body">
         <div class="head">
           <span class="name">${esc(p.author.nickname||p.author.username||"用户")}</span>
           <span class="meta">· ${timeAgo(p.created_at)}</span>
         </div>
         <div class="text">${esc(p.text||"")}</div>
         <div class="pics">${imgs}</div>
-        <div class="actions" style="margin-top:12px;">
+        <div class="actions">
           <div class="action like ${p.liked?'liked':''}" data-id="${esc(p.id)}">❤️ <span>${p.likes||0}</span></div>
+          <div class="action open" onclick="$.openReply('${p.id}')">💬 回复</div>
           <div class="action back" onclick="history.back()">↩ 返回</div>
         </div>
       </div>
-    </article>
-
-    <div class="comments">
-      <div class="composer-inline">
-        <img class="avatar" src="${esc(session.get()?.user?.avatar || 'data:,')}" 
-             style="width:40px;height:40px;border-radius:50%;background:#ddd;" alt="">
-        <input type="text" placeholder="Post your reply" 
-               onclick="$.openReply('${p.id}')" readonly
-               style="flex:1;border:1px solid var(--line);border-radius:12px;padding:10px;background:transparent;color:var(--fg);cursor:text;">
-        <button class="btn btn-primary" onclick="$.openReply('${p.id}')">回复</button>
-      </div>
-      ${comments || `<div class="empty">暂无评论</div>`}
     </div>
+
+    <!-- 回复输入行（你自己的头像与输入框也在同一头像列） -->
+    <div class="row composer">
+      <img class="rail avatar" src="${meAvatar}" alt="">
+      <div class="body">
+        <div class="reply-inline">
+          <textarea id="commentTextPage" rows="2" placeholder="Post your reply"></textarea>
+          <button id="btnCommentPage" class="btn btn-primary">回复</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 评论列表 -->
+    ${comments || `<div class="row"><div class="body"><div class="empty">暂无评论</div></div></div>`}
   </div>`;
 }
 
