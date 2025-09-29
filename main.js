@@ -642,3 +642,4 @@ function setupExpandableComposer(textSel, counterSel, upsellSel, limit=280){
   // 初次渲染
   update();
 }
+}
