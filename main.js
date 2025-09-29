@@ -476,8 +476,18 @@ async function showPostPage(id){
   }
 }
 
+function formatFullTime(iso){
+  // e.g. "1:15 AM · Sep 29, 2025"
+  if(!iso) return "";
+  const dt = new Date(iso);
+  const time = dt.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
+  const date = dt.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+  return `${time} · ${date}`;
+}
+
 function renderPostPage(p){
   const imgs = (p.images||[]).map(src=>`<img src="${esc(src)}" loading="lazy" alt="">`).join("");
+  const meAvatar = esc(session.get()?.user?.avatar || "data:,");
   const comments = (p.comments||[]).map(c=>htm`
     <div class="row comment">
       <img class="rail avatar" src="${esc(c.author.avatar||'data:,')}" alt="">
@@ -491,8 +501,14 @@ function renderPostPage(p){
     </div>
   `).join("");
 
-  const meAvatar = esc(session.get()?.user?.avatar || "data:,");
   return htm`
+  <!-- 顶部栏：左返回，右回复 -->
+  <div class="post-topbar">
+    <button class="icon-btn" id="btnBackTop" title="返回">←</button>
+    <div class="title">Post</div>
+    <button class="btn-ghost" id="btnReplyTop">Reply</button>
+  </div>
+
   <div class="post-thread">
     <!-- 原帖 -->
     <div class="row detail">
@@ -507,12 +523,17 @@ function renderPostPage(p){
         <div class="actions">
           <div class="action like ${p.liked?'liked':''}" data-id="${esc(p.id)}">❤️ <span>${p.likes||0}</span></div>
           <div class="action open" onclick="$.openReply('${p.id}')">💬 回复</div>
-          <div class="action back" onclick="history.back()">↩ 返回</div>
         </div>
       </div>
     </div>
 
-    <!-- 回复输入行（你自己的头像与输入框也在同一头像列） -->
+    <!-- 时间行（和推特一样在正文下单独一行） -->
+    <div class="meta-row">
+      <div></div>
+      <div class="timestamp">${esc(formatFullTime(p.created_at))}</div>
+    </div>
+
+    <!-- 回复输入行：头像/输入/按钮同一水平线居中 -->
     <div class="row composer">
       <img class="rail avatar" src="${meAvatar}" alt="">
       <div class="body">
@@ -529,8 +550,15 @@ function renderPostPage(p){
 }
 
 function bindPostPageEvents(p){
-  // 点赞（页面版）
-  const likeEl = document.querySelector(".post-page .action.like");
+  // 顶部栏：返回 & 右侧“回复”按钮
+  const backTop = document.getElementById("btnBackTop");
+  if(backTop) backTop.onclick = ()=> history.back();
+  const replyTop = document.getElementById("btnReplyTop");
+  if(replyTop) replyTop.onclick = ()=> $.openReply(p.id);
+
+  // 原有点赞
+  const likeEl = document.querySelector(".post-page .action.like") 
+              || document.querySelector(".post-thread .action.like");
   if(likeEl){
     likeEl.onclick = async ()=>{
       const me = await ensureLogin(); if(!me) return;
@@ -543,18 +571,18 @@ function bindPostPageEvents(p){
       }catch(e){ toast(e.message||"失败"); }
     };
   }
-  // 评论（页面版）
+
+  // 底部“回复”按钮（页面内直接发）
   const btn = document.getElementById("btnCommentPage");
   const ta  = document.getElementById("commentTextPage");
   if(btn && ta){
     btn.onclick = async ()=>{
       const me = await ensureLogin(); if(!me) return;
       const text = (ta.value||"").trim();
-      if(!text) return toast("评论不能为空");
+      if(!text) return toast("回复不能为空");
       try{
         await api(`/posts/${p.id}/comments`, { method:"POST", body:{ text } });
-        ta.value = "";
-        showPostPage(p.id); // 刷新
+        ta.value = ""; showPostPage(p.id); // 重新加载
       }catch(e){ toast(e.message||"评论失败"); }
     };
   }
