@@ -388,12 +388,20 @@ body{
   background: rgba(0,0,0,.50);
   backdrop-filter: blur(2px) saturate(110%);
 }
-/* 覆盖遮罩：更柔和，带一点模糊 */
+
+/* 仅用 backdrop 做遮罩；dialog 本体透明 */
 .modal{
   border: none;
-  background: rgba(0,0,0,.50);
+  background: transparent; /* ← 关键：不要给 dialog 自己上黑底 */
+  padding: 0;              /* 避免内容四周再留黑边距 */
+}
+
+/* 更柔和的遮罩 */
+.modal::backdrop{
+  background: rgba(0,0,0,.35);
   backdrop-filter: blur(2px) saturate(110%);
 }
+
 
 /* Reply 弹窗卡片：移除硬边框，改成多层软阴影 */
 .reply-card{
@@ -409,18 +417,16 @@ body{
   outline: 1px solid rgba(255,255,255,.06);  /* 暗色主题下轻微描边 */
 }
 
-/* 软阴影（负 spread 让边缘更糯；多层叠加更自然） */
 .reply-card{
-  box-shadow:
-    0 32px 96px -12px rgba(0,0,0,.45),   /* 大范围主阴影，柔 */
-    0 12px 28px -12px rgba(0,0,0,.30),   /* 中层过渡 */
-    0  2px  8px   0px rgba(0,0,0,.15);   /* 贴边的小阴影，提层次 */
+  border: none;
+  outline: none;
   border-radius: 16px;
-  padding: 0;
-  position: relative;
-}
-.reply-card .close{
-  position:absolute; top:10px; right:10px;
+  background: var(--bg);
+  color: var(--fg);
+  box-shadow:
+    0 32px 96px -12px rgba(0,0,0,.45),
+    0 12px 28px -12px rgba(0,0,0,.30),
+    0  2px  8px   0px rgba(0,0,0,.15);
 }
 
 /* 两行线程：左 56px 头像轨道，右正文；行距 12px */
