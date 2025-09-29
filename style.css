@@ -212,3 +212,21 @@ body{
   margin-top: 4px;
 }
 
+/* —— 回复弹窗 —— */
+.reply-card{ width:min(680px, 96vw); background:var(--bg); color:var(--fg);
+  border:1px solid var(--line); border-radius:16px; padding:12px; position:relative; }
+.reply-card .close{ position:absolute; top:8px; right:8px; }
+
+/* 引用的原帖样式（左侧竖线） */
+.quoted{
+  border-left: 3px solid var(--line);
+  padding-left: 12px;
+  margin: 6px 0 8px;
+}
+.quoted .head{ font-weight:600; font-size:15px; margin-bottom:4px; }
+.quoted .text{ white-space:pre-wrap; line-height:1.5; }
+
+/* 让评论按钮 hover 有手势、卡片 hover 加深（如果你还没加） */
+.card{ transition: background .15s ease; }
+.card.clickable{ cursor: pointer; }
+.card.clickable:hover{ background: var(--hover); }
