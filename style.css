@@ -543,3 +543,12 @@ body{
 
 /* 关闭按钮位置（保持） */
 .reply-card .close{ position:absolute; top:10px; right:10px; }
+
+/* 彻底覆盖 <dialog> 自带的边框/阴影 */
+dialog {
+  border: none;          /* 去掉黑边 */
+  padding: 0;            /* 不要额外留白 */
+  background: transparent; /* 背景透明，让 backdrop 生效 */
+  box-shadow: none;      /* 去掉默认的四角阴影 */
+}
+
