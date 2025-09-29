@@ -533,13 +533,25 @@ function renderPostPage(p){
       <div class="timestamp">${esc(formatFullTime(p.created_at))}</div>
     </div>
 
-    <!-- 回复输入行：头像/输入/按钮同一水平线居中 -->
+    <!-- 回复输入行：无边框 + 展开动画 + 计数 + Upsell -->
     <div class="row composer">
       <img class="rail avatar" src="${meAvatar}" alt="">
       <div class="body">
         <div class="reply-inline">
-          <textarea id="commentTextPage" rows="2" placeholder="Post your reply"></textarea>
-          <button id="btnCommentPage" class="btn btn-primary">回复</button>
+          <img class="avatar" src="${meAvatar}" alt="" style="display:none"> <!-- 兼容保留，不显示 -->
+          <div class="reply-editor">
+            <textarea id="commentTextPage" rows="1" placeholder="Post your reply"></textarea>
+
+            <div class="reply-tools">
+              <div class="char-counter" id="replyCounter">280</div>
+              <button id="btnCommentPage" class="btn btn-primary">Reply</button>
+            </div>
+
+            <div class="upsell" id="replyUpsell">
+              Upgrade to <b>Premium+</b> to write longer posts and Articles.
+              <a class="link" href="javascript:;">Learn more</a>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -579,12 +591,54 @@ function bindPostPageEvents(p){
     btn.onclick = async ()=>{
       const me = await ensureLogin(); if(!me) return;
       const text = (ta.value||"").trim();
-      if(!text) return toast("回复不能为空");
+  
+      // 280 超限检查
+      if(text.length === 0) return toast("回复不能为空");
+      if(text.length > 280){
+        document.getElementById('replyUpsell')?.classList.add('show');
+        toast("超出 280 字，精简后再发");
+        return;
+      }
+  
       try{
         await api(`/posts/${p.id}/comments`, { method:"POST", body:{ text } });
-        ta.value = ""; showPostPage(p.id); // 重新加载
+        ta.value = "";
+        showPostPage(p.id); // 刷新
       }catch(e){ toast(e.message||"评论失败"); }
     };
   }
-}
 
+
+// 启用无边框编辑框的自动增高与计数
+setupExpandableComposer('#commentTextPage', '#replyCounter', '#replyUpsell', 280);
+
+function setupExpandableComposer(textSel, counterSel, upsellSel, limit=280){
+  const ta = document.querySelector(textSel);
+  const counter = document.querySelector(counterSel);
+  const upsell = document.querySelector(upsellSel);
+  if(!ta) return;
+
+  const autosize = ()=>{
+    ta.style.height = 'auto';
+    // 上限防止无限拉长，可按需调整（600px ~ 8~10行）
+    ta.style.height = Math.min(ta.scrollHeight, 600) + 'px';
+  };
+
+  const update = ()=>{
+    autosize();
+    const len = ta.value.length;
+    const remain = limit - len;
+    if(counter){
+      counter.textContent = remain;
+      counter.classList.toggle('over', remain < 0);
+    }
+    if(upsell){
+      upsell.classList.toggle('show', remain < 0);
+    }
+  };
+
+  ta.addEventListener('input', update);
+  ta.addEventListener('focus', update);
+  // 初次渲染
+  update();
+}
