@@ -423,10 +423,6 @@ body{
   border-radius: 16px;
   background: var(--bg);
   color: var(--fg);
-  box-shadow:
-    0 32px 96px -12px rgba(0,0,0,.45),
-    0 12px 28px -12px rgba(0,0,0,.30),
-    0  2px  8px   0px rgba(0,0,0,.15);
 }
 
 /* 两行线程：左 56px 头像轨道，右正文；行距 12px */
