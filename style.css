@@ -261,51 +261,39 @@ body{
 }
 
 /* ===== 推特式无边框编辑框（回复栏） ===== */
-.reply-inline{ display:flex; align-items:center; gap:12px; }
-.reply-editor{ flex:1; display:flex; flex-direction:column; }
 
-/* 无边框、默认小高度；focus 时动画展开；输入多行时 JS 自动增高 */
-.reply-editor textarea{
-  border:none; background:transparent; outline:none; resize:none;
-  padding:8px 0;
-  min-height:28px;               /* 初始紧凑 */
-  font-size:16px; line-height:24px; color:var(--fg);
-  transition: min-height .15s ease, padding .15s ease;
+/* 行和容器允许随 textarea 一起长高，不隐藏溢出 */
+.post-thread .row,
+.post-thread .row .body,
+.reply-inline,
+.reply-editor{
+  height: auto;
+  overflow: visible;
 }
 
-.char-counter{
-  min-width:28px; height:28px; padding:0 8px;
-  border-radius:999px; display:flex; align-items:center; justify-content:center;
-  background:#f0f3f4; color:#606a73; font-weight:700; font-size:13px;
+/* 回复行顶部对齐，避免“居中”导致可视区域被吃掉 */
+.post-thread .row.composer{ align-items: flex-start; }
+.reply-inline{ align-items: flex-start; }
+
+/* 回复栏布局（头像 + 编辑区） */
+.reply-inline{
+  display: flex;
+  gap: 12px;
 }
-:root.dark .char-counter{ background:#1b1e20; color:#8b98a5; }
-.char-counter.over{ background:#ffe8e8; color:#c81e1e; }
-:root.dark .char-counter.over{ background:#3a0d0d; color:#ff7373; }
-
-/* 让整行元素中心线对齐（头像 / 输入 / 按钮） */
-.post-thread .row.composer{ align-items:center; }
-
-/* 让回复框永远不出现内部滚动，配合 JS 自动增高 */
-.reply-editor textarea{
-  overflow-y: hidden;     /* 关键：禁用内部滚动 */
-  height: auto;           /* 让 JS 控高生效 */
-}
-
-/* 防止上一行原帖的竖线“盖住”下面的回复输入行 */
-.post-thread .detail .body{ position: relative; z-index: 0; }
-.post-thread .detail .body::before{ z-index: 0; }   /* 竖线留在底层 */
-.post-thread .row.composer{ position: relative; z-index: 1; } /* 回复行在上层 */
-.reply-editor{ position: relative; z-index: 1; }
-
-/* 聚焦轻微展开的“动画感觉”，但不压制 JS 的 height */
-.reply-editor:focus-within textarea{
-  /* 不再用 min-height；仅通过 padding 制造展开感 */
-  padding: 12px 0;
-  transition: height .15s ease, padding .15s ease;
+.reply-inline .avatar{
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #ddd;
+  flex-shrink: 0;
 }
 
-/* ===== 回复编辑区兜底：不做内部滚动，容器随内容长高 ===== */
-.reply-editor{ position: relative; z-index: 2; }           /* 确保不被上面的元素压住 */
+/* 只保留这一套：textarea 无边框，由 JS 控高，禁用内部滚动 */
+.reply-editor{
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
 .reply-editor textarea{
   display: block;
   width: 100%;
@@ -313,30 +301,26 @@ body{
   outline: none;
   background: transparent;
   color: var(--fg);
-
-  /* 核心三行：禁用内部滚动、让 JS 控高、避免盒模型干扰 */
-  overflow-y: hidden !important;
-  height: auto !important;
   box-sizing: border-box;
 
-  line-height: 1.5;
-  font-size: 16px;
   padding: 12px 0;
+  font-size: 16px;
+  line-height: 1.5;
   resize: none;
+
+  overflow-y: hidden;  /* 不出现内部滚动条 */
+  height: auto;       /* 由 JS 设置高度 */
+  min-height: 28px;
+  transition: height .15s ease, padding .15s ease;
 }
 
-/* 单帖页左侧“引线”只用于正文，不作用在 composer 行 */
-.post-thread .row.detail .body::before{ z-index: 0; }
-.post-thread .row.composer .body::before{ content: none; }
+/* 聚焦时轻微展开（不妨碍 JS 自增高） */
+.reply-editor:focus-within textarea{
+  min-height: 64px;
+  padding: 14px 0;
+}
 
-/* 容器允许长高，且不要任何 max-height/overflow 限制 */
-.post-thread .row.composer{ position: relative; z-index: 1; }
-.post-thread .row.composer .body{ height: auto; overflow: visible; }
-
-/* 计数和高级提示的层级也抬高，避免被覆盖 */
-.reply-tools, .upsell{ position: relative; z-index: 2; }
-
-/* 占位样式（像推特） */
+/* 占位样式（更像推特） */
 .reply-editor textarea::placeholder{
   color: var(--muted);
   opacity: .75;
@@ -345,87 +329,53 @@ body{
   text-align: left;
 }
 
-/* ===== 单帖页：唯一版本的回复编辑区样式 ===== */
-
-/* 行（头像/正文列）本身允许增长，且不隐藏溢出 */
-.post-thread .row.composer{ 
-  align-items: center;
-  position: relative;
-  z-index: 1;
-}
-.post-thread .row.composer .body{
-  height: auto;
-  overflow: visible;
-}
-
-/* 竖线只作用于正文，不要影响回复行，也不会拦截事件 */
-.post-thread .detail .body{ position: relative; z-index: 0; }
-.post-thread .detail .body::before{
-  content:"";
-  position:absolute;
-  left:-16px; top:44px; bottom:10px; width:2px;
-  background:var(--line);
-  z-index:0;
-  pointer-events:none;        /* 关键：不拦截鼠标/输入事件 */
-}
-.post-thread .row.composer .body::before{ content:none; }
-
-/* 回复栏布局 */
-.reply-inline{
-  display:flex; align-items:center; gap:12px;
-}
-.reply-inline .avatar{
-  width:44px; height:44px; border-radius:50%; background:#ddd; flex-shrink:0;
-}
-
-/* 仅保留 .reply-editor 这一套，textarea 无边框、无内部滚动，由 JS 控高 */
-/* 仅保留 .reply-editor 这一套，textarea 无边框、无内部滚动，由 JS 控高 */
-.reply-editor{
-  flex:1; display:flex; flex-direction:column; position:relative; z-index:2;
-}
-
-.reply-editor textarea{
-  display:block; width:100%;
-  border:none; outline:none; background:transparent; color:var(--fg);
-  box-sizing:border-box;
-
-  padding:12px 0;
-  font-size:16px; line-height:1.5;
-  resize:none;
-
-  overflow-y:hidden;   /* 允许 JS 控高；保留隐藏滚动条 */
-  height:auto;         /* 关键：去掉 !important，JS 才能覆盖 */
-  min-height:28px;
-  transition:height .15s ease, padding .15s ease;
-}
-
-/* 聚焦时给个“展开”的感觉（不会妨碍 JS 高度） */
-.reply-editor:focus-within textarea{
-  min-height:64px;
-  padding:14px 0;
-}
-
-.reply-editor textarea::placeholder{
-  color:var(--muted); opacity:.75; font-weight:600; font-size:16px; text-align:left;
-}
-
-/* 工具栏和 upsell */
+/* 工具栏（计数 + 按钮）与 Upsell */
 .reply-tools{
-  display:flex; align-items:center; justify-content:flex-end;
-  gap:8px; padding-top:8px; position:relative; z-index:2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 8px;
 }
 .char-counter{
-  min-width:28px; height:28px; padding:0 8px;
-  border-radius:999px; display:flex; align-items:center; justify-content:center;
-  background:#f0f3f4; color:#606a73; font-weight:700; font-size:13px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f3f4;
+  color: #606a73;
+  font-weight: 700;
+  font-size: 13px;
 }
 :root.dark .char-counter{ background:#1b1e20; color:#8b98a5; }
 .char-counter.over{ background:#ffe8e8; color:#c81e1e; }
 :root.dark .char-counter.over{ background:#3a0d0d; color:#ff7373; }
 
 .upsell{
-  display:none; margin-top:8px; border:1px solid var(--line);
-  border-radius:12px; padding:10px 12px; color:var(--muted); font-size:14px;
-  position:relative; z-index:2;
+  display: none;
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: var(--muted);
+  font-size: 14px;
 }
-.upsell.show{ display:block; }
+.upsell.show{ display: block; }
+
+/* 左侧竖线只用于正文，不拦截事件，也不参与叠层遮挡 */
+.post-thread .detail .body{ position: relative; }
+.post-thread .detail .body::before{
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: 44px;
+  bottom: 10px;
+  width: 2px;
+  background: var(--line);
+  pointer-events: none; /* 不拦截鼠标/输入事件 */
+}
+/* 确保回复行不受竖线影响 */
+.post-thread .row.composer .body::before{ content: none; }
