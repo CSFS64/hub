@@ -379,23 +379,32 @@ body{
 }
 
 /* 仅保留 .reply-editor 这一套，textarea 无边框、无内部滚动，由 JS 控高 */
+/* 仅保留 .reply-editor 这一套，textarea 无边框、无内部滚动，由 JS 控高 */
 .reply-editor{
   flex:1; display:flex; flex-direction:column; position:relative; z-index:2;
 }
+
 .reply-editor textarea{
   display:block; width:100%;
   border:none; outline:none; background:transparent; color:var(--fg);
   box-sizing:border-box;
 
-  padding:12px 0;            /* 视觉上的展开 */
+  padding:12px 0;
   font-size:16px; line-height:1.5;
   resize:none;
 
-  overflow-y:hidden !important;  /* 不出现内部滚动条 */
-  height:auto !important;        /* 交给 JS 设置高度 */
-  min-height:28px;               /* 初始紧凑 */
+  overflow-y:hidden;   /* 允许 JS 控高；保留隐藏滚动条 */
+  height:auto;         /* 关键：去掉 !important，JS 才能覆盖 */
+  min-height:28px;
   transition:height .15s ease, padding .15s ease;
 }
+
+/* 聚焦时给个“展开”的感觉（不会妨碍 JS 高度） */
+.reply-editor:focus-within textarea{
+  min-height:64px;
+  padding:14px 0;
+}
+
 .reply-editor textarea::placeholder{
   color:var(--muted); opacity:.75; font-weight:600; font-size:16px; text-align:left;
 }
