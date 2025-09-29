@@ -612,29 +612,32 @@ function bindPostPageEvents(p){
 // 启用无边框编辑框的自动增高与计数
 setupExpandableComposer('#commentTextPage', '#replyCounter', '#replyUpsell', 280);
 
+// 启用无边框编辑框的自动增高与计数
+setupExpandableComposer('#commentTextPage', '#replyCounter', '#replyUpsell', 280);
+
 function setupExpandableComposer(textSel, counterSel, upsellSel, limit = 280){
   const ta = document.querySelector(textSel);
   const counter = document.querySelector(counterSel);
   const upsell = document.querySelector(upsellSel);
-  if(!ta) return;
+  if (!ta) return;
 
   // 自动高度
-  const autosize = ()=>{
+  const autosize = () => {
     ta.style.height = 'auto';
     ta.style.overflowY = 'hidden';
     ta.style.height = Math.min(ta.scrollHeight, 1000) + 'px';
   };
 
   // 更新计数 + 超限提示
-  const update = ()=>{
+  const update = () => {
     autosize();
     const len = ta.value.length;
     const remain = limit - len;
-    if(counter){
+    if (counter) {
       counter.textContent = remain;
       counter.classList.toggle('over', remain < 0);
     }
-    if(upsell){
+    if (upsell) {
       upsell.classList.toggle('show', remain < 0);
     }
   };
@@ -646,27 +649,4 @@ function setupExpandableComposer(textSel, counterSel, upsellSel, limit = 280){
 
   // 初次执行
   update();
-}
-
-  const update = ()=>{
-    autosize();
-    const len = ta.value.length;
-    const remain = limit - len;
-    if (counter){
-      counter.textContent = remain;
-      counter.classList.toggle('over', remain < 0);
-    }
-    if (upsell){
-      upsell.classList.toggle('show', remain < 0);
-    }
-  };
-
-  // 事件：输入、聚焦、窗口尺寸变更
-  ta.addEventListener('input', update);
-  ta.addEventListener('focus', update);
-  window.addEventListener('resize', autosize, { passive: true });
-
-  // 初次
-  update();
-}
 }
