@@ -540,47 +540,33 @@ body{
 /* 关闭按钮位置（保持） */
 .reply-card .close{ position:absolute; top:10px; right:10px; }
 
-/* 彻底覆盖 <dialog> 自带的边框/阴影 */
-dialog {
-  border: none;          /* 去掉黑边 */
-  padding: 0;            /* 不要额外留白 */
-  background: transparent; /* 背景透明，让 backdrop 生效 */
-  box-shadow: none;      /* 去掉默认的四角阴影 */
-}
-
-/* 彻底抹掉 <dialog> 的默认外观（黑角、描边、阴影） */
+/* 彻底关掉 <dialog> 和内部卡片的焦点描边（会导致四角像直角的那条淡线） */
 dialog,
-.modal {
-  border: 0 !important;
-  outline: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  border-radius: 0 !important;   /* 不要让 dialog 自己有圆角 */
-}
 dialog:focus,
-dialog:focus-visible {
-  outline: none !important;       /* 某些浏览器会给 focus 画外轮廓 */
+dialog:focus-visible,
+.reply-card:focus,
+.reply-card:focus-visible {
+  outline: none !important;
+  box-shadow: none; /* 这里只对 dialog 起作用；reply-card 的阴影另外定义 */
 }
 
-/* 只让内部卡片负责圆角 + 阴影；裁掉内部内容避免锯齿叠影 */
+/* 仍然保持对话框透明、只用 backdrop 作为遮罩 */
+dialog.modal {
+  background: transparent !important;
+  border: none !important;
+  padding: 0;
+  box-shadow: none !important;  /* 防止 UA 盒影 */
+}
+
+/* 阴影放在卡片上（圆角会让阴影也圆滑） */
 .reply-card {
   border: none;
   outline: none;
   border-radius: 16px;
   background: var(--bg);
   color: var(--fg);
-  padding: 0;
-  position: relative;
-  overflow: clip; /* 或 overflow: hidden; 防止内容/阴影在圆角处溢出产生直角感 */
   box-shadow:
-    0 32px 96px -12px rgba(0,0,0,.45),
+    0 32px 96px -16px rgba(0,0,0,.45),
     0 12px 28px -12px rgba(0,0,0,.30),
-    0  2px  8px   0px rgba(0,0,0,.15);
-}
-
-/* 遮罩层只放在 backdrop 上 */
-.modal::backdrop {
-  background: rgba(0,0,0,.35);
-  backdrop-filter: blur(2px) saturate(110%);
+    0  2px  8px   0   rgba(0,0,0,.15);
 }
