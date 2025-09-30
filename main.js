@@ -49,6 +49,50 @@ async function api(path, {method="GET", body=null, auth=true, raw=false, headers
   return data;
 }
 
+// 把 feed 里的每条帖子中，形如 string 的 repost_of / quote_of 先展开成对象
+async function expandRefs(items){
+  const authed = !!session.get();        // 已登录就带 token，避免私有帖 403
+  if (!Array.isArray(items) || items.length===0) return items;
+
+  // 1) 收集所有需要补拉的 id，去重
+  const needIds = new Set();
+  for (const p of items){
+    if (typeof p.repost_of === 'string') needIds.add(p.repost_of);
+    if (typeof p.original  === 'string') needIds.add(p.original);
+    if (typeof p.quote_of  === 'string') needIds.add(p.quote_of);
+  }
+  if (needIds.size === 0) return items;
+
+  // 2) 并发拉取，放进缓存
+  const cache = new Map();
+  await Promise.all([...needIds].map(async (id)=>{
+    try{
+      const obj = await api(`/posts/${id}`, { method:'GET', auth: authed });
+      cache.set(id, obj);
+    }catch(e){ /* 静默失败，保持原样 */ }
+  }));
+
+  // 3) 回填到原数组
+  for (const p of items){
+    if (typeof p.repost_of === 'string' && cache.has(p.repost_of)) p.repost_of = cache.get(p.repost_of);
+    if (typeof p.original  === 'string' && cache.has(p.original))  p.original  = cache.get(p.original);
+    if (typeof p.quote_of  === 'string' && cache.has(p.quote_of))  p.quote_of  = cache.get(p.quote_of);
+  }
+  return items;
+}
+
+// 展开“单条帖子”的引用（用在单帖页兜底）
+async function expandOne(post){
+  const authed = !!session.get();
+  if (post && typeof post.repost_of === 'string') {
+    try{ post.repost_of = await api(`/posts/${post.repost_of}`, { method:'GET', auth: authed }); }catch{}
+  }
+  if (post && typeof post.quote_of === 'string') {
+    try{ post.quote_of = await api(`/posts/${post.quote_of}`, { method:'GET', auth: authed }); }catch{}
+  }
+  return post;
+}
+
 /* ====== Boot ====== */
 window.addEventListener("DOMContentLoaded", () => {
   cacheDom();
@@ -242,6 +286,7 @@ async function loadFeed(tab="for_you"){
   try{
     const data = await api(`/feed?tab=${encodeURIComponent(tab)}`, { method:"GET", auth:false });
     const items = data.items || [];
+    items = await expandRefs(items);
     if(items.length===0){ $.empty.hidden=false; }
     $.feed.innerHTML = items.map(renderCard).join("");
     bindCardEvents();
