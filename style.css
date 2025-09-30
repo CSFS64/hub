@@ -726,17 +726,17 @@ dialog {
 /* ===== 引用卡（使用 grid；正文与头像左对齐） ===== */
 .quote-embed{
   display: grid;
-  grid-template-columns: 28px 8px 1fr;  /* 头像 28 + 间距 8 + 正文 */
+  grid-template-columns: 28px 8px minmax(0,1fr); /* ← 关键：1fr -> minmax(0,1fr) */
   grid-template-areas:
     "av  . head"
     "av  . text"
     "av  . more";
   align-items: start;
-
+  width: 100%;                                     /* 保证占满父级 */
   padding: 12px;
   border-radius: 12px;
   border: 1px solid var(--line);
-  background: var(--card);              /* 默认白/深色卡片底 */
+  background: var(--card);
   transition: background-color .22s ease, box-shadow .22s ease;
 }
 .quote-embed > img.avatar{
