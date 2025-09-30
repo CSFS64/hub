@@ -753,7 +753,7 @@ dialog {
 .quote-embed .q-head{
   grid-area: head;
   font-weight: 600; font-size: 14px;
-  margin: 0 0 6px;
+  margin: 0 0 12px;
 }
 .quote-embed .q-head .meta{
   margin-left: 6px; color: var(--muted); font-weight: 400;
