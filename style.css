@@ -481,22 +481,6 @@ dialog {
   overflow-wrap: anywhere;
 }
 
-/* ② 名称位置与样式（加粗，靠近头像上边对齐） */
-.reply-card .quoted-detail .head,
-.reply-card #replyHost .head{
-  display: flex !important;
-  align-items: center !important;  /* baseline → center，更贴近头像 */
-  gap: 6px;
-  font-weight: 700;        /* 名称加粗 */
-  font-size: 15px;
-  margin: 0 0 4px !important;   /* 顶部 0，避免被别处加出的间距 */
-}
-.reply-card .quoted-detail .head .meta,
-.reply-card #replyHost .head .meta{
-  font-weight: 400;
-  color: var(--muted);
-}
-
 /* ③ 弹窗里的“Post your reply”输入框 */
 #replyText{
   font-family: system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -584,20 +568,6 @@ dialog {
 .reply-thread .rail.me::after { display: none; }
 .reply-thread .body { grid-column: 2; }
 
-/* 作者信息行（昵称 + 时间） */
-.reply-card #replyHost .head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 700;
-  font-size: 15px;
-  margin: 0 0 4px;
-}
-.reply-card #replyHost .head .meta {
-  font-weight: 400;
-  color: var(--muted);
-}
-
 /* 正文文本 */
 .reply-card #replyHost .text {
   white-space: pre-wrap;
@@ -633,7 +603,6 @@ dialog {
   align-items: center;
   gap: 8px;
   padding: 12px 20px 16px;
-  border-top: 1px solid var(--line);
 }
 .char-counter {
   min-width: 28px;
@@ -652,3 +621,11 @@ dialog {
 .char-counter.over{ background:#ffe8e8; color:#c81e1e; }
 :root.dark .char-counter.over{ background:#3a0d0d; color:#ff7373; }
 
+.reply-card #replyHost .head {
+  display: flex;
+  align-items: flex-start !important;   /* 改成顶对齐 */
+  gap: 6px;
+  font-weight: 700;
+  font-size: 15px;
+  margin: 0 0 4px !important;
+}
