@@ -109,29 +109,39 @@
   </dialog>
 
   <dialog id="replyDialog">
-    <div class="mf-modal-card">
-      <div class="mf-modal-topbar">
-        <div>Reply</div>
-        <button class="mf-modal-close" onclick="$.closeReply()">✕</button>
-      </div>
+    <div class="mf-shadow">
+      <div class="mf-modal-card">
+        <div class="mf-modal-topbar">
+          <div>Reply</div>
+          <button class="mf-modal-close" onclick="$.closeReply()">✕</button>
+        </div>
   
-      <div class="mf-modal-body">
-        <!-- 原帖容器（id 保持不变，供 JS 填充） -->
-        <div id="replyHost" class="mf-quote"></div>
+        <div class="mf-modal-body">
+          <!-- 两列线程布局 -->
+          <div class="mf-thread">
+            <!-- 上：原作者 rail + 文本 -->
+            <div class="mf-rail">
+              <img id="replyAuthorAvatar" class="avatar" alt="">
+            </div>
+            <div id="replyHost" class="mf-quote body"><!-- JS 填充原帖 --></div>
   
-        <!-- 编辑器（id 保持不变） -->
-        <div class="mf-editor">
-          <textarea id="replyText" class="mf-input" rows="1" placeholder="Post your reply"></textarea>
-  
-          <div class="mf-tools">
-            <div id="replyModalCounter" class="mf-counter">280</div>
-            <button id="btnReply" class="mf-btn primary" type="button">Reply</button>
+            <!-- 下：我自己的 rail + 编辑器 -->
+            <div class="mf-rail me">
+              <img id="replyMyAvatar" class="avatar" alt="">
+            </div>
+            <div class="mf-editor body">
+              <textarea id="replyText" class="mf-input" rows="1" placeholder="Post your reply"></textarea>
+              <div class="mf-tools">
+                <div id="replyModalCounter" class="mf-counter">280</div>
+                <button id="btnReply" class="mf-btn primary" type="button">Reply</button>
+              </div>
+              <div id="replyModalUpsell" class="upsell">
+                Upgrade to <b>Premium+</b> to write longer posts and Articles.
+                <a class="link" href="javascript:;">Learn more</a>
+              </div>
+            </div>
           </div>
-  
-          <div id="replyModalUpsell" class="upsell">
-            Upgrade to <b>Premium+</b> to write longer posts and Articles.
-            <a class="link" href="javascript:;">Learn more</a>
-          </div>
+          <!-- /mf-thread -->
         </div>
       </div>
     </div>
