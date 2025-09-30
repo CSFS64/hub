@@ -539,7 +539,17 @@ dialog {
 .mf-modal-close:hover{ background: var(--hover); }
 
 /* 内容区整体内边距（避免文字靠右贴边） */
-.mf-modal-body{ padding: 16px 20px; }
+/* 内容区：把上 padding 收紧 */
+.mf-modal-body{
+  padding: 12px 20px 16px;   /* 原来是 16px 20px，少 4px 就贴近顶栏了 */
+}
+
+/* 任何可能的“首行外边距”一律清零 */
+.mf-modal-body > *:first-child{ margin-top: 0; }
+.mf-thread{ margin-top: 0; }
+.mf-quote .head{ margin: 0; }     /* 标题行 */
+.mf-quote .text{ margin-top: 4px; }  /* 正文与标题的间距保留一点点即可 */
+
 
 /* ========== 两列线程：双头像 + 连接灰线 ========== */
 .mf-thread{
@@ -645,4 +655,16 @@ dialog {
 @media (max-width: 680px){
   .mf-modal-card{ margin: 0 12px; }
   .mf-modal-body{ padding: 14px 16px; }
+}
+
+/* 脊柱：从第一张头像下方垂到第二行头像上方 */
+.mf-spine{
+  grid-column:1;
+  grid-row:1 / span 2;        /* 跨两行 */
+  justify-self:center;
+  width:2px;
+  background:var(--line);
+  margin-top:48px;            /* 40px头像 + 8px间距 */
+  margin-bottom:20px;         /* 在第二个头像前“收尾”一点点 */
+  border-radius:1px;
 }
