@@ -242,16 +242,40 @@ function bindNav(){
       document.querySelectorAll(".left-nav .nav-item").forEach(n=>n.classList.remove("is-active"));
       a.classList.add("is-active");
       const link = a.getAttribute("data-link");
-      if(link==="home"){ setActiveTab("for_you"); loadFeed("for_you"); }
-      if(link==="following"){ setActiveTab("following"); loadFeed("following"); }
-      if(link==="profile"){ gotoMyProfile(); }
-      if(link==="search"){ document.getElementById("q").focus(); }
+
+      // 统一：先把路由切回根，这样“返回”不会回到旧的 #/post/xxx
+      const goHomeRoute = () => {
+        if (location.hash !== "") location.hash = ""; // 触发 handleRoute（它会恢复 UI + loadFeed）
+      };
+
+      if (link === "home") {
+        setActiveTab("for_you");
+        goHomeRoute();
+        // 不再手动 loadFeed，交给 handleRoute 处理，避免重复加载
+        return;
+      }
+
+      if (link === "following") {
+        setActiveTab("following");
+        goHomeRoute();
+        return;
+      }
+
+      if (link === "profile") { gotoMyProfile(); return; }
+      if (link === "search")  { document.getElementById("q").focus(); return; }
     };
   });
+
   $.tabs.forEach(t=>{
-    t.onclick = ()=>{ setActiveTab(t.dataset.tab); loadFeed(t.dataset.tab); };
+    t.onclick = ()=>{
+      setActiveTab(t.dataset.tab);
+      // 在单帖页点顶部 Tab 时，也要回到根，避免“返回”跳回旧帖子
+      if (location.hash !== "") location.hash = "";
+      else loadFeed(t.dataset.tab);
+    };
   });
 }
+
 function setActiveTab(tab){
   $.tabs.forEach(t=>t.classList.toggle("is-active", t.dataset.tab===tab));
 }
@@ -768,7 +792,6 @@ async function doSearch(){
 function getAvatarPlaceholder(name=""){ return "data:,"; }
 
 async function showPostPage(id){
-  // 单帖页隐藏顶部 tabs / 发帖栏
   document.getElementById("composeInline").style.display = "none";
   document.querySelector(".topbar .tabs").style.display = "none";
   $.loading.hidden = false; $.empty.hidden = true; $.feed.innerHTML = "";
@@ -778,13 +801,19 @@ async function showPostPage(id){
     $.feed.innerHTML = renderPostPage(d);
     bindPostPageEvents(d);
   }catch(e){
+    // 如果是 not found，直接回首页并提示
+    if (String(e.message||"").toLowerCase().includes("not found")) {
+      toast("该帖子不存在或已被删除");
+      // 回根，触发 handleRoute -> 恢复首页
+      location.hash = "";
+      return;
+    }
     $.feed.innerHTML = `<div class="empty">加载失败：${esc(e.message||'')}</div>`;
-    }finally{
+  }finally{
     $.loading.hidden = true;
-    applyClamp();   // ← 同样渲染单帖页后检查
+    applyClamp();
   }
 }
-
 
 function formatFullTime(iso){
   // e.g. "1:15 AM · Sep 29, 2025"
