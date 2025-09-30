@@ -485,14 +485,24 @@ dialog {
 
 /* ========== Reply Modal（精简版：无模糊、无阴影） ========== */
 
-/* 1) <dialog>：无内边距、不做阴影/模糊；仅用半透明遮罩 */
+/* Reply Modal 的可见性必须跟 open 属性走 */
 #replyDialog{
   border: none;
   background: transparent;
-  padding: 0;                     /* ← 去掉顶部空白的根源 */
-  display: grid;
-  place-items: center;            /* 居中卡片 */
+  padding: 0;
+  /* 千万不要在这里写 display:grid */
+  z-index: 9999; /* 确保浮在最上层 */
 }
+/* 打开时才参与布局并居中 */
+#replyDialog[open]{
+  display: grid;
+  place-items: center;
+}
+/* 关闭时强制隐藏，避免被其它样式意外覆盖 */
+#replyDialog:not([open]){
+  display: none !important;
+}
+
 #replyDialog::backdrop{
   background: rgba(0,0,0,.35);    /* 不要高斯模糊，仅半透明遮罩 */
 }
