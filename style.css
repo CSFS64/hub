@@ -629,3 +629,12 @@ dialog {
   font-size: 15px;
   margin: 0 0 4px !important;
 }
+
+/* rail 里把内容顶对齐；或者只给头像设置 align-self 也行 */
+.reply-thread .rail{ 
+  align-items: flex-start;              /* 关键 */
+}
+
+.reply-thread .rail .avatar{
+  align-self: flex-start;               /* 保险，再钉一次 */
+}
