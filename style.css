@@ -721,7 +721,7 @@ dialog {
 }
 
 /* ===== 父帖正文与引用卡之间的距离（稍微更松） ===== */
-.card .text + .quote-embed{ margin-top: 12px; }
+.card .text + .quote-embed{ margin-top: 16px; }
 
 /* ===== 引用卡（使用 grid；正文与头像左对齐） ===== */
 .quote-embed{
