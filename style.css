@@ -157,7 +157,6 @@ body{
 .modal{ border:none; background:rgba(0,0,0,.4); }
 .modal::backdrop{
   background: rgba(0,0,0,.50);
-  backdrop-filter: blur(0.5px) saturate(110%);
 }
 .modal-card{ width:min(680px,92vw); background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:16px; padding:12px; position:relative; }
 .modal-card .close{ position:absolute; top:8px; right:8px; }
