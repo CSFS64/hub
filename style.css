@@ -606,3 +606,32 @@ dialog {
 /* Upsell 仍然只在超限时显示（和 JS .show 配合） */
 .reply-card .upsell{ display: none !important; }
 .reply-card .upsell.show{ display: block !important; }
+
+/* 让昵称行紧贴头像顶部 —— 切掉所有可能的顶边距/内边距 */
+.reply-card .reply-thread .row:first-child .body{
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+/* #replyHost（你把原帖塞在这里）以及它的第一个块级子元素不许有顶边距 */
+.reply-card #replyHost{
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+.reply-card #replyHost > *:first-child{
+  margin-top: 0 !important;
+}
+
+/* 名称那一行的排版（加粗 + 与头像上边对齐） */
+.reply-card #replyHost .head{
+  display: flex !important;
+  align-items: baseline !important;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 15px;
+  margin: 0 0 4px !important;   /* 顶部 0，避免被别处加出的间距 */
+}
+.reply-card #replyHost .head .meta{
+  font-weight: 400; color: var(--muted);
+}
+
