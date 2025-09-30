@@ -748,7 +748,7 @@ dialog {
   /* 鼠标移到引用块本身：比父卡 hover 稍深，但不要太重 */
   .card.clickable:hover .quote-embed:hover{
     /* 以父卡 hover 为基，向前景色混 12% 得到微深的灰 */
-    background: color-mix(in srgb, var(--hover) 94%, var(--fg) 6%);
+    background: color-mix(in srgb, var(--hover) 96%, var(--fg) 4%);
   }
 }
 /* 不支持 color-mix 的浏览器：用极轻的内阴影模拟“更深一点” */
