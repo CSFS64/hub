@@ -140,6 +140,14 @@ body{
 
 .empty,.loading{ text-align:center; padding:24px; color:var(--muted); }
 
+/* 详情页/评论里的正文必须保留换行与空行 */
+.post-thread .detail .text,
+.post-thread .comment .text {
+  white-space: pre-wrap;    /* 保留 \n 与空行 */
+  word-break: break-word;   /* 不会把中文硬断 */
+  overflow-wrap: anywhere;  /* 超长链接也能换行 */
+}
+
 /* =========================
    Right Rail
    ========================= */
