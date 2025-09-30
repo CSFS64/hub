@@ -285,7 +285,7 @@ async function loadFeed(tab="for_you"){
   $.loading.hidden=false; $.empty.hidden=true; $.feed.innerHTML="";
   try{
     const data = await api(`/feed?tab=${encodeURIComponent(tab)}`, { method:"GET", auth:false });
-    const items = data.items || [];
+    let items = data.items || [];
     items = await expandRefs(items);
     if(items.length===0){ $.empty.hidden=false; }
     $.feed.innerHTML = items.map(renderCard).join("");
