@@ -472,3 +472,70 @@ dialog {
   height: auto !important;
   overflow: visible !important;
 }
+
+/* ===== Reply 弹窗：宽度 & 版心 ===== */
+.reply-card{
+  width: min(600px, 96vw) !important;   /* 更接近 X 的宽度 */
+  border-radius: 16px;
+  background: var(--bg);
+  color: var(--fg);
+  /* 软阴影保留即可（你已有），不重复 */
+}
+.reply-thread{
+  padding: 16px 20px 12px !important;   /* 内边距更舒适 */
+}
+
+/* 弹窗内全局排版（不要影响全站） */
+.reply-card{
+  font-family: system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size: 15px;               /* X 的正文感受 */
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ===== 保留原作者文本的段落/空行，且支持长链接换行 ===== */
+/* 你的 JS 把原文塞到 #replyHost；直接针对这里做白空格保留 */
+#replyHost .text,
+#replyHost,
+.quoted-detail .text,
+.post-thread .detail .text{
+  white-space: pre-wrap !important;  /* 保留换行/空行 */
+  word-break: break-word;            /* 不中断中文，长链接也能换行 */
+  overflow-wrap: anywhere;           /* 超长单词/URL 强制换行 */
+}
+
+/* 头像与连线维持现有两列布局（确保不被其它规则覆盖） */
+.reply-thread{
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  row-gap: 12px; column-gap: 12px;
+}
+.reply-thread .rail{
+  grid-column: 1; position: relative;
+  display: flex; justify-content: center;
+}
+.reply-thread .rail .avatar{
+  width: 40px; height: 40px; border-radius: 50%; background:#ddd; object-fit: cover;
+}
+.reply-thread .rail:first-of-type::after{
+  content:""; position:absolute; left:50%; transform:translateX(-50%);
+  width:2px; top:48px; bottom:-12px; background:var(--line); pointer-events:none;
+}
+.reply-thread .rail.me::after{ display:none; }
+.reply-thread .body{ grid-column: 2; }
+
+/* ===== Upsell 只在超限时出现（双保险） ===== */
+.upsell{ display: none !important; }
+.upsell.show{ display: block !important; }
+
+/* ===== 输入区：和外层版式一致 ===== */
+.reply-editor textarea{
+  font-size: 15px; line-height: 1.6;     /* 与弹窗正文统一 */
+  padding: 12px 0;                       /* 聚焦/未聚焦一致，避免跳动 */
+  min-height: 44px;                      /* 首行总高与 44px 头像匹配 */
+}
+.reply-editor textarea::placeholder{
+  color: rgba(83,100,113,.9);
+  font-weight: 400;
+}
