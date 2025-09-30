@@ -52,6 +52,7 @@ async function api(path, {method="GET", body=null, auth=true, raw=false, headers
 /* ====== Boot ====== */
 window.addEventListener("DOMContentLoaded", () => {
   cacheDom();
+  initRepostDialogs();
   bindNav();
   bindComposer();
   bindAuth();
@@ -61,94 +62,8 @@ window.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("hashchange", handleRoute);
 });
 
-// 当前正在操作的原帖 id
-$.repostTargetId = null;
-
-// 打开选择弹窗
-$.openRepostChoice = (postId)=>{
-  $.repostTargetId = postId;
-  $.repostChoiceDialog.showModal();
-};
-
-// 直接转发
-$.btnRepostNow.onclick = async ()=>{
-  const me = await ensureLogin(); if(!me) return;
-  const id = $.repostTargetId; if(!id) return $.repostChoiceDialog.close();
-
-  try{
-    // 方案一：后端有专门接口
-    // await api(`/posts/${id}/repost`, { method:"POST" });
-
-    // 方案二：复用发帖接口，标注为“转发”
-    await api(`/posts`, { method:"POST", body:{ repost_of: id } });
-
-    $.repostChoiceDialog.close();
-    toast("已转发");
-    loadFeed(getCurrentTab());
-  }catch(e){ toast(e.message||"转发失败"); }
-};
-
-// 选择“引用”
-$.btnQuote.onclick = async ()=>{
-  const id = $.repostTargetId; if(!id) return $.repostChoiceDialog.close();
-  $.repostChoiceDialog.close();
-  await buildQuotePreview(id);     // 预载原帖内容
-  $.quoteText.value = "";
-  updateQuoteCounter();
-  $.quoteDialog.showModal();
-};
-
-// 引用发布
-$.btnQuoteSend.onclick = async ()=>{
-  const me = await ensureLogin(); if(!me) return;
-  const id = $.repostTargetId; if(!id) return $.quoteDialog.close();
-
-  const text = ($.quoteText.value||"").trim();
-  if(text.length>280){ toast("超出 280 字"); return; }
-
-  try{
-    // 方案一：发新帖，携带 quote_of
-    await api(`/posts`, { method:"POST", body:{ text, quote_of: id } });
-    $.quoteDialog.close();
-    toast("已发布引用");
-    loadFeed(getCurrentTab());
-  }catch(e){ toast(e.message||"发布失败"); }
-};
-
-// 引用输入字数
-function updateQuoteCounter(){
-  const remain = 280 - ($.quoteText.value||"").length;
-  $.quoteCounter.textContent = remain;
-  $.quoteCounter.classList.toggle("over", remain < 0);
-}
-$.quoteText?.addEventListener("input", updateQuoteCounter);
-
-// 构建引用预览
-async function buildQuotePreview(postId){
-  const p = await api(`/posts/${postId}`, { method:"GET", auth: !!session.get() });
-  const html = `
-    <div class="q-head">${esc(p.author?.nickname||p.author?.username||"用户")} · <span class="meta">${timeAgo(p.created_at)}</span></div>
-    <div class="q-text clamped">${nl2brSafe(p.text||"")}</div>
-    <div class="show-more" onclick="
-      this.previousElementSibling.classList.remove('clamped');
-      this.remove();
-    ">Show more</div>
-  `;
-  $.quotePreview.innerHTML = html;
-  $.quotePreview.onclick = ()=> goToPost(postId);   // 点击跳原帖
-}
-
 /* ====== DOM cache ====== */
 function cacheDom(){
-  $.repostChoiceDialog = document.getElementById("repostChoiceDialog");
-  $.quoteDialog        = document.getElementById("quoteDialog");
-  $.btnRepostNow       = document.getElementById("btnRepostNow");
-  $.btnQuote           = document.getElementById("btnQuote");
-  $.btnQuoteSend       = document.getElementById("btnQuoteSend");
-  $.quoteText          = document.getElementById("quoteText");
-  $.quoteCounter       = document.getElementById("quoteCounter");
-  $.quotePreview       = document.getElementById("quotePreview");
-
   $.replyDialog = document.getElementById("replyDialog");
   $.replyHost   = document.getElementById("replyHost");
   $.replyText   = document.getElementById("replyText");
@@ -171,6 +86,94 @@ function cacheDom(){
   document.getElementById("openComposer").onclick = () => $.postText?.focus();
   document.getElementById("btnSearch").onclick = doSearch;
   $.toggleTheme.onclick = toggleTheme;
+}
+
+// ===== 初始化：转发/引用弹窗 =====
+function initRepostDialogs(){
+  // 缓存 DOM
+  $.repostChoiceDialog = document.getElementById("repostChoiceDialog");
+  $.quoteDialog        = document.getElementById("quoteDialog");
+  $.btnRepostNow       = document.getElementById("btnRepostNow");
+  $.btnQuote           = document.getElementById("btnQuote");
+  $.btnQuoteSend       = document.getElementById("btnQuoteSend");
+  $.quoteText          = document.getElementById("quoteText");
+  $.quoteCounter       = document.getElementById("quoteCounter");
+  $.quotePreview       = document.getElementById("quotePreview");
+
+  // 当前操作的原帖 id
+  $.repostTargetId = null;
+
+  // 打开选择弹窗（供卡片按钮调用）
+  $.openRepostChoice = (postId)=>{
+    $.repostTargetId = postId;
+    if ($.repostChoiceDialog) $.repostChoiceDialog.showModal();
+  };
+
+  // 直接转发
+  if ($.btnRepostNow) {
+    $.btnRepostNow.onclick = async ()=>{
+      const me = await ensureLogin(); if(!me) return;
+      const id = $.repostTargetId; if(!id) return $.repostChoiceDialog?.close();
+      try{
+        await api(`/posts`, { method:"POST", body:{ repost_of: id } });
+        $.repostChoiceDialog?.close();
+        toast("已转发"); loadFeed(getCurrentTab());
+      }catch(e){ toast(e.message||"转发失败"); }
+    };
+  }
+
+  // 选择“引用”
+  if ($.btnQuote) {
+    $.btnQuote.onclick = async ()=>{
+      const id = $.repostTargetId; if(!id) return $.repostChoiceDialog?.close();
+      $.repostChoiceDialog?.close();
+      await buildQuotePreview(id);
+      if ($.quoteText) $.quoteText.value = "";
+      updateQuoteCounter();
+      $.quoteDialog?.showModal();
+    };
+  }
+
+  // 发布引用
+  if ($.btnQuoteSend) {
+    $.btnQuoteSend.onclick = async ()=>{
+      const me = await ensureLogin(); if(!me) return;
+      const id = $.repostTargetId; if(!id) return $.quoteDialog?.close();
+      const text = ($.quoteText?.value||"").trim();
+      if (text.length>280) { toast("超出 280 字"); return; }
+      try{
+        await api(`/posts`, { method:"POST", body:{ text, quote_of: id } });
+        $.quoteDialog?.close();
+        toast("已发布引用"); loadFeed(getCurrentTab());
+      }catch(e){ toast(e.message||"发布失败"); }
+    };
+  }
+
+  // 计数器
+  function updateQuoteCounter(){
+    if (!$.quoteCounter) return;
+    const remain = 280 - ($.quoteText?.value||"").length;
+    $.quoteCounter.textContent = remain;
+    $.quoteCounter.classList.toggle("over", remain < 0);
+  }
+  $.updateQuoteCounter = updateQuoteCounter; // 如果别处要用
+  $.quoteText?.addEventListener("input", updateQuoteCounter);
+
+  // 引用预览
+  $.buildQuotePreview = async function(postId){
+    const p = await api(`/posts/${postId}`, { method:"GET", auth: !!session.get() });
+    const html = `
+      <div class="q-head">${esc(p.author?.nickname||p.author?.username||"用户")} ·
+        <span class="meta">${timeAgo(p.created_at)}</span></div>
+      <div class="q-text clamped">${nl2brSafe(p.text||"")}</div>
+      <div class="show-more" onclick="
+        this.previousElementSibling.classList.remove('clamped'); this.remove();
+      ">Show more</div>`;
+    if ($.quotePreview){
+      $.quotePreview.innerHTML = html;
+      $.quotePreview.onclick = ()=> goToPost(postId);
+    }
+  };
 }
 
 /* ====== Theme ====== */
@@ -243,24 +246,6 @@ async function loadFeed(tab="for_you"){
     $.loading.hidden = true;
     applyClamp();   // ← 渲染完成后检查是否需要显示 Show more
   }
-}
-
-
-function cleanText(s = "") {
-  return s
-    .replace(/^\s*\n+/, "")   // 去掉开头的换行/空白行
-    .replace(/\n{3,}/g, "\n\n"); // 3 个及以上的连续空行压成 2 个（可选）
-}
-
-function renderTextWithClamp(text) {
-  const safe = esc(cleanText(text || ""));
-  return `
-    <div class="text clamped">${safe}</div>
-    <div class="show-more"
-         onclick="event.stopPropagation();
-                  this.previousElementSibling.classList.remove('clamped');
-                  this.remove()">Show more</div>
-  `;
 }
 
 function applyClamp(){
