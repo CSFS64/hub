@@ -207,6 +207,7 @@ function renderCard(p){
       <div class="actions">
         <div class="action open">💬 <span>${p.comments_count||0}</span></div>
         <div class="action like ${p.liked?'liked':''}">❤️ <span>${p.likes||0}</span></div>
+        <div class="action repost" title="转发">🔁</div>
         ${deletable ? `<div class="action del" title="删除">🗑️</div>` : ""}
       </div>
     </div>
@@ -214,6 +215,17 @@ function renderCard(p){
 }
 
 function bindCardEvents(){
+  // —— 转发按钮 —— //
+  document.querySelectorAll(".card .repost").forEach(b=>{
+    b.onclick = async (e)=>{
+      e.stopPropagation();
+      const me = await ensureLogin(); if(!me) return;
+      const card = e.target.closest(".card");
+      const id = card.dataset.id;               // 原帖 id
+      $.openRepostChoice(id);                   // 打开选择弹窗
+    };
+  });
+
   // 整卡点击进入详情
   document.querySelectorAll(".card.clickable").forEach(card=>{
     card.onclick = (e)=>{
