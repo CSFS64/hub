@@ -115,7 +115,9 @@ function initRepostDialogs(){
       const me = await ensureLogin(); if(!me) return;
       const id = $.repostTargetId; if(!id) return $.repostChoiceDialog?.close();
       try{
-        await api(`/posts`, { method:"POST", body:{ repost_of: id } });
+        const fd1 = new FormData();
+        fd1.append('repost_of', id);
+        await api('/posts', { method:'POST', body: fd1 });
         $.repostChoiceDialog?.close();
         toast("已转发"); loadFeed(getCurrentTab());
       }catch(e){ toast(e.message||"转发失败"); }
@@ -142,7 +144,10 @@ function initRepostDialogs(){
       const text = ($.quoteText?.value||"").trim();
       if (text.length>280) { toast("超出 280 字"); return; }
       try{
-        await api(`/posts`, { method:"POST", body:{ text, quote_of: id } });
+          const fd2 = new FormData();
+          fd2.append('text', text);
+          fd2.append('quote_of', id);
+          await api('/posts', { method:'POST', body: fd2 });
         $.quoteDialog?.close();
         toast("已发布引用"); loadFeed(getCurrentTab());
       }catch(e){ toast(e.message||"发布失败"); }
