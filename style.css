@@ -403,3 +403,72 @@ dialog {
   box-shadow: none !important;
   background: transparent !important;
 }
+
+/* ===== Hotfix: 保证 Upsell 只在超字数时显示 ===== */
+.upsell{ 
+  display: none !important;
+  visibility: hidden !important;
+}
+.upsell.show{
+  display: block !important;
+  visibility: visible !important;
+}
+
+/* ===== Hotfix: 弹窗回复采用“推特式两头像 + 连接灰线”布局，且不被裁切 ===== */
+.reply-card{
+  overflow: visible !important;     /* 防止内部线条/阴影被裁切 */
+}
+.reply-thread{
+  display: grid !important;
+  grid-template-columns: 56px 1fr !important;
+  column-gap: 12px !important;
+  row-gap: 12px !important;
+  padding: 16px !important;
+  overflow: visible !important;
+}
+.reply-thread .rail{
+  grid-column: 1 !important;
+  position: relative !important;
+  display: flex !important;
+  justify-content: center !important;
+}
+.reply-thread .rail .avatar{
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50% !important;
+  background: #ddd !important;
+  object-fit: cover !important;
+}
+.reply-thread .rail:first-of-type::after{
+  content: "" !important;
+  position: absolute !important;
+  left: 50% !important;
+  width: 2px !important;
+  transform: translateX(-50%) !important;
+  top: 48px !important;    /* 40px头像 + 8px间距 */
+  bottom: -12px !important;
+  background: var(--line) !important;
+  pointer-events: none !important;
+}
+.reply-thread .rail.me::after{ display: none !important; }
+
+/* ===== Hotfix: 输入框与头像精确对齐，并允许所在行随内容增高 ===== */
+#replyText,
+#commentTextPage{
+  font-size: 15px !important;
+  line-height: 20px !important;
+  padding: 12px 0 !important;   /* 12 + 20 + 12 = 44，与 44px 头像中心线对齐 */
+  min-height: 44px !important;
+}
+.reply-editor:focus-within textarea{
+  min-height: 44px !important;
+  padding: 12px 0 !important;   /* 聚焦不跳动 */
+}
+/* 容器允许增长，不裁切 */
+.post-thread .row,
+.post-thread .row .body,
+.reply-inline,
+.reply-editor{
+  height: auto !important;
+  overflow: visible !important;
+}
