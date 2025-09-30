@@ -687,6 +687,7 @@ async function gotoMyProfile(){
 async function openUser(uid){
   try{
     const d = await api(`/users/${uid}`, { method:"GET", auth: !!session.get() });
+    d.posts = await expandRefs(d.posts || []);
     $.feed.innerHTML = renderProfile(d);
     bindProfileActions(d);
   }catch(e){ toast(e.message||"打开失败"); }
@@ -755,10 +756,13 @@ async function doSearch(){
   if(!q) return;
   try{
     const data = await api(`/search?q=${encodeURIComponent(q)}`, { method:"GET", auth: !!session.get() });
-    $.feed.innerHTML = data.items.map(renderCard).join("") || `<div class="empty">未找到相关内容</div>`;
+    let items = data.items || [];
+    items = await expandRefs(items);
+    $.feed.innerHTML = items.map(renderCard).join("") || `<div class="empty">未找到相关内容</div>`;
     bindCardEvents();
   }catch(e){ toast(e.message || "搜索失败"); }
 }
+
 
 /* ====== Small helpers ====== */
 function getAvatarPlaceholder(name=""){ return "data:,"; }
@@ -770,6 +774,7 @@ async function showPostPage(id){
   $.loading.hidden = false; $.empty.hidden = true; $.feed.innerHTML = "";
   try{
     const d = await api(`/posts/${id}`, { method:"GET", auth: !!session.get() });
+    await expandOne(d);
     $.feed.innerHTML = renderPostPage(d);
     bindPostPageEvents(d);
   }catch(e){
