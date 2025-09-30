@@ -362,13 +362,6 @@ function renderCard(p){
     // 仍然复用原帖的可视卡片，但把外层包一个 data-repost-id
     const cardHtml = renderOriginalCard(originalPost);
   
-    // 给转发者一个“删除转发”的专属动作（可选，但推荐）
-    const repostActions = canDeleteRepost ? `
-      <div class="actions" style="margin:6px 12px 0 52px;">
-        <div class="action del" data-delete-repost="${esc(p.id)}" title="删除这条转发">🗑️ 删除转发</div>
-      </div>
-    ` : "";
-  
     return `
       <div class="repost-wrap" data-repost-id="${esc(p.id)}">
         ${badge}
