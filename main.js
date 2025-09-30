@@ -170,13 +170,12 @@ function initRepostDialogs(){
 
   // 选择“引用”
   if ($.btnQuote) {
-    $.btnQuote.onclick = async ()=>{
-      const id = $.repostTargetId; if(!id) return $.repostChoiceDialog?.close();
+    $.btnQuote.onclick = async () => {
+      const id = $.repostTargetId; 
+      if (!id) return $.repostChoiceDialog?.close();
       $.repostChoiceDialog?.close();
-      await $.buildQuotePreview(id);
-      if ($.quoteText) $.quoteText.value = "";
-      updateQuoteCounter();
-      $.quoteDialog?.showModal();
+      // 直接用回复弹窗样式打开“引用模式”
+      $.openQuote(id);
     };
   }
 
@@ -532,71 +531,65 @@ function renderQuoted(p){
   `;
 }
 
-/** 打开回复弹窗并绑定提交 */
-$.openReply = async (postId) => {
+// 通用：打开编辑弹窗（reply/quote 共用 UI）
+$.openComposer = async (postId, mode = "reply") => {
   const me = await ensureLogin(); if (!me) return;
   try {
     const d = await api(`/posts/${postId}`, { method: "GET", auth: true });
 
-    // 原帖
+    // 顶部标题、按钮、占位语切换
+    const titleEl = $.replyDialog.querySelector('.mf-modal-topbar div');
+    const btnEl   = document.getElementById("btnReply");
+    const ta      = document.getElementById("replyText");
+
+    if (mode === "quote") {
+      titleEl.textContent = "引用帖子";
+      btnEl.textContent   = "发布";
+      ta.placeholder      = "写点你的看法（可选）";
+    } else {
+      titleEl.textContent = "Reply";
+      btnEl.textContent   = "Reply";
+      ta.placeholder      = "Post your reply";
+    }
+
+    // 原帖显示（沿用你已有的渲染）
     $.replyHost.innerHTML = renderQuoted(d);
 
     // 两侧头像
-    const authorAv = document.getElementById("replyAuthorAvatar");
-    const myAv     = document.getElementById("replyMyAvatar");
-    if (authorAv) authorAv.src = esc(d.author?.avatar || "data:,");
-    if (myAv)     myAv.src     = esc(session.get()?.user?.avatar || "data:,");
+    document.getElementById("replyAuthorAvatar").src = esc(d.author?.avatar || "data:,");
+    document.getElementById("replyMyAvatar").src     = esc(session.get()?.user?.avatar || "data:,");
 
-    // 输入区 & 工具
-    const ta      = document.getElementById("replyText");
-    const counter = document.getElementById("replyModalCounter");
-    const upsell  = document.getElementById("replyModalUpsell");
-    const btn     = document.getElementById("btnReply");
-
+    // 清空输入
     if (ta) ta.value = "";
 
+    // 打开弹窗
     $.replyDialog.showModal();
 
     requestAnimationFrame(layoutSpine);
 
-    // 如果你在引用里做了“Show more”展开，需要在点击时重算
-    const host = document.getElementById('replyHost');
-    host?.addEventListener('click', (e) => {
-      const btn = e.target.closest('.show-more');
-      if (btn) {
-        // 展开后，正文高度改变，重算一下脊柱
-        setTimeout(layoutSpine, 0);
-      }
-    });
-
-    // 自动高度 + 计数
-    const LIMIT = 280;
+    // 计数/自适应（保留原逻辑）
+    const LIMIT   = 280;
+    const counter = document.getElementById("replyModalCounter");
+    const upsell  = document.getElementById("replyModalUpsell");
     const autosize = () => {
-      if (!ta) return;
       ta.style.height = "auto";
       ta.style.overflowY = "hidden";
       ta.style.height = Math.min(ta.scrollHeight, 1000) + "px";
     };
     const update = () => {
-      if (!ta) return;
       autosize();
-      const remain = LIMIT - ta.value.length;
+      const remain = LIMIT - (ta?.value.length || 0);
       if (counter) {
         counter.textContent = remain;
         counter.classList.toggle("over", remain < 0);
       }
-      if (upsell) {
-        upsell.classList.toggle("show", remain < 0);
-      }
+      if (upsell) upsell.classList.toggle("show", remain < 0);
     };
-
-    // 用“赋值”的方式绑定，避免多次 addEventListener 叠加
     if (ta) {
-      ta.oninput  = update;
-      ta.onfocus  = update;
+      ta.oninput = ta.onfocus = update;
       ta.onkeydown = (ev) => {
         if (ev.key === "Enter" && !ev.ctrlKey && !ev.metaKey && !ev.shiftKey) {
-          ev.preventDefault(); btn?.click();
+          ev.preventDefault(); btnEl?.click();
         }
         if (ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)) {
           ev.preventDefault();
@@ -607,46 +600,52 @@ $.openReply = async (postId) => {
         }
       };
     }
+    update();
 
-    // resize 监听：命名 + 关闭时移除
+    // 关闭时清理
     const handleResize = () => autosize();
     window.addEventListener("resize", handleResize, { passive: true });
     $.replyDialog.addEventListener("close", () => {
       window.removeEventListener("resize", handleResize);
-      // 也顺便清理一次性句柄（可选）
-      if (ta) {
-        ta.oninput = ta.onfocus = ta.onkeydown = null;
-      }
+      if (ta) ta.oninput = ta.onfocus = ta.onkeydown = null;
     }, { once: true });
 
-    // 提交
-    if (btn) {
-      btn.onclick = async () => {
-        const text = (ta?.value || "").trim();
+    // 发送（按模式分流）
+    btnEl.onclick = async () => {
+      const text = (ta?.value || "").trim();
+      if (mode === "reply") {
         if (!text) return toast("回复不能为空");
-        if (text.length > LIMIT) {
-          upsell?.classList.add("show");
-          return toast("超出 280 字，精简后再发");
-        }
+        if (text.length > LIMIT) { upsell?.classList.add("show"); return toast("超出 280 字，精简后再发"); }
         try {
           await api(`/posts/${postId}/comments`, { method: "POST", body: { text } });
           $.closeReply();
           if (location.hash === `#/post/${postId}`) { showPostPage(postId); }
           else { goToPost(postId); }
           toast("已回复");
-        } catch (e) {
-          toast(e.message || "发送失败");
-        }
-      };
-    }
-
-    // 首次更新
-    update();
+        } catch (e) { toast(e.message || "发送失败"); }
+      } else {
+        // quote 模式：text 可空；提交 quote_of
+        if (text.length > LIMIT) { upsell?.classList.add("show"); return toast("超出 280 字，精简后再发"); }
+        try {
+          const fd = new FormData();
+          if (text) fd.append('text', text);
+          fd.append('quote_of', postId);
+          await api('/posts', { method:'POST', body: fd });
+          $.closeReply();
+          toast("已发布引用");
+          loadFeed(getCurrentTab());
+        } catch (e) { toast(e.message || "发布失败"); }
+      }
+    };
 
   } catch (e) {
     toast(e.message || "打开失败");
   }
 };
+
+// 兼容旧名字：保留调用点
+$.openReply = (postId) => $.openComposer(postId, "reply");
+$.openQuote = (postId) => $.openComposer(postId, "quote");
 
 
 /* ====== Router ====== */
