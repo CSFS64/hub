@@ -696,7 +696,7 @@ dialog {
 
 
 
-/* ==================== 转发和引用卡片 ==================== */
+/* ==================== 转发和引用卡片（整理版） ==================== */
 /* ===== 选择 & 引用弹窗 ===== */
 #repostChoiceDialog,#quoteDialog{ border:none;background:transparent;padding:0; }
 #repostChoiceDialog[open],#quoteDialog[open]{ display:grid; place-items:center; }
@@ -720,163 +720,32 @@ dialog {
   display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:5; overflow:hidden;
 }
 
-/* ===== 引用卡（推特风：左头像 + 右正文） ===== */
+/* ===== 父帖正文与引用卡之间的距离（稍微更松） ===== */
+.card .text + .quote-embed{ margin-top: 12px; }
+
+/* ===== 引用卡（使用 grid；正文与头像左对齐） ===== */
 .quote-embed{
-  display:flex; align-items:flex-start; gap:8px;
-  padding:10px; border-radius:12px;
-  border:1px solid var(--line);
-  background: var(--card);                    /* 默认白/深色卡片底 */
-  transition: background-color .22s ease, box-shadow .22s ease;
-}
-.quote-embed > img.avatar{
-  width:28px; height:28px; border-radius:50%; flex:0 0 28px; object-fit:cover;
-}
-.quote-embed .q-content{ flex:1; min-width:0; }
-.quote-embed .q-head{ font-weight:600; font-size:14px; }
-.quote-embed .q-head .meta{ margin-left:6px; color:var(--muted); font-weight:400; }
-.quote-embed .show-more{ display:none; color:var(--primary); font-weight:600; cursor:pointer; margin-top:4px; }
-.quote-embed .q-text.clamped + .show-more{ display:inline; }
-
-/* ===== 父卡 hover：父卡浅灰、过渡更顺滑 ===== */
-.card.clickable{ transition: background-color .22s ease; }
-.card.clickable:hover{ background: var(--hover); }
-
-/* ===== 引用卡 hover：在父卡 hover 时，引用卡略深一点（有 fallback） ===== */
-.card.clickable:hover .quote-embed{ background: var(--card); } /* 父卡灰时，引用仍白底 */
-
-@supports (background: color-mix(in srgb, black 10%, white)){
-  /* 鼠标移到引用块本身：比父卡 hover 稍深，但不要太重 */
-  .card.clickable:hover .quote-embed:hover{
-    /* 以父卡 hover 为基，向前景色混 12% 得到微深的灰 */
-    background: color-mix(in srgb, var(--hover) 96%, var(--fg) 4%);
-  }
-}
-/* 不支持 color-mix 的浏览器：用极轻的内阴影模拟“更深一点” */
-@supports not (background: color-mix(in srgb, black 10%, white)){
-  .card.clickable:hover .quote-embed:hover{
-    background: var(--hover);
-    box-shadow: inset 0 0 0 999px rgba(0,0,0,.02);
-  }
-}
-
-/* ===== 无障碍：若用户减少动效，则禁用过渡 ===== */
-@media (prefers-reduced-motion: reduce){
-  .card.clickable, .quote-embed{ transition: none !important; }
-}
-
-/* 父帖正文与引用卡的间距（更舒服一点） */
-.card .text + .quote-embed{
-  margin-top: 12px; /* 10→12 更接近图2手感 */
-}
-
-/* 引用卡：改用 grid 让“正文”从头像的左边缘开始（与头像左对齐） */
-.quote-embed{
-  /* 外观保持不变，只是把布局从 flex 换成 grid */
   display: grid;
-  grid-template-columns: 28px 8px 1fr; /* 头像宽 28 + 间距 8 + 正文区 */
+  grid-template-columns: 28px 8px 1fr;  /* 头像 28 + 间距 8 + 正文 */
   grid-template-areas:
     "av  . head"
     "av  . text"
     "av  . more";
   align-items: start;
 
-  padding: 12px;                /* 稍微更松一点 */
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: var(--card);
-  transition: background-color .22s ease, box-shadow .22s ease;
-}
-
-.quote-embed > img.avatar{
-  grid-area: av;
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.quote-embed .q-content{ min-width: 0; } /* 兼容旧结构，可留着 */
-
-.quote-embed .q-head{
-  grid-area: head;
-  font-weight: 600; font-size: 14px;
-  margin: 0 0 6px;               /* 用户名与正文之间留一点空间（图2手感） */
-}
-.quote-embed .q-head .meta{
-  margin-left: 6px; color: var(--muted); font-weight: 400;
-}
-
-.quote-embed .q-text{
-  grid-area: text;
-  line-height: var(--post-lh);
-  white-space: normal;
-  margin: 0;                     /* 与 q-head 的 6px 间距由上面控制 */
-}
-.quote-embed .q-text.clamped{
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 5;
-  overflow: hidden;
-}
-.quote-embed .q-text br{ line-height: inherit; }
-
-.quote-embed .show-more{
-  grid-area: more;
-  display: none;
-  color: var(--primary);
-  font-weight: 600;
-  cursor: pointer;
-  margin-top: 6px;
-}
-.quote-embed .q-text.clamped + .show-more{ display: inline; }
-
-/* 悬停层级与过渡（保持你之前的手感） */
-.card.clickable{ transition: background-color .22s ease; }
-.card.clickable:hover{ background: var(--hover); }
-.card.clickable:hover .quote-embed{ background: var(--card); }
-@supports (background: color-mix(in srgb, black 10%, white)){
-  .card.clickable:hover .quote-embed:hover{
-    background: color-mix(in srgb, var(--hover) 97%, var(--fg) 3%);
-  }
-}
-@supports not (background: color-mix(in srgb, black 10%, white)){
-  .card.clickable:hover .quote-embed:hover{
-    background: var(--hover);
-    box-shadow: inset 0 0 0 999px rgba(0,0,0,.015);
-  }
-}
-@media (prefers-reduced-motion: reduce){
-  .card.clickable, .quote-embed{ transition: none !important; }
-}
-
-/* 父帖正文与引用卡之间的距离（稍微更松） */
-.card .text + .quote-embed{
-  margin-top: 12px;
-}
-
-/* 引用卡：使用 grid，正文与头像左对齐 */
-.quote-embed{
-  display: grid;
-  grid-template-columns: 28px 8px 1fr;           /* 头像 28 + 间距 8 + 正文 */
-  grid-template-areas:
-    "av  . head"
-    "av  . text"
-    "av  . more";
-  align-items: start;
   padding: 12px;
   border-radius: 12px;
   border: 1px solid var(--line);
-  background: var(--card);
+  background: var(--card);              /* 默认白/深色卡片底 */
   transition: background-color .22s ease, box-shadow .22s ease;
 }
-
 .quote-embed > img.avatar{
   grid-area: av;
   width: 28px; height: 28px;
   border-radius: 50%;
   object-fit: cover;
 }
-
-/* 关键：防止网格子项按 min-content 折成“一字一行” */
+/* 防止 grid 子项按 min-content 折成“一字一行” */
 .quote-embed .q-head,
 .quote-embed .q-text,
 .quote-embed .show-more{ min-width: 0; }
@@ -916,7 +785,7 @@ dialog {
 }
 .quote-embed .q-text.clamped + .show-more{ display: inline; }
 
-/* 悬停层级（父卡浅灰；引用卡在其上轻微更深） */
+/* ===== 悬停层级（父卡浅灰；引用卡在其上轻微更深） ===== */
 .card.clickable{ transition: background-color .22s ease; }
 .card.clickable:hover{ background: var(--hover); }
 .card.clickable:hover .quote-embed{ background: var(--card); }
@@ -933,6 +802,7 @@ dialog {
   }
 }
 
+/* ===== 无障碍：若用户减少动效，则禁用过渡 ===== */
 @media (prefers-reduced-motion: reduce){
   .card.clickable, .quote-embed{ transition: none !important; }
 }
