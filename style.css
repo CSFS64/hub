@@ -656,15 +656,3 @@ dialog {
   .mf-modal-card{ margin: 0 12px; }
   .mf-modal-body{ padding: 14px 16px; }
 }
-
-/* 脊柱：从第一张头像下方垂到第二行头像上方 */
-.mf-spine{
-  grid-column:1;
-  grid-row:1 / span 2;        /* 跨两行 */
-  justify-self:center;
-  width:2px;
-  background:var(--line);
-  margin-top:48px;            /* 40px头像 + 8px间距 */
-  margin-bottom:20px;         /* 在第二个头像前“收尾”一点点 */
-  border-radius:1px;
-}
