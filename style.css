@@ -590,3 +590,45 @@ dialog {
   line-height: 1.5;
   color: var(--fg);
 }
+
+/* === Fix: 让头像与输入文字真正同一中线，且聚焦不跳动 === */
+
+/* 整个“回复行”里的两列（左头像/右输入区）垂直居中 */
+.post-thread .row.composer { 
+  align-items: center !important;
+}
+
+/* 右侧“头像 + 输入框”的内联容器也居中（而非 baseline / flex-start） */
+.reply-inline { 
+  align-items: center !important; 
+}
+
+/* 头像自己保持居中 */
+.reply-inline .avatar { 
+  align-self: center; 
+}
+
+/* 输入框的排版节奏：推特风推荐 15/20，padding 保持一致 */
+#commentTextPage {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 20px;
+  padding: 12px 0;            /* ← 与聚焦时保持一致，避免跳动 */
+  border: none;
+  outline: none;
+  background: transparent;
+  flex: 1;
+  color: var(--fg);
+}
+
+/* 占位符的样式（更现代） */
+#commentTextPage::placeholder {
+  color: rgba(83,100,113,.9);
+  font-weight: 400;
+}
+
+/* 聚焦时不要改 padding，只改最小高度即可（不影响对齐） */
+.reply-editor:focus-within textarea{
+  min-height: 64px;
+  padding: 12px 0;           /* ← 和未聚焦一致，阻止位移 */
+}
