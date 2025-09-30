@@ -156,6 +156,36 @@ async function loadFeed(tab="for_you"){
   }catch(e){ toast(e.message || "加载失败"); }
   finally{ $.loading.hidden=true; }
 }
+
+function cleanText(s = "") {
+  return s
+    .replace(/^\s*\n+/, "")   // 去掉开头的换行/空白行
+    .replace(/\n{3,}/g, "\n\n"); // 3 个及以上的连续空行压成 2 个（可选）
+}
+
+function renderTextWithClamp(text) {
+  const safe = esc(cleanText(text || ""));
+  return `
+    <div class="text clamped">${safe}</div>
+    <div class="show-more" onclick="this.previousElementSibling.classList.remove('clamped'); this.remove()">Show more</div>
+  `;
+}
+
+function applyClamp(){
+  document.querySelectorAll(".text.clamp").forEach(el=>{
+    if(el.scrollHeight > el.clientHeight + 4){
+      const btn = el.nextElementSibling;
+      if(btn && btn.classList.contains("show-more")){
+        btn.style.display = "inline-block";
+        btn.onclick = ()=>{
+          el.classList.remove("clamp");
+          btn.remove();
+        };
+      }
+    }
+  });
+}
+
 function renderCard(p){
   const imgs = (p.images||[]).map(src=>`<img src="${esc(src)}" loading="lazy" alt="">`).join("");
   const me = session.get()?.user;
@@ -168,7 +198,7 @@ function renderCard(p){
         <span class="name">${esc(p.author.nickname || p.author.username || "用户")}</span>
         <span class="meta">· ${timeAgo(p.created_at)}</span>
       </div>
-      <div class="text">${esc(p.text||"")}</div>
+      ${renderTextWithClamp(p.text, p.id)}
       <div class="pics">${imgs}</div>
       <div class="actions">
         <div class="action open">💬 <span>${p.comments_count||0}</span></div>
@@ -234,7 +264,7 @@ function renderQuoted(p){
   const name = esc(p.author?.nickname || p.author?.username || "用户");
   return `
     <div class="head">${name} <span class="meta">· ${timeAgo(p.created_at)}</span></div>
-    <div class="text">${esc(cleanText(p.text || ""))}</div>
+    ${renderTextWithClamp(p.text, p.id)}
   `;
 }
 
@@ -740,10 +770,4 @@ function bindPostPageEvents(p){
     // 初次执行
     update();
   }
-}
-
-function cleanText(s = "") {
-  return s
-    .replace(/^\s*\n+/, "")   // 去掉开头的换行/空白行
-    .replace(/\n{3,}/g, "\n\n"); // 3 个及以上的连续空行压成 2 个（可选）
 }
