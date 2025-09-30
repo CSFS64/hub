@@ -288,7 +288,7 @@ body{
 /* —— 针对帖子页回复框：首行高度=头像高度，初始中线对齐；聚焦不跳 —— */
 #commentTextPage{
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  font-size: 15px;                 /* 推特风：15/20 */
+  font-size: 20px;                 /* 推特风：15/20 */
   line-height: 20px;
   padding: 12px 0;                 /* 12 + 20 + 12 = 44 */
   min-height: 44px;                /* 首行总高度与头像一致 */
@@ -299,7 +299,7 @@ body{
   font: inherit;                    /* 继承度量，避免下沉 */
   line-height: inherit;
   color: rgba(83,100,113,.9);
-  font-weight: 400;
+  font-weight: 500;
 }
 /* 聚焦时保持同一盒模型，防止“轻微下跳” */
 .reply-editor:focus-within #commentTextPage{
