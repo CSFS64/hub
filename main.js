@@ -777,3 +777,25 @@ function bindPostPageEvents(p){
     update();
   }
 }
+
+// 保留换行：先转义，再把 \n 变成 <br>
+function nl2brSafe(s = "") {
+  return esc(s).replace(/\n/g, "<br>");
+}
+
+// 如果你不想再“压缩空行”，把 cleanText 改成只做最小清洗：
+function cleanText(s = "") {
+  return String(s).replace(/\r\n/g, "\n"); // 仅统一换行符，别再合并空行
+}
+
+function renderTextWithClamp(text) {
+  const html = nl2brSafe(cleanText(text || ""));
+  return `
+    <div class="text clamped">${html}</div>
+    <div class="show-more"
+         onclick="event.stopPropagation();
+                  this.previousElementSibling.classList.remove('clamped');
+                  this.remove()">Show more</div>
+  `;
+}
+
