@@ -806,3 +806,25 @@ dialog {
 @media (prefers-reduced-motion: reduce){
   .card.clickable, .quote-embed{ transition: none !important; }
 }
+
+/* 关键：第三列允许收缩到 0 */
+.quote-embed{
+  display: grid;
+  grid-template-columns: 28px 8px minmax(0,1fr); /* 1fr -> minmax(0,1fr) */
+  grid-template-areas:
+    "av  . head"
+    "av  . text"
+    "av  . more";
+}
+
+/* 让 q-content 不占一个格子，而是把子元素提升为 grid items */
+.quote-embed .q-content{
+  display: contents;
+}
+
+/* 为稳妥，允许这些元素收缩 */
+.quote-embed .q-head,
+.quote-embed .q-text,
+.quote-embed .show-more{
+  min-width: 0;
+}
