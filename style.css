@@ -635,3 +635,30 @@ dialog {
   font-weight: 400; color: var(--muted);
 }
 
+/* ===== 修复 Reply 弹窗的作者信息与正文排版 ===== */
+
+/* 作者信息行：昵称加粗、和头像顶端对齐 */
+.reply-card #replyHost .head {
+  display: flex !important;
+  align-items: center !important;  /* baseline → center，更贴近头像 */
+  gap: 6px;
+  font-weight: 700;
+  font-size: 15px;
+  margin: 0 0 4px !important;
+}
+.reply-card #replyHost .head .meta {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* 确保正文紧跟在作者行之后，不留大空隙 */
+.reply-card #replyHost .text {
+  line-height: 1.5 !important;
+  margin-top: 2px !important;
+}
+
+/* 行整体上提，避免正文整体被下推 */
+.reply-card .reply-thread .row:first-child .body {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
