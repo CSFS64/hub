@@ -172,13 +172,13 @@ function renderTextWithClamp(text) {
 }
 
 function applyClamp(){
-  document.querySelectorAll(".text.clamp").forEach(el=>{
+  document.querySelectorAll(".text.clamped").forEach(el=>{
     if(el.scrollHeight > el.clientHeight + 4){
       const btn = el.nextElementSibling;
       if(btn && btn.classList.contains("show-more")){
         btn.style.display = "inline-block";
         btn.onclick = ()=>{
-          el.classList.remove("clamped");
+          el.classList.remove("clamp");
           btn.remove();
         };
       }
