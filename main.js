@@ -297,6 +297,18 @@ $.openReply = async (postId) => {
 
     $.replyDialog.showModal();
 
+    requestAnimationFrame(layoutSpine);
+
+    // 如果你在引用里做了“Show more”展开，需要在点击时重算
+    const host = document.getElementById('replyHost');
+    host?.addEventListener('click', (e) => {
+      const btn = e.target.closest('.show-more');
+      if (btn) {
+        // 展开后，正文高度改变，重算一下脊柱
+        setTimeout(layoutSpine, 0);
+      }
+    });
+
     // 自动高度 + 计数
     const LIMIT = 280;
     const autosize = () => {
@@ -799,3 +811,84 @@ function renderTextWithClamp(text) {
   `;
 }
 
+// ===== 计算并布置“脊柱”灰线 =====
+function layoutSpine() {
+  const dlg     = document.getElementById('replyDialog');
+  if (!dlg || !dlg.open) return;               // 没开就不算
+
+  const thread  = dlg.querySelector('.mf-thread');
+  if (!thread) return;
+
+  // 确保有一个 .mf-spine 元素
+  let spine = thread.querySelector('.mf-spine');
+  if (!spine) {
+    spine = document.createElement('div');
+    spine.className = 'mf-spine';
+    thread.appendChild(spine);
+  }
+
+  // 关键节点
+  const topAvatar = thread.querySelector('.mf-rail:not(.me) .avatar');
+  const meAvatar  = thread.querySelector('.mf-rail.me .avatar');
+  if (!topAvatar || !meAvatar) return;
+
+  // 统一坐标系：把窗口坐标换算成 thread 内部坐标
+  const tb = thread.getBoundingClientRect();
+  const a  = topAvatar.getBoundingClientRect();
+  const b  = meAvatar.getBoundingClientRect();
+
+  const left   = (a.left + a.width / 2) - tb.left; // 中线
+  const startY = (a.bottom - tb.top) + 8;          // 上头像底下 8px
+  const endY   = (b.top    - tb.top) - 12;         // 下头像上方 12px
+
+  const height = Math.max(0, endY - startY);
+
+  // 写样式
+  spine.style.left   = left + 'px';
+  spine.style.top    = startY + 'px';
+  spine.style.height = height + 'px';
+}
+
+// ===== 在合适时机绑定/解绑：窗口变化、输入变化、内容重排 =====
+(function setupSpineObservers(){
+  const dlg = document.getElementById('replyDialog');
+  if (!dlg) return;
+
+  // 关闭时移除监听
+  dlg.addEventListener('close', () => {
+    window.removeEventListener('resize', layoutSpine);
+    if (window.__mfSpineRO) { window.__mfSpineRO.disconnect(); window.__mfSpineRO = null; }
+  });
+
+  // 打开时做一次，并挂监听（openReply 里也会主动 call 一次，双保险）
+  dlg.addEventListener('toggle', () => { if (dlg.open) afterOpenSpineSetup(); });
+
+  function afterOpenSpineSetup(){
+    // 窗口尺寸变化
+    window.addEventListener('resize', layoutSpine, { passive: true });
+
+    // 容器尺寸变化（正文展开/折叠、图片加载、字体渲染等）
+    const thread = dlg.querySelector('.mf-thread');
+    if (thread) {
+      // 复用全局 ResizeObserver，避免重复创建
+      if (!window.__mfSpineRO) window.__mfSpineRO = new ResizeObserver(() => layoutSpine());
+      window.__mfSpineRO.observe(thread);
+    }
+
+    // 输入框变化也触发布局（高度在自增）
+    const ta = dlg.querySelector('#replyText');
+    if (ta) {
+      ta.addEventListener('input', layoutSpine);
+      // 如果你有 autosize 的逻辑（设置 textarea.style.height），那块里也顺便调一次 layoutSpine()
+    }
+
+    // 等一帧，等 DOM 都渲染好了再算（包括 show-more 初始状态）
+    requestAnimationFrame(() => {
+      // 如果引用有图片，onload 后也重算
+      dlg.querySelectorAll('.mf-quote img').forEach(img => {
+        if (!img.complete) img.addEventListener('load', layoutSpine, { once:true });
+      });
+      layoutSpine();
+    });
+  }
+})();
