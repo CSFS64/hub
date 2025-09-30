@@ -127,7 +127,7 @@ function initRepostDialogs(){
     $.btnQuote.onclick = async ()=>{
       const id = $.repostTargetId; if(!id) return $.repostChoiceDialog?.close();
       $.repostChoiceDialog?.close();
-      await buildQuotePreview(id);
+      await $.buildQuotePreview(id);
       if ($.quoteText) $.quoteText.value = "";
       updateQuoteCounter();
       $.quoteDialog?.showModal();
