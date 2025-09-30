@@ -575,18 +575,6 @@ dialog {
   background: #ddd; object-fit: cover;
 }
 
-/* 头像之间的灰线（“脊柱”）：单独元素更稳 */
-.mf-spine{
-  grid-column: 1;
-  grid-row: 1 / span 2;           /* 连原帖与编辑区 */
-  justify-self: center;
-  width: 2px;
-  background: var(--line);
-  margin-top: 48px;               /* 40px 头像 + 8px 间距 */
-  margin-bottom: 20px;
-  border-radius: 1px;
-}
-
 /* ========== 引用区（原作者文本）：5 行 clamp + Show more ========== */
 .mf-quote .head{
   font-weight: 700; font-size: 15px;
@@ -656,3 +644,21 @@ dialog {
   .mf-modal-card{ margin: 0 12px; }
   .mf-modal-body{ padding: 14px 16px; }
 }
+
+/* rail 自身得是相对定位，伪元素才能绝对定位到它里面 */
+.mf-rail{ position:relative; }
+
+/* 灰色连接线——从第一张头像下方 8px 处开始，延伸到下一行上缘附近 */
+.mf-rail:first-child::after{
+  content:"";
+  position:absolute;
+  left:50%; transform:translateX(-50%);
+  top:48px;              /* 40px 头像 + 8px 间距 */
+  bottom:-20px;          /* 稍微穿到下一行一点点，更自然 */
+  width:2px;
+  background: var(--line);
+  border-radius: 1px;
+}
+
+/* 自己这行（第二个 rail）别再画线 */
+.mf-rail.me::after{ display:none; }
