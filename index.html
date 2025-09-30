@@ -147,6 +147,42 @@
     </div>
   </dialog>
 
+  <!-- 选择：转发 or 引用 -->
+  <dialog id="repostChoiceDialog">
+    <div class="mf-modal-card" style="width:min(420px,96vw);margin:0 16px;border-radius:16px;background:var(--bg);color:var(--fg);border:1px solid color-mix(in srgb, var(--fg) 6%, transparent);">
+      <div class="mf-modal-topbar">
+        <div>转发</div>
+        <button class="mf-modal-close" onclick="document.getElementById('repostChoiceDialog').close()">✕</button>
+      </div>
+      <div class="mf-modal-body" style="padding:16px 20px;">
+        <button id="btnRepostNow" class="mf-btn" style="width:100%;margin-bottom:10px;">🔁 直接转发</button>
+        <button id="btnQuote" class="mf-btn" style="width:100%;">📝 引用并评论</button>
+      </div>
+    </div>
+  </dialog>
+  
+  <!-- 引用弹窗（新帖子 + 嵌入原帖预览） -->
+  <dialog id="quoteDialog">
+    <div class="mf-modal-card" style="width:min(600px,96vw);margin:0 16px;border-radius:16px;background:var(--bg);color:var(--fg);border:1px solid color-mix(in srgb, var(--fg) 6%, transparent);">
+      <div class="mf-modal-topbar">
+        <div>引用帖子</div>
+        <button class="mf-modal-close" onclick="document.getElementById('quoteDialog').close()">✕</button>
+      </div>
+      <div class="mf-modal-body">
+        <div class="mf-editor" style="margin-bottom:10px;">
+          <textarea id="quoteText" class="mf-input" rows="2" placeholder="写点你的看法（可选）"></textarea>
+          <div class="mf-tools">
+            <div id="quoteCounter" class="mf-counter">280</div>
+            <button id="btnQuoteSend" class="mf-btn primary">发布</button>
+          </div>
+        </div>
+  
+        <!-- 原帖预览（可点击跳原帖） -->
+        <div id="quotePreview" class="quote-embed" role="button"></div>
+      </div>
+    </div>
+  </dialog>
+
   <!-- Toast -->
   <div id="toast" class="toast" hidden></div>
 
