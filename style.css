@@ -577,7 +577,7 @@ dialog {
 #commentTextPage::placeholder {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 20px;      /* Twitter 占位文字大小 */
-  font-weight: 400;     /* 普通字重，不要太粗 */
+  font-weight: 500;     /* 普通字重，不要太粗 */
   color: rgba(83,100,113,0.8); /* 推特风格的灰色（比 muted 更浅一些） */
   line-height: 1.5;
 }
