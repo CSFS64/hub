@@ -815,3 +815,12 @@ dialog {
   z-index:2;                     /* 比卡片 hover 更高 */
   position: relative;            /* 让 z-index 生效 */
 }
+
+.show-more {
+  text-decoration: none;         /* 默认不带下划线 */
+}
+
+.show-more:hover,
+.show-more:focus-visible {       /* 鼠标悬停 & 键盘聚焦都显示下划线 */
+  text-decoration: underline;
+}
