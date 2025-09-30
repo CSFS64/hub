@@ -776,3 +776,12 @@ dialog {
   display:flex; align-items:center; justify-content:space-between;
   padding: 10px 16px 0 16px; color: var(--muted);
 }
+
+.show-more {
+  display: none;
+  cursor: pointer;
+  color: var(--primary);
+  font-weight: 600;
+  margin-top: 4px;
+  z-index: 2;
+}
