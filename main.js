@@ -234,7 +234,7 @@ function renderQuoted(p){
   const name = esc(p.author?.nickname || p.author?.username || "用户");
   return `
     <div class="head">${name} <span class="meta">· ${timeAgo(p.created_at)}</span></div>
-    <div class="text">${esc(p.text || "")}</div>
+    <div class="text">${esc(cleanText(p.text || ""))}</div>
   `;
 }
 
@@ -740,4 +740,10 @@ function bindPostPageEvents(p){
     // 初次执行
     update();
   }
+}
+
+function cleanText(s = "") {
+  return s
+    .replace(/^\s*\n+/, "")   // 去掉开头的换行/空白行
+    .replace(/\n{3,}/g, "\n\n"); // 3 个及以上的连续空行压成 2 个（可选）
 }
