@@ -638,3 +638,141 @@ dialog {
 .reply-thread .rail .avatar{
   align-self: flex-start;               /* 保险，再钉一次 */
 }
+
+/* ===== Root wrapper：把这个类放在 <dialog> 或弹窗根元素上 ===== */
+.tw-reply { 
+  border: none; background: transparent; padding: 0;
+}
+.tw-reply::backdrop{ background: rgba(0,0,0,.35); }
+
+/* ===== Card ===== */
+.tw-reply .tw-card{
+  width: min(600px, 96vw);
+  margin: 0 auto;
+  background: var(--bg);
+  color: var(--fg);
+  border-radius: 16px;
+  box-shadow:
+    0 32px 96px -16px rgba(0,0,0,.45),
+    0 12px 28px -12px rgba(0,0,0,.30),
+    0  2px  8px   0   rgba(0,0,0,.15);
+  position: relative;
+  overflow: hidden;
+}
+.tw-reply .tw-close{
+  position:absolute; top:10px; right:12px;
+  border:none; background:transparent; cursor:pointer;
+  color: var(--muted); font-size:18px; padding:6px;
+  border-radius:10px;
+}
+.tw-reply .tw-close:hover{ background: var(--hover); }
+
+/* ===== Two-rail thread layout ===== */
+.tw-reply .tw-thread{
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  column-gap: 12px;
+  row-gap: 12px;
+  padding: 20px;
+  align-items: start;            /* 关键：整行顶对齐 */
+}
+.tw-reply .rail{
+  grid-column: 1; position: relative;
+  display: flex; align-items: flex-start; justify-content: center;
+}
+.tw-reply .rail .avatar{
+  width: 40px; height: 40px; border-radius: 50%;
+  background: #ddd; object-fit: cover; flex: 0 0 40px;
+}
+
+/* 上半部分（原作者头像）与下半部分之间的竖线 */
+.tw-reply .rail:first-of-type::after{
+  content:""; position:absolute; left:50%; transform:translateX(-50%);
+  top: 48px;    /* 40px avatar + 8px 间距 */
+  bottom: -12px; width:2px; background: var(--line);
+}
+.tw-reply .rail.me::after{ display:none; }
+
+.tw-reply .body{ grid-column: 2; }
+
+/* ===== 原帖 Head（昵称贴头像右上角） ===== */
+.tw-reply .head{
+  display:flex; align-items:flex-start; gap:6px;
+  font-weight:700; font-size:15px; margin:0 0 4px;
+}
+.tw-reply .meta{ color: var(--muted); font-weight:400; }
+
+/* ===== 原帖正文：默认 5 行，支持 Show more 展开 ===== */
+.tw-reply .quote .text{
+  font-size: 15px; line-height: 1.6; margin: 0;
+  white-space: pre-wrap; word-break: break-word; overflow-wrap:anywhere;
+  position: relative;
+}
+.tw-reply .quote.is-clamped .text{
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;         /* 默认显示 5 行 */
+  overflow: hidden;
+}
+.tw-reply .quote.is-clamped .fade{
+  content:""; pointer-events:none;
+  position:absolute; left:0; right:0; bottom:0; height:2.2em;
+  background: linear-gradient(to bottom, rgba(0,0,0,0), var(--bg) 80%);
+}
+:root.dark .tw-reply .quote.is-clamped .fade{
+  background: linear-gradient(to bottom, rgba(0,0,0,0), var(--bg) 80%);
+}
+
+/* Show more 按钮（仅在被夹时显示） */
+.tw-reply .show-more{
+  display:none; margin-top:6px; padding:0; border:none; background:transparent;
+  color: var(--primary); font-weight:600; cursor:pointer;
+}
+.tw-reply .quote.is-clamped .show-more{ display:inline; }
+
+/* ===== 编辑区（输入 + 工具） ===== */
+.tw-reply .editor{ display:flex; flex-direction:column; }
+.tw-reply textarea.tw-input{
+  border:none; outline:none; background:transparent; color:var(--fg);
+  font-size: 15px; line-height: 1.6;
+  padding: 12px 0; min-height: 44px;
+  resize:none; width:100%; box-sizing:border-box; overflow:hidden;
+}
+.tw-reply textarea.tw-input::placeholder{ color: rgba(83,100,113,.9); }
+
+/* 工具栏（计数 + 按钮） */
+.tw-reply .tools{
+  display:flex; align-items:center; justify-content:flex-end;
+  gap:8px; padding: 10px 0 0;
+}
+.tw-reply .char-counter{
+  min-width:28px; height:28px; padding:0 8px; border-radius:999px;
+  display:flex; align-items:center; justify-content:center;
+  background:#f0f3f4; color:#606a73; font-weight:700; font-size:13px;
+}
+:root.dark .tw-reply .char-counter{ background:#1b1e20; color:#8b98a5; }
+.tw-reply .char-counter.over{ background:#ffe8e8; color:#c81e1e; }
+:root.dark .tw-reply .char-counter.over{ background:#3a0d0d; color:#ff7373; }
+
+.tw-reply .btn{
+  border:1px solid var(--line); background:var(--card); color:var(--fg);
+  padding:8px 14px; border-radius:999px; cursor:pointer; font-weight:700;
+}
+.tw-reply .btn:hover{ background:var(--hover); }
+.tw-reply .btn-primary{ background:var(--primary); color:var(--primary-ink); border-color:var(--primary); }
+.tw-reply .btn-primary:hover{ filter:brightness(1.03); }
+
+/* ===== 超字数 Upsell（默认隐藏，超限时外部 JS 加 .show） ===== */
+.tw-reply .upsell{
+  display:none; margin-top:10px; padding:10px 12px;
+  border:1px dashed var(--line); border-radius:12px;
+  background: color-mix(in srgb, var(--primary) 8%, var(--bg));
+}
+.tw-reply .upsell .link{ color: var(--primary); font-weight:700; }
+.tw-reply .upsell.show{ display:block; }
+
+/* 顶部条（可选：与 Twitter 一致） */
+.tw-reply .topbar{
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 10px 16px 0 16px; color: var(--muted);
+}
