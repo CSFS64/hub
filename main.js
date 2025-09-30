@@ -178,7 +178,7 @@ function applyClamp(){
       if(btn && btn.classList.contains("show-more")){
         btn.style.display = "inline-block";
         btn.onclick = ()=>{
-          el.classList.remove("clamp");
+          el.classList.remove("clamped");
           btn.remove();
         };
       }
