@@ -212,12 +212,16 @@ function initRepostDialogs(){
   $.buildQuotePreview = async function(postId){
     const p = await api(`/posts/${postId}`, { method:"GET", auth: !!session.get() });
     const html = `
-      <div class="q-head">${esc(p.author?.nickname||p.author?.username||"用户")} ·
-        <span class="meta">${timeAgo(p.created_at)}</span></div>
-      <div class="q-text clamped">${nl2brSafe(p.text||"")}</div>
-      <div class="show-more" onclick="
-        this.previousElementSibling.classList.remove('clamped'); this.remove();
-      ">Show more</div>`;
+      <div class="quote-embed">
+        <img class="avatar" src="${esc(p.author?.avatar || 'data:,')}" alt="">
+        <div class="q-content">
+          <div class="q-head">${esc(p.author?.nickname||p.author?.username||"用户")}
+            <span class="meta">· ${timeAgo(p.created_at)}</span></div>
+          <div class="q-text clamped">${nl2brSafe(p.text||"")}</div>
+          <div class="show-more"
+               onclick="this.previousElementSibling.classList.remove('clamped'); this.remove()">Show more</div>
+        </div>
+      </div>`;
     if ($.quotePreview){
       $.quotePreview.innerHTML = html;
       $.quotePreview.onclick = ()=> goToPost(postId);
@@ -362,11 +366,22 @@ function renderCard(p){
     const deletable = me && me.id===p.author.id;
 
     const quoteHtml = quote ? `
-      <div class="quote-embed" onclick="event.stopPropagation(); goToPost('${esc(quote.id)}')" role="button">
-        <div class="q-head">${esc(quote.author?.nickname||quote.author?.username||"用户")} · <span class="meta">${timeAgo(quote.created_at)}</span></div>
-        <div class="q-text clamped">${nl2brSafe(quote.text||"")}</div>
-        <div class="show-more" onclick="event.stopPropagation(); this.previousElementSibling.classList.remove('clamped'); this.remove()">Show more</div>
-      </div>` : "";
+      <div class="quote-embed" role="button"
+           onclick="event.stopPropagation(); goToPost('${esc(quote.id)}')">
+        <img class="avatar" src="${esc(quote.author?.avatar || 'data:,')}" alt="">
+        <div class="q-content">
+          <div class="q-head">
+            <span class="name">${esc(quote.author?.nickname || quote.author?.username || "用户")}</span>
+            <span class="meta">· ${timeAgo(quote.created_at)}</span>
+          </div>
+          <div class="q-text clamped">${nl2brSafe(quote.text || "")}</div>
+          <div class="show-more"
+               onclick="event.stopPropagation();
+                        this.previousElementSibling.classList.remove('clamped');
+                        this.remove()">Show more</div>
+        </div>
+      </div>
+    ` : "";
 
     return htm`
     <article class="card clickable" data-id="${esc(p.id)}">
