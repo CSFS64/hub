@@ -591,44 +591,58 @@ dialog {
   color: var(--fg);
 }
 
-/* === Fix: 让头像与输入文字真正同一中线，且聚焦不跳动 === */
-
-/* 整个“回复行”里的两列（左头像/右输入区）垂直居中 */
+/* —— 1) 顶对齐：让整行能从上往下长高 —— */
 .post-thread .row.composer { 
-  align-items: center !important;
+  align-items: flex-start !important;      /* grid 第二列(正文列)顶对齐 */
 }
-
-/* 右侧“头像 + 输入框”的内联容器也居中（而非 baseline / flex-start） */
 .reply-inline { 
-  align-items: center !important; 
+  align-items: flex-start !important;      /* 头像 + 输入区 顶对齐 */
 }
 
-/* 头像自己保持居中 */
-.reply-inline .avatar { 
-  align-self: center; 
+/* —— 2) 头像尺寸/位置固定，不用居中 —— */
+.reply-inline .avatar{
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #ddd;
+  flex-shrink: 0;
+  align-self: flex-start;                  /* 明确顶对齐 */
 }
 
-/* 输入框的排版节奏：推特风推荐 15/20，padding 保持一致 */
-#commentTextPage {
+/* —— 3) 文本框：首行高度做成 44px，这样初始“中心线”与头像重合 —— */
+/*    计算: 12px(上) + 20px(行高) + 12px(下) = 44px  */
+#commentTextPage{
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 15px;
   line-height: 20px;
-  padding: 12px 0;            /* ← 与聚焦时保持一致，避免跳动 */
+  padding: 12px 0;                         /* 聚焦前后保持一致，避免跳动 */
+  min-height: 44px;                        /* 首行总高度 = 头像高 */
   border: none;
   outline: none;
   background: transparent;
-  flex: 1;
   color: var(--fg);
+  resize: none;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-/* 占位符的样式（更现代） */
-#commentTextPage::placeholder {
+/* 占位样式（推特风） */
+#commentTextPage::placeholder{
   color: rgba(83,100,113,.9);
   font-weight: 400;
 }
 
-/* 聚焦时不要改 padding，只改最小高度即可（不影响对齐） */
+/* —— 4) 聚焦时不要改 padding，只保留最小高度，避免“往下跳” —— */
 .reply-editor:focus-within textarea{
-  min-height: 64px;
-  padding: 12px 0;           /* ← 和未聚焦一致，阻止位移 */
+  min-height: 44px;                        /* 聚焦也不改变盒子高度公式 */
+  padding: 12px 0;                         /* 与未聚焦一致 */
+}
+
+/* —— 5) 允许容器随 textarea 一起长高，不裁切 —— */
+.post-thread .row,
+.post-thread .row .body,
+.reply-inline,
+.reply-editor{
+  height: auto;
+  overflow: visible;
 }
