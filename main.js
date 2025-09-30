@@ -346,17 +346,36 @@ function renderCard(p){
   const isRepost = !!(p.repost_of || p.original || p.kind==='repost');
   const isQuote  = !!p.quote_of;
 
-  if(isRepost){
-    const orig = p.repost_of?.id ? p.repost_of : (p.original||p.repost_of); // 对象
-    const originalPost = orig?.id ? orig : p.repost_of;                      // 容错
-    const reposter = p.reposter || p.actor || p.author || {}; // 谁转发的
-    // 上方“转发了”徽标 + 原帖卡片（动作都指向原帖）
+  if (isRepost) {
+    const orig = p.repost_of?.id ? p.repost_of : (p.original || p.repost_of);
+    const originalPost = orig?.id ? orig : p.repost_of;
+    const reposter = p.reposter || p.actor || p.author || {};
+    const me = session.get()?.user;
+    const canDeleteRepost = me && me.id === (p.author?.id); // 你自己发的这条“转发”
+  
     const badge = `
-      <div class="repost-badge"><span class="icon">🔁</span>${esc(reposter.nickname||reposter.username||"用户")} 转发了</div>
+      <div class="repost-badge">
+        <span class="icon">🔁</span>${esc(reposter.nickname||reposter.username||"用户")} 转发了
+      </div>
     `;
-    // 复用原始渲染：但把 p 换成原帖，并确保 data-id 用原帖 id
+  
+    // 仍然复用原帖的可视卡片，但把外层包一个 data-repost-id
     const cardHtml = renderOriginalCard(originalPost);
-    return `<div class="repost-wrap">${badge}${cardHtml}</div>`;
+  
+    // 给转发者一个“删除转发”的专属动作（可选，但推荐）
+    const repostActions = canDeleteRepost ? `
+      <div class="actions" style="margin:6px 12px 0 52px;">
+        <div class="action del" data-delete-repost="${esc(p.id)}" title="删除这条转发">🗑️ 删除转发</div>
+      </div>
+    ` : "";
+  
+    return `
+      <div class="repost-wrap" data-repost-id="${esc(p.id)}">
+        ${badge}
+        ${cardHtml}
+        ${repostActions}
+      </div>
+    `;
   }
 
   if(isQuote){
@@ -478,16 +497,34 @@ function bindCardEvents(){
       }catch(err){ toast(err.message || "失败"); }
     };
   });
-  document.querySelectorAll(".card .del").forEach(b=>{
-    b.onclick = async (e)=>{
+  document.querySelectorAll(".card .del, .repost-wrap .del").forEach(b => {
+    b.onclick = async (e) => {
       e.stopPropagation();
-      const id = e.target.closest(".card").dataset.id;
-      if(!id || id==='null' || id==='undefined' || id.length!==24){ toast("这条帖子数据异常，已过滤"); return; }
-      if(!confirm("确定删除这条帖子吗？")) return;
-      try{
-        await api(`/posts/${id}`, { method:"DELETE" });
-        toast("已删除"); loadFeed(getCurrentTab());
-      }catch(err){ toast(err.message || "删除失败"); }
+  
+      // 先看是否在转发包裹里，如果是，就删这条“转发”的 id
+      const wrap = e.target.closest('.repost-wrap');
+      let id = wrap?.dataset.repostId;
+  
+      // 否则按原逻辑：删这张卡自身的 id（普通帖 / 引用帖）
+      if (!id) {
+        const card = e.target.closest(".card");
+        id = card?.dataset.id;
+      }
+  
+      if (!id || id==='null' || id==='undefined' || id.length !== 24) {
+        toast("这条帖子数据异常，已过滤"); 
+        return;
+      }
+  
+      if (!confirm("确定删除这条帖子吗？")) return;
+  
+      try {
+        await api(`/posts/${id}`, { method: "DELETE" });
+        toast("已删除");
+        loadFeed(getCurrentTab());
+      } catch (err) {
+        toast(err.message || "删除失败");
+      }
     };
   });
 }
