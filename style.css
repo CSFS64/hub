@@ -191,9 +191,6 @@ body{
 
 /* Reply modal quoted block */
 .reply-card .close{ position:absolute; top:8px; right:8px; }
-.quoted{ border-left:3px solid var(--line); padding-left:12px; margin:6px 0 8px; }
-.quoted .head{ font-weight:600; font-size:15px; margin-bottom:4px; }
-.quoted .text{ white-space:pre-wrap; line-height:1.5; }
 
 /* =========================
    Thread Page (single post)
@@ -415,29 +412,6 @@ dialog {
 }
 
 /* ===== Hotfix: 弹窗回复采用“推特式两头像 + 连接灰线”布局，且不被裁切 ===== */
-.reply-card{
-  overflow: visible !important;     /* 防止内部线条/阴影被裁切 */
-  width: min(600px, 96vw) !important;   /* 更接近 X 的宽度 */
-  border-radius: 16px;
-  background: var(--bg);
-  color: var(--fg);
-  font-family: system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  font-size: 15px;               /* X 的正文感受 */
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-  /* 软阴影保留即可（你已有），不重复 */
-}
-:root.dark .reply-card{ outline:none; }
-
-.reply-thread{
-  display: grid !important;
-  grid-template-columns: 56px 1fr !important;
-  column-gap: 12px !important;
-  row-gap: 12px !important;
-  padding: 16px 20px 12px !important;   /* 内边距更舒适 */
-  overflow: visible !important;
-}
 .reply-thread .rail{
   grid-column: 1 !important;
   position: relative !important;
@@ -451,17 +425,7 @@ dialog {
   background: #ddd !important;
   object-fit: cover !important;
 }
-.reply-thread .rail:first-of-type::after{
-  content: "" !important;
-  position: absolute !important;
-  left: 50% !important;
-  width: 2px !important;
-  transform: translateX(-50%) !important;
-  top: 48px !important;    /* 40px头像 + 8px间距 */
-  bottom: -12px !important;
-  background: var(--line) !important;
-  pointer-events: none !important;
-}
+
 .reply-thread .rail.me::after{ display: none !important; }
 .reply-thread .body{ grid-column: 2; }
 
@@ -566,3 +530,125 @@ dialog {
   line-height: 1.5 !important;
   margin-top: 2px !important;
 }
+
+/* ===== Reply 弹窗（推特风格） ===== */
+.reply-card {
+  width: min(600px, 96vw);
+  border-radius: 16px;
+  background: var(--bg);
+  color: var(--fg);
+  box-shadow:
+    0 32px 96px -16px rgba(0,0,0,.45),
+    0 12px 28px -12px rgba(0,0,0,.30),
+    0  2px  8px   0   rgba(0,0,0,.15);
+  font-family: system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  overflow: visible;
+  padding: 0;
+  position: relative;
+}
+.reply-card .close{ position:absolute; top:12px; right:12px; }
+
+/* 两头像 + 灰线布局 */
+.reply-thread {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  column-gap: 12px;
+  row-gap: 12px;
+  padding: 20px;
+}
+.reply-thread .rail {
+  grid-column: 1;
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+.reply-thread .rail .avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #ddd;
+  object-fit: cover;
+}
+.reply-thread .rail:first-of-type::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  top: 48px;   /* 40px头像 + 8px间距 */
+  bottom: -12px;
+  background: var(--line);
+}
+.reply-thread .rail.me::after { display: none; }
+.reply-thread .body { grid-column: 2; }
+
+/* 作者信息行（昵称 + 时间） */
+.reply-card #replyHost .head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 15px;
+  margin: 0 0 4px;
+}
+.reply-card #replyHost .head .meta {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* 正文文本 */
+.reply-card #replyHost .text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+  margin-top: 2px;
+}
+
+/* 输入框（推特风） */
+#replyText {
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.6;
+  padding: 12px 0;
+  min-height: 44px;
+  border: none;
+  outline: none;
+  background: transparent;
+  resize: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+#replyText::placeholder {
+  color: rgba(83,100,113,.9);
+  font-weight: 400;
+}
+
+/* 工具栏（字数统计 + 按钮） */
+.reply-tools {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--line);
+}
+.char-counter {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f3f4;
+  color: #606a73;
+  font-weight: 700;
+  font-size: 13px;
+}
+:root.dark .char-counter{ background:#1b1e20; color:#8b98a5; }
+.char-counter.over{ background:#ffe8e8; color:#c81e1e; }
+:root.dark .char-counter.over{ background:#3a0d0d; color:#ff7373; }
+
