@@ -645,20 +645,18 @@ dialog {
   .mf-modal-body{ padding: 14px 16px; }
 }
 
-/* rail 自身得是相对定位，伪元素才能绝对定位到它里面 */
-.mf-rail{ position:relative; }
+/* 让容器成为定位上下文 */
+.mf-thread{ position: relative; }
 
-/* 灰色连接线——从第一张头像下方 8px 处开始，延伸到下一行上缘附近 */
-.mf-rail:first-child::after{
-  content:"";
-  position:absolute;
-  left:50%; transform:translateX(-50%);
-  top:48px;              /* 40px 头像 + 8px 间距 */
-  bottom:-20px;          /* 稍微穿到下一行一点点，更自然 */
-  width:2px;
+/* 绝对定位的“脊柱”灰线——由 JS 设置 top/height/left */
+.mf-spine{
+  position: absolute;
+  width: 2px;
   background: var(--line);
   border-radius: 1px;
+  /* 下面这些由 JS 动态设置：
+     left: <头像中线>;
+     top:  <上头像底 8px>;
+     height: <直到下头像上方 12px>;
+  */
 }
-
-/* 自己这行（第二个 rail）别再画线 */
-.mf-rail.me::after{ display:none; }
