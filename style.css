@@ -401,7 +401,9 @@ dialog {
   background: transparent !important;
 }
 
-/* ===== Hotfix: 保证 Upsell 只在超字数时显示 ===== */
+/* =========================
+   Upsell visibility
+   ========================= */
 .upsell{
   display: none !important;
   visibility: hidden !important;
@@ -411,13 +413,15 @@ dialog {
   visibility: visible !important;
 }
 
-/* ===== Hotfix: 弹窗回复采用“推特式两头像 + 连接灰线”布局，且不被裁切 ===== */
+/* =========================
+   Reply modal: two-rail layout (avatars, line)
+   ========================= */
 .reply-thread .rail{
   grid-column: 1 !important;
   position: relative !important;
   display: flex !important;
   justify-content: center !important;
-  align-items: flex-start; /* 统一顶对齐 */
+  align-items: flex-start; /* 顶对齐 */
 }
 .reply-thread .rail .avatar{
   width: 40px !important;
@@ -425,12 +429,24 @@ dialog {
   border-radius: 50% !important;
   background: #ddd !important;
   object-fit: cover !important;
-  align-self: flex-start; /* 再钉一次顶对齐 */
+  align-self: flex-start;
 }
 .reply-thread .rail.me::after{ display: none !important; }
 .reply-thread .body{ grid-column: 2; }
+.reply-thread .rail:first-of-type::after{
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  top: 48px;   /* 40px 头像 + 8px 间距 */
+  bottom: -12px;
+  background: var(--line);
+}
 
-/* ===== Hotfix: 输入框与头像精确对齐，并允许所在行随内容增高 ===== */
+/* =========================
+   Reply editor sizing & containers growth
+   ========================= */
 #replyText,
 #commentTextPage{
   font-size: 15px !important;
@@ -442,7 +458,6 @@ dialog {
   min-height: 44px !important;
   padding: 12px 0 !important; /* 聚焦不跳动 */
 }
-
 /* 容器允许增长，不裁切 */
 .post-thread .row,
 .post-thread .row .body,
@@ -452,12 +467,12 @@ dialog {
   overflow: visible !important;
 }
 
-/* ===== 输入区：和外层版式一致 ===== */
+/* 输入区（与外层版式一致） */
 .reply-editor textarea{
   font-size: 15px;
-  line-height: 1.6;   /* 与弹窗正文统一 */
-  padding: 12px 0;    /* 聚焦/未聚焦一致，避免跳动 */
-  min-height: 44px;   /* 首行总高与 44px 头像匹配 */
+  line-height: 1.6;
+  padding: 12px 0;
+  min-height: 44px;
   border: none;
   outline: none;
   background: transparent;
@@ -470,32 +485,12 @@ dialog {
   font-weight: 400;
 }
 
-/* ===== 保留原作者文本的段落/空行，且支持长链接换行 ===== */
-#replyHost .text,
-#replyHost,
-.quoted-detail .text,
-.post-thread .detail .text{
-  white-space: pre-wrap !important;  /* 保留换行/空行 */
-  word-break: break-word;            /* 不中断中文，长链接也能换行 */
-  overflow-wrap: anywhere;           /* 超长单词/URL 强制换行 */
-}
-
-/* ① 引用区的“空行太大” → 只在弹窗的原帖文本里压一点垂直间距 */
-.reply-card #replyHost,
-.reply-card #replyHost .text,
-.reply-card .quoted-detail .text{
-  white-space: pre-wrap !important;  /* 继续保留换行/空行 */
-  line-height: 1.5 !important;       /* 比之前略紧，空行也随之变小 */
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
-
-/* ③ 弹窗里的“Post your reply”输入框（后者为准，整合为一处） */
+/* 弹窗里的“Post your reply”输入框 */
 #replyText{
   font-family: inherit;
-  font-size: 15px;
+  font-size: 20px;
   line-height: 1.6;     /* 和页面评论栏一致 */
-  padding: 12px 0;      /* 聚焦前后都一致，避免“往下跳” */
+  padding: 12px 0;      /* 聚焦前后一致 */
   min-height: 44px;     /* 与 44px 头像对齐 */
   border: none;
   outline: none;
@@ -506,10 +501,32 @@ dialog {
 }
 #replyText::placeholder{
   color: rgba(83,100,113,.9);
-  font-weight: 400;
+  font-weight: 500;
 }
 
-/* ===== 让昵称行紧贴头像顶部 —— 切掉所有可能的顶边距/内边距 ===== */
+/* =========================
+   Quoted/original text formatting
+   ========================= */
+#replyHost .text,
+#replyHost,
+.quoted-detail .text,
+.post-thread .detail .text{
+  white-space: pre-wrap !important;  /* 保留换行/空行 */
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* 引用区在弹窗里略紧凑 */
+.reply-card #replyHost,
+.reply-card #replyHost .text,
+.reply-card .quoted-detail .text{
+  white-space: pre-wrap !important;
+  line-height: 1.5 !important;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* 让昵称行更贴近头像；正文紧跟其后 */
 .reply-card .reply-thread .row:first-child .body{
   padding-top: 0 !important;
   margin-top: 0 !important;
@@ -521,14 +538,23 @@ dialog {
 .reply-card #replyHost > *:first-child{
   margin-top: 0 !important;
 }
-
-/* 确保正文紧跟在作者行之后，不留大空隙 */
 .reply-card #replyHost .text{
   line-height: 1.5 !important;
   margin-top: 2px !important;
 }
+/* 原帖 Head（昵称贴头像右上角） */
+.reply-card #replyHost .head{
+  display: flex;
+  align-items: flex-start !important; /* 顶对齐 */
+  gap: 6px;
+  font-weight: 700;
+  font-size: 15px;
+  margin: 0 0 4px !important;
+}
 
-/* ===== Reply 弹窗（推特风格） ===== */
+/* =========================
+   Reply modal card/base
+   ========================= */
 .reply-card{
   width: min(600px, 96vw);
   border-radius: 16px;
@@ -547,36 +573,9 @@ dialog {
 }
 .reply-card .close{ position:absolute; top:12px; right:12px; }
 
-/* 两头像 + 灰线布局 */
-.reply-thread{
-  display: grid;
-  grid-template-columns: 56px 1fr;
-  column-gap: 12px;
-  row-gap: 12px;
-  padding: 20px;
-}
-.reply-thread .rail:first-of-type::after{
-  content: "";
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 2px;
-  top: 48px;   /* 40px 头像 + 8px 间距 */
-  bottom: -12px;
-  background: var(--line);
-}
-
-/* 原帖 Head（昵称贴头像右上角） */
-.reply-card #replyHost .head{
-  display: flex;
-  align-items: flex-start !important; /* 顶对齐 */
-  gap: 6px;
-  font-weight: 700;
-  font-size: 15px;
-  margin: 0 0 4px !important;
-}
-
-/* ===== Root wrapper：把这个类放在 <dialog> 或弹窗根元素上 ===== */
+/* =========================
+   tw-reply variant
+   ========================= */
 .tw-reply{
   border: none;
   background: transparent;
@@ -584,7 +583,6 @@ dialog {
 }
 .tw-reply::backdrop{ background: rgba(0,0,0,.35); }
 
-/* ===== Card ===== */
 .tw-reply .tw-card{
   width: min(600px, 96vw);
   margin: 0 auto;
@@ -612,14 +610,14 @@ dialog {
 }
 .tw-reply .tw-close:hover{ background: var(--hover); }
 
-/* ===== Two-rail thread layout ===== */
+/* Two-rail layout */
 .tw-reply .tw-thread{
   display: grid;
   grid-template-columns: 56px 1fr;
   column-gap: 12px;
   row-gap: 12px;
   padding: 20px;
-  align-items: start; /* 整行顶对齐 */
+  align-items: start; /* 顶对齐 */
 }
 .tw-reply .rail{
   grid-column: 1;
@@ -636,8 +634,7 @@ dialog {
   object-fit: cover;
   flex: 0 0 40px;
 }
-
-/* 上半部分（原作者头像）与下半部分之间的竖线 */
+/* 竖线 */
 .tw-reply .rail:first-of-type::after{
   content:"";
   position:absolute;
@@ -649,10 +646,9 @@ dialog {
   background: var(--line);
 }
 .tw-reply .rail.me::after{ display:none; }
-
 .tw-reply .body{ grid-column: 2; }
 
-/* ===== 原帖 Head（昵称贴头像右上角） ===== */
+/* 原帖 Head */
 .tw-reply .head{
   display:flex;
   align-items:flex-start;
@@ -663,7 +659,7 @@ dialog {
 }
 .tw-reply .meta{ color: var(--muted); font-weight:400; }
 
-/* ===== 原帖正文：默认 5 行，支持 Show more 展开 ===== */
+/* 原帖正文（默认 5 行可展开） */
 .tw-reply .quote .text{
   font-size: 15px;
   line-height: 1.6;
@@ -706,7 +702,7 @@ dialog {
 }
 .tw-reply .quote.is-clamped .show-more{ display:inline; }
 
-/* ===== 编辑区（输入 + 工具） ===== */
+/* 编辑区（输入 + 工具） */
 .tw-reply .editor{ display:flex; flex-direction:column; }
 .tw-reply textarea.tw-input{
   border:none;
@@ -724,7 +720,6 @@ dialog {
 }
 .tw-reply textarea.tw-input::placeholder{ color: rgba(83,100,113,.9); }
 
-/* 工具栏（计数 + 按钮） */
 .tw-reply .tools{
   display:flex;
   align-items:center;
@@ -766,7 +761,7 @@ dialog {
 }
 .tw-reply .btn-primary:hover{ filter:brightness(1.03); }
 
-/* ===== 超字数 Upsell（默认隐藏，超限时外部 JS 加 .show） ===== */
+/* 超字数 Upsell（默认隐藏，超限时外部 JS 加 .show） */
 .tw-reply .upsell{
   display:none;
   margin-top:10px;
@@ -778,7 +773,7 @@ dialog {
 .tw-reply .upsell .link{ color: var(--primary); font-weight:700; }
 .tw-reply .upsell.show{ display:block; }
 
-/* 顶部条（可选：与 Twitter 一致） */
+/* 顶部条（与 Twitter 一致） */
 .tw-reply .topbar{
   display:flex;
   align-items:center;
@@ -788,41 +783,36 @@ dialog {
 }
 
 /* =========================
-   Show more（通用）+ 卡片正文
+   Card text clamp & Show more (home feed)
    ========================= */
-
-/* 卡片正文：基础 */
+/* 卡片正文基础（为 clamp 生效覆盖 pre-wrap） */
 .card .text{
   font-size: 15px;
   line-height: 1.6;
-  /* 关键：让行内换行按普通段落来，否则 -webkit-line-clamp 失效 */
-  white-space: normal;            /* 覆盖 pre-wrap 的影响 */
+  white-space: normal;            /* 覆盖上文 pre-wrap 的影响 */
   word-break: break-word;
   overflow-wrap: anywhere;
-  position: relative;             /* 方便做渐隐层 */
+  position: relative;             /* 可加渐隐 */
 }
-
 /* 被夹时（5 行） */
 .card .text.clamped{
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 5;          /* 5 行 */
+  -webkit-line-clamp: 5;
   overflow: hidden;
 }
 
-/* Show more（默认隐藏，由 JS 决定显示） */
+/* Show more（默认隐藏，由 JS 决定显示；悬停/聚焦下划线） */
 .show-more{
   display: none;
   cursor: pointer;
   color: var(--primary);
   font-weight: 600;
   margin-top: 4px;
-  z-index: 2;                     /* 比卡片 hover 更高 */
-  position: relative;             /* 让 z-index 生效 */
-  text-decoration: none;          /* 默认不带下划线 */
+  z-index: 2;
+  position: relative;             /* 使 z-index 生效 */
+  text-decoration: none;
 }
-
-/* 悬停/键盘聚焦提示可点击 */
 .show-more:hover,
 .show-more:focus-visible{
   text-decoration: underline;
