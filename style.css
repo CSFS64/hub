@@ -609,3 +609,93 @@ dialog {
 .show-more{ display:none; cursor:pointer; color:var(--primary); font-weight:600; margin-top:4px; position:relative; z-index:3; text-decoration:none; }
 .show-more:hover, .show-more:focus-visible{ text-decoration: underline; }
 
+/* ===== Modal 阴影：用外层 drop-shadow，四周都柔和 ===== */
+#replyDialog{
+  border:none;
+  background: transparent;
+  padding: 6vh 24px;      /* 左右留白让阴影不被贴边吃掉 */
+}
+#replyDialog::backdrop{
+  background: rgba(0,0,0,.35);
+  backdrop-filter: blur(2px);
+}
+
+/* 外层包一层用来投影（避免被 overflow 裁剪） */
+.mf-shadow{
+  filter:
+    drop-shadow(0 24px 72px rgba(0,0,0,.33))
+    drop-shadow(0  6px 18px rgba(0,0,0,.22));
+}
+
+/* 弹窗本体：不再用厚重 box-shadow；保持圆角与细边线 */
+.mf-modal-card{
+  width: min(600px, 96vw);
+  border-radius: 16px;
+  background: var(--bg);
+  color: var(--fg);
+  overflow: hidden; /* 只裁内容 */
+  border: 1px solid color-mix(in srgb, var(--fg) 6%, transparent);
+}
+
+/* 右侧不贴边：整体和每个 body 都加内边距 */
+.mf-modal-body{ padding: 16px 20px; }
+.mf-thread{ 
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  column-gap: 14px;
+  row-gap: 16px;
+  align-items: start;
+}
+.mf-thread .body{ 
+  grid-column: 2;
+  padding-right: 8px;   /* 再加一点安全内边距 */
+}
+
+/* 头像 rail */
+.mf-rail{
+  grid-column: 1;
+  position: relative;
+  display: flex; justify-content: center; align-items: flex-start;
+}
+.mf-rail .avatar{
+  width: 40px; height: 40px; border-radius: 50%;
+  background: #ddd; object-fit: cover;
+}
+
+/* ===== 两头像之间的灰线（“脊柱”） ===== */
+.mf-spine{
+  grid-column: 1; 
+  grid-row: 1 / span 2;          /* 跨两行：连原帖与编辑区 */
+  justify-self: center;          /* 居中到头像中线 */
+  width: 2px;
+  background: var(--line);
+  /* 只从第一张头像下方开始，到第二张头像上方收尾：用内边距“掐头去尾” */
+  margin-top: 48px;              /* 40px 头像 + 8px 间距 */
+  margin-bottom: 20px;           /* 让线在第二个头像前结束一点点 */
+  border-radius: 1px;
+}
+
+/* ===== 引用区（原作者文本）：5 行 clamp + show more ===== */
+.mf-quote .text{
+  font-size: 15px; line-height: 1.6; margin: 0;
+  white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;
+  position: relative;
+}
+.mf-quote .text.clamped{
+  display:-webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+  overflow:hidden;
+}
+
+/* Show more（与你主页一致） */
+.show-more{
+  display:none; cursor:pointer; color:var(--primary);
+  font-weight:600; margin-top:6px; position:relative; z-index:3;
+  text-decoration: none;
+}
+.show-more:hover,
+.show-more:focus-visible{ text-decoration: underline; }
+
+/* 仅当被夹住才显示按钮（JS 已经写好了判断） */
+.mf-quote .text.clamped + .show-more{ display:inline; }
