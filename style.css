@@ -483,34 +483,42 @@ dialog {
 
 
 
-/* ========== MF Modal (clean & isolated) ========== */
+/* ===== Reply Modal 基础：让阴影有空间显示 ===== */
 #replyDialog{
-  padding:0; border:none; background:transparent;
+  border:none;
+  background: transparent;   /* 背景透明，靠 backdrop */
+  padding: 6vh 16px;         /* 给左右留 16px 缓冲，阴影不会被屏幕“贴边吃掉” */
 }
 #replyDialog::backdrop{
   background: rgba(0,0,0,.35);
+  backdrop-filter: blur(2px); /* 轻微虚化，更柔和 */
 }
 
-/* 面板躯体 */
+/* 用 wrapper 做 drop-shadow，避免被内部 overflow 裁剪 */
+.mf-shadow{
+  display:block;
+  max-width: 96vw;
+  margin: 0 auto;
+  filter:
+    drop-shadow(0 24px 72px rgba(0,0,0,.35))
+    drop-shadow(0 6px 18px rgba(0,0,0,.20));
+}
+
+/* 真正的卡片本体：不再用厚重 box-shadow，避免“灰块断边”；保持圆角与内容裁剪 */
 .mf-modal-card{
-  width:min(600px,96vw);
-  margin: 8vh auto;
+  width:min(600px, 96vw);
+  border-radius:16px;
   background: var(--bg);
   color: var(--fg);
-  border-radius: 16px;
-  box-shadow:
-    0 24px 72px -16px rgba(0,0,0,.45),
-    0 10px 24px -12px rgba(0,0,0,.30),
-    0  1px  6px   0   rgba(0,0,0,.15);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  overflow: hidden;                    /* 只裁内容，不影响外层 drop-shadow */
+  /* 如果你更喜欢保留一点边线： */
+  border: 1px solid color-mix(in srgb, var(--fg) 6%, transparent);
 }
 
-/* 顶部栏 */
+/* 顶栏 */
 .mf-modal-topbar{
   display:flex; align-items:center; justify-content:space-between;
-  padding: 10px 14px;
+  padding:10px 14px;
   border-bottom:1px solid var(--line);
   color: var(--muted);
 }
@@ -520,16 +528,43 @@ dialog {
 }
 .mf-modal-close:hover{ background: var(--hover); }
 
-/* 内容区域：上=引用原帖，下=编辑器 */
-.mf-modal-body{
-  max-height: min(70vh, 560px);
-  overflow:auto;
-  padding: 16px;
-  display: grid;
-  row-gap: 16px;
+/* 内容 */
+.mf-modal-body{ padding:16px; }
+
+/* ===== 两列线程：两头像 + 连接线 ===== */
+.mf-thread{
+  display:grid;
+  grid-template-columns:56px 1fr;
+  column-gap:12px;
+  row-gap:16px;
+  align-items:start;
 }
 
-/* 引用原帖（只做最少样式，沿用你的文本规则） */
+.mf-rail{
+  grid-column:1;
+  position:relative;
+  display:flex; justify-content:center; align-items:flex-start;
+}
+.mf-rail .avatar{
+  width:40px; height:40px; border-radius:50%;
+  background:#ddd; object-fit:cover;
+}
+
+/* 只在第一段 rail（原作者）下面画竖线，连到“我”的 rail 顶部附近 */
+.mf-rail:first-of-type::after{
+  content:"";
+  position:absolute;
+  left:50%; transform:translateX(-50%);
+  top: 48px;           /* 40px头像 + 8px间距 */
+  bottom: -12px;       /* 稍微穿过下一行一点点，连起来更自然 */
+  width:2px;
+  background: var(--line);
+}
+.mf-rail.me::after{ display:none; }
+
+.body{ grid-column:2; }
+
+/* ===== 引用（沿用你的文本规则） ===== */
 .mf-quote .head{
   font-weight:700; font-size:15px; display:flex; gap:6px; align-items:flex-start;
 }
@@ -542,7 +577,7 @@ dialog {
   line-height: 1.5;
 }
 
-/* 编辑器 */
+/* ===== 编辑器（与你现有输入风格一致） ===== */
 .mf-editor{ display:flex; flex-direction:column; gap:8px; }
 .mf-input{
   border:none; outline:none; background:transparent; color:var(--fg);
@@ -570,14 +605,7 @@ dialog {
 .mf-btn.primary{ background:var(--primary); color:var(--primary-ink); border-color:var(--primary); }
 .mf-btn.primary:hover{ filter:brightness(1.03); }
 
-/* Upsell 复用你全局 .upsell/.upsell.show，就不重复了 */
-
-/* Show more 提示（与你首页一致） */
-.show-more{
-  display:none; cursor:pointer; color:var(--primary); font-weight:600;
-  margin-top:4px; position:relative; z-index:2; text-decoration:none;
-}
+/* show more 提示（你主页一致的交互） */
+.show-more{ display:none; cursor:pointer; color:var(--primary); font-weight:600; margin-top:4px; position:relative; z-index:3; text-decoration:none; }
 .show-more:hover, .show-more:focus-visible{ text-decoration: underline; }
 
-/* 避免与卡片 hover 冲突 */
-.mf-modal-card .show-more{ z-index: 3; }
