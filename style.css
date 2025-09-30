@@ -483,175 +483,68 @@ dialog {
 
 
 
-/* ===== Reply Modal 基础：让阴影有空间显示 ===== */
+/* ========== Reply Modal（精简版：无模糊、无阴影） ========== */
+
+/* 1) <dialog>：无内边距、不做阴影/模糊；仅用半透明遮罩 */
 #replyDialog{
-  border:none;
-  background: transparent;   /* 背景透明，靠 backdrop */
-  padding: 6vh 16px;         /* 给左右留 16px 缓冲，阴影不会被屏幕“贴边吃掉” */
-}
-#replyDialog::backdrop{
-  background: rgba(0,0,0,.35);
-  backdrop-filter: blur(2px); /* 轻微虚化，更柔和 */
-}
-
-/* 用 wrapper 做 drop-shadow，避免被内部 overflow 裁剪 */
-.mf-shadow{
-  display:block;
-  max-width: 96vw;
-  margin: 0 auto;
-  filter:
-    drop-shadow(0 24px 72px rgba(0,0,0,.35))
-    drop-shadow(0 6px 18px rgba(0,0,0,.20));
-}
-
-/* 真正的卡片本体：不再用厚重 box-shadow，避免“灰块断边”；保持圆角与内容裁剪 */
-.mf-modal-card{
-  width:min(600px, 96vw);
-  border-radius:16px;
-  background: var(--bg);
-  color: var(--fg);
-  overflow: hidden;                    /* 只裁内容，不影响外层 drop-shadow */
-  /* 如果你更喜欢保留一点边线： */
-  border: 1px solid color-mix(in srgb, var(--fg) 6%, transparent);
-}
-
-/* 顶栏 */
-.mf-modal-topbar{
-  display:flex; align-items:center; justify-content:space-between;
-  padding:10px 14px;
-  border-bottom:1px solid var(--line);
-  color: var(--muted);
-}
-.mf-modal-close{
-  border:none; background:transparent; cursor:pointer;
-  padding:6px; border-radius:8px; color:var(--muted);
-}
-.mf-modal-close:hover{ background: var(--hover); }
-
-/* 内容 */
-.mf-modal-body{ padding:16px; }
-
-/* ===== 两列线程：两头像 + 连接线 ===== */
-.mf-thread{
-  display:grid;
-  grid-template-columns:56px 1fr;
-  column-gap:12px;
-  row-gap:16px;
-  align-items:start;
-}
-
-.mf-rail{
-  grid-column:1;
-  position:relative;
-  display:flex; justify-content:center; align-items:flex-start;
-}
-.mf-rail .avatar{
-  width:40px; height:40px; border-radius:50%;
-  background:#ddd; object-fit:cover;
-}
-
-/* 只在第一段 rail（原作者）下面画竖线，连到“我”的 rail 顶部附近 */
-.mf-rail:first-of-type::after{
-  content:"";
-  position:absolute;
-  left:50%; transform:translateX(-50%);
-  top: 48px;           /* 40px头像 + 8px间距 */
-  bottom: -12px;       /* 稍微穿过下一行一点点，连起来更自然 */
-  width:2px;
-  background: var(--line);
-}
-.mf-rail.me::after{ display:none; }
-
-.body{ grid-column:2; }
-
-/* ===== 引用（沿用你的文本规则） ===== */
-.mf-quote .head{
-  font-weight:700; font-size:15px; display:flex; gap:6px; align-items:flex-start;
-}
-.mf-quote .meta{ color:var(--muted); font-weight:400; }
-.mf-quote .text{
-  margin-top:4px;
-  white-space: pre-wrap;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  line-height: 1.5;
-}
-
-/* ===== 编辑器（与你现有输入风格一致） ===== */
-.mf-editor{ display:flex; flex-direction:column; gap:8px; }
-.mf-input{
-  border:none; outline:none; background:transparent; color:var(--fg);
-  font-size:15px; line-height:1.6;
-  padding:12px 0; min-height:44px; resize:none; width:100%;
-  box-sizing:border-box; overflow:hidden;
-}
-.mf-tools{
-  display:flex; align-items:center; justify-content:flex-end; gap:8px;
-}
-.mf-counter{
-  min-width:28px; height:28px; padding:0 8px;
-  border-radius:999px; display:flex; align-items:center; justify-content:center;
-  background:#f0f3f4; color:#606a73; font-weight:700; font-size:13px;
-}
-:root.dark .mf-counter{ background:#1b1e20; color:#8b98a5; }
-.mf-counter.over{ background:#ffe8e8; color:#c81e1e; }
-:root.dark .mf-counter.over{ background:#3a0d0d; color:#ff7373; }
-
-.mf-btn{
-  border:1px solid var(--line); background:var(--card); color:var(--fg);
-  padding:8px 14px; border-radius:999px; cursor:pointer; font-weight:700;
-}
-.mf-btn:hover{ background:var(--hover); }
-.mf-btn.primary{ background:var(--primary); color:var(--primary-ink); border-color:var(--primary); }
-.mf-btn.primary:hover{ filter:brightness(1.03); }
-
-/* show more 提示（你主页一致的交互） */
-.show-more{ display:none; cursor:pointer; color:var(--primary); font-weight:600; margin-top:4px; position:relative; z-index:3; text-decoration:none; }
-.show-more:hover, .show-more:focus-visible{ text-decoration: underline; }
-
-/* ===== Modal 阴影：用外层 drop-shadow，四周都柔和 ===== */
-#replyDialog{
-  border:none;
+  border: none;
   background: transparent;
-  padding: 6vh 24px;      /* 左右留白让阴影不被贴边吃掉 */
+  padding: 0;                     /* ← 去掉顶部空白的根源 */
+  display: grid;
+  place-items: center;            /* 居中卡片 */
 }
 #replyDialog::backdrop{
-  background: rgba(0,0,0,.35);
-  backdrop-filter: blur(2px);
+  background: rgba(0,0,0,.35);    /* 不要高斯模糊，仅半透明遮罩 */
 }
 
-/* 外层包一层用来投影（避免被 overflow 裁剪） */
+/* 2) 外层容器（可选保留，已去掉任何阴影/滤镜） */
 .mf-shadow{
-  filter:
-    drop-shadow(0 24px 72px rgba(0,0,0,.33))
-    drop-shadow(0  6px 18px rgba(0,0,0,.22));
+  display: block;
+  max-width: 96vw;
+  margin: 0 auto;                 /* 不做投影，仅保持结构 */
 }
 
-/* 弹窗本体：不再用厚重 box-shadow；保持圆角与细边线 */
+/* 3) 弹窗卡片主体（无阴影） */
 .mf-modal-card{
   width: min(600px, 96vw);
   border-radius: 16px;
   background: var(--bg);
   color: var(--fg);
-  overflow: hidden; /* 只裁内容 */
+  overflow: hidden;               /* 只裁内容，圆角可见 */
   border: 1px solid color-mix(in srgb, var(--fg) 6%, transparent);
+  margin: 0 16px;                 /* 仅左右留点安全边距；不增加顶部空白 */
 }
 
-/* 右侧不贴边：整体和每个 body 都加内边距 */
+/* 顶栏 */
+.mf-modal-topbar{
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+}
+.mf-modal-close{
+  border: none; background: transparent; cursor: pointer;
+  padding: 6px; border-radius: 8px; color: var(--muted);
+}
+.mf-modal-close:hover{ background: var(--hover); }
+
+/* 内容区整体内边距（避免文字靠右贴边） */
 .mf-modal-body{ padding: 16px 20px; }
-.mf-thread{ 
+
+/* ========== 两列线程：双头像 + 连接灰线 ========== */
+.mf-thread{
   display: grid;
   grid-template-columns: 56px 1fr;
   column-gap: 14px;
   row-gap: 16px;
   align-items: start;
 }
-.mf-thread .body{ 
+.mf-thread .body{
   grid-column: 2;
-  padding-right: 8px;   /* 再加一点安全内边距 */
+  padding-right: 8px;             /* 再给右侧一点安全内边距 */
 }
 
-/* 头像 rail */
+/* 左侧头像栏 */
 .mf-rail{
   grid-column: 1;
   position: relative;
@@ -662,40 +555,84 @@ dialog {
   background: #ddd; object-fit: cover;
 }
 
-/* ===== 两头像之间的灰线（“脊柱”） ===== */
+/* 头像之间的灰线（“脊柱”）：单独元素更稳 */
 .mf-spine{
-  grid-column: 1; 
-  grid-row: 1 / span 2;          /* 跨两行：连原帖与编辑区 */
-  justify-self: center;          /* 居中到头像中线 */
+  grid-column: 1;
+  grid-row: 1 / span 2;           /* 连原帖与编辑区 */
+  justify-self: center;
   width: 2px;
   background: var(--line);
-  /* 只从第一张头像下方开始，到第二张头像上方收尾：用内边距“掐头去尾” */
-  margin-top: 48px;              /* 40px 头像 + 8px 间距 */
-  margin-bottom: 20px;           /* 让线在第二个头像前结束一点点 */
+  margin-top: 48px;               /* 40px 头像 + 8px 间距 */
+  margin-bottom: 20px;
   border-radius: 1px;
 }
 
-/* ===== 引用区（原作者文本）：5 行 clamp + show more ===== */
+/* ========== 引用区（原作者文本）：5 行 clamp + Show more ========== */
+.mf-quote .head{
+  font-weight: 700; font-size: 15px;
+  display: flex; gap: 6px; align-items: flex-start;
+}
+.mf-quote .meta{ color: var(--muted); font-weight: 400; }
+
 .mf-quote .text{
   font-size: 15px; line-height: 1.6; margin: 0;
-  white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;
+  white-space: pre-wrap;          /* 保留空行/换行 */
+  word-break: break-word;
+  overflow-wrap: anywhere;
   position: relative;
 }
 .mf-quote .text.clamped{
-  display:-webkit-box;
+  display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 5;
-  overflow:hidden;
+  -webkit-line-clamp: 5;          /* 仅显示 5 行 */
+  overflow: hidden;
 }
 
-/* Show more（与你主页一致） */
+/* Show more（仅在被夹时显示；悬停下划线） */
 .show-more{
-  display:none; cursor:pointer; color:var(--primary);
-  font-weight:600; margin-top:6px; position:relative; z-index:3;
+  display: none; cursor: pointer; color: var(--primary);
+  font-weight: 600; margin-top: 6px;
+  position: relative; z-index: 3;
   text-decoration: none;
 }
+.mf-quote .text.clamped + .show-more{ display: inline; }
 .show-more:hover,
 .show-more:focus-visible{ text-decoration: underline; }
 
-/* 仅当被夹住才显示按钮（JS 已经写好了判断） */
-.mf-quote .text.clamped + .show-more{ display:inline; }
+/* ========== 编辑器（与主页风格统一） ========== */
+.mf-editor{ display: flex; flex-direction: column; gap: 8px; }
+
+.mf-input{
+  border: none; outline: none; background: transparent; color: var(--fg);
+  font-size: 15px; line-height: 1.6;
+  padding: 12px 0; min-height: 44px;
+  resize: none; width: 100%; box-sizing: border-box; overflow: hidden;
+}
+
+.mf-tools{
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+}
+.mf-counter{
+  min-width: 28px; height: 28px; padding: 0 8px; border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  background: #f0f3f4; color: #606a73; font-weight: 700; font-size: 13px;
+}
+:root.dark .mf-counter{ background: #1b1e20; color: #8b98a5; }
+.mf-counter.over{ background: #ffe8e8; color: #c81e1e; }
+:root.dark .mf-counter.over{ background: #3a0d0d; color: #ff7373; }
+
+.mf-btn{
+  border: 1px solid var(--line); background: var(--card); color: var(--fg);
+  padding: 8px 14px; border-radius: 999px; cursor: pointer; font-weight: 700;
+}
+.mf-btn:hover{ background: var(--hover); }
+.mf-btn.primary{
+  background: var(--primary); color: var(--primary-ink); border-color: var(--primary);
+}
+.mf-btn.primary:hover{ filter: brightness(1.03); }
+
+/* 小屏边距微调（可选） */
+@media (max-width: 680px){
+  .mf-modal-card{ margin: 0 12px; }
+  .mf-modal-body{ padding: 14px 16px; }
+}
