@@ -692,3 +692,28 @@ dialog {
      height: <直到下头像上方 12px>;
   */
 }
+
+
+
+/* 选择 & 引用弹窗跟 replyDialog 同样的开启规则 */
+#repostChoiceDialog,#quoteDialog{ border:none;background:transparent;padding:0; }
+#repostChoiceDialog[open],#quoteDialog[open]{ display:grid; place-items:center; }
+#repostChoiceDialog:not([open]),#quoteDialog:not([open]){ display:none!important; }
+#repostChoiceDialog::backdrop,#quoteDialog::backdrop{ background: rgba(0,0,0,.35); }
+
+/* “转发了”徽标 + 引用内嵌卡片风格 */
+.repost-badge{ color:var(--muted); font-size:12px; margin:0 0 4px 52px; display:flex; align-items:center; gap:6px; }
+.repost-badge .icon{ transform:translateY(-1px); }
+
+.quote-embed{
+  border:1px solid var(--line); border-radius:12px; padding:10px; margin-top:8px;
+  background:var(--card);
+}
+.quote-embed .q-head{ font-weight:700; font-size:14px; margin-bottom:2px; }
+.quote-embed .q-text{ font-size:14px; line-height:1.6; white-space:pre-wrap; overflow-wrap:anywhere; }
+.quote-embed .q-text.clamped{
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:5; overflow:hidden;
+}
+.quote-embed .show-more{ display:none; color:var(--primary); font-weight:600; cursor:pointer; margin-top:4px; }
+.quote-embed .q-text.clamped + .show-more{ display:inline; }
+.quote-embed:hover{ background:var(--hover); }
