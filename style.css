@@ -539,3 +539,70 @@ dialog {
   color: rgba(83,100,113,.9);
   font-weight: 400;
 }
+
+/* ① 引用区的“空行太大” → 只在弹窗的原帖文本里压一点垂直间距  */
+.reply-card #replyHost,
+.reply-card #replyHost .text,
+.reply-card .quoted-detail .text{
+  white-space: pre-wrap !important;   /* 继续保留换行/空行 */
+  line-height: 1.5 !important;        /* 比之前略紧，空行也随之变小 */
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* ② 名称位置与样式（加粗，靠近头像上边对齐） */
+.reply-card .quoted-detail .head,
+.reply-card #replyHost .head{
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-weight: 700;        /* 名称加粗 */
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+.reply-card .quoted-detail .head .meta,
+.reply-card #replyHost .head .meta{
+  font-weight: 400;
+  color: var(--muted);
+}
+/* 让第一行正文块整体微微上提，贴近头像顶部 */
+.reply-card .reply-thread .row:first-child .body{ padding-top: 2px; }
+
+/* ③ 弹窗里的“Post your reply”输入框：完全沿用你单帖页评论栏的样式 */
+#replyText{
+  font-family: system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size: 15px;
+  line-height: 1.6;      /* 和页面评论栏一致 */
+  padding: 12px 0;       /* 聚焦前后都一致，避免“往下跳” */
+  min-height: 44px;      /* 与 44px 头像对齐 */
+  border: none; outline: none; background: transparent;
+  resize: none; width: 100%; box-sizing: border-box;
+}
+#replyText::placeholder{
+  color: rgba(83,100,113,.9);
+  font-weight: 400;
+}
+
+/* —— 仍保留两头像同列 + 灰线连接（防止被之前的整理规则覆盖） —— */
+.reply-card .reply-thread{
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  row-gap: 12px; column-gap: 12px;
+  padding: 16px 20px 12px;
+}
+.reply-card .reply-thread .rail{
+  grid-column: 1; position: relative; display:flex; justify-content:center;
+}
+.reply-card .reply-thread .rail .avatar{
+  width: 40px; height: 40px; border-radius: 50%; background:#ddd; object-fit:cover;
+}
+.reply-card .reply-thread .rail:first-of-type::after{
+  content:""; position:absolute; left:50%; transform:translateX(-50%);
+  width:2px; top:48px; bottom:-12px; background:var(--line); pointer-events:none;
+}
+.reply-card .reply-thread .rail.me::after{ display:none; }
+.reply-card .reply-thread .body{ grid-column: 2; }
+
+/* Upsell 仍然只在超限时显示（和 JS .show 配合） */
+.reply-card .upsell{ display: none !important; }
+.reply-card .upsell.show{ display: block !important; }
