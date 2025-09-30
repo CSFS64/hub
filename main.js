@@ -811,6 +811,28 @@ function renderPostPage(p){
     </div>
   `).join("");
 
+  // 转发内容（如果有）
+  let repostBlock = "";
+  if (p.kind === "repost" && p.repost_of) {
+    repostBlock = htm`
+      <div class="repost-block">
+        <div class="repost-author">${esc(p.repost_of.author.nickname||p.repost_of.author.username||"用户")}</div>
+        <div class="repost-text">${esc(p.repost_of.text||"")}</div>
+      </div>
+    `;
+  }
+
+  // 引用内容（如果有）
+  let quoteBlock = "";
+  if (p.quote_of) {
+    quoteBlock = htm`
+      <div class="quote-block">
+        <div class="quote-author">${esc(p.quote_of.author.nickname||p.quote_of.author.username||"用户")}</div>
+        <div class="quote-text">${esc(p.quote_of.text||"")}</div>
+      </div>
+    `;
+  }
+
   return htm`
   <!-- 顶部栏：左返回，右回复 -->
   <div class="post-topbar">
@@ -830,6 +852,10 @@ function renderPostPage(p){
         </div>
         <div class="text">${esc(p.text||"")}</div>
         <div class="pics">${imgs}</div>
+
+        ${repostBlock}
+        ${quoteBlock}
+
         <div class="actions">
           <div class="action like ${p.liked?'liked':''}" data-id="${esc(p.id)}">❤️ <span>${p.likes||0}</span></div>
           <div class="action open" onclick="$.openReply('${p.id}')">💬 回复</div>
@@ -843,7 +869,7 @@ function renderPostPage(p){
       <div class="timestamp">${esc(formatFullTime(p.created_at))}</div>
     </div>
 
-    <!-- 回复输入行：无边框 + 展开动画 + 计数 + Upsell -->
+    <!-- 回复输入行 -->
     <div class="row composer">
       <img class="rail avatar" src="${meAvatar}" alt="">
       <div class="body">
