@@ -366,7 +366,6 @@ function renderCard(p){
       <div class="repost-wrap" data-repost-id="${esc(p.id)}">
         ${badge}
         ${cardHtml}
-        ${repostActions}
       </div>
     `;
   }
