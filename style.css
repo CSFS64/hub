@@ -154,29 +154,70 @@ body{
 /* =========================
    Modals (auth / reply)
    ========================= */
-.modal{ border:none; background:rgba(0,0,0,.4); }
-.modal::backdrop{
-  background: rgba(0,0,0,.50);
+/* 通用 modal 设置 */
+.modal {
+  border: none;
+  background: transparent; /* 透明本体，只靠 backdrop */
+  padding: 0;
 }
-.modal-card{ width:min(680px,92vw); background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:16px; padding:12px; position:relative; }
+.modal::backdrop {
+  background: rgba(0,0,0,.50);
+  backdrop-filter: blur(1px) saturate(110%); /* ← 可调节模糊强度 */
+}
+
+/* modal-card */
+.modal-card {
+  width:min(680px,92vw);
+  background:var(--bg);
+  color:var(--fg);
+  border:none;
+  border-radius:16px;
+  padding:12px;
+  position:relative;
+  box-shadow:
+    0 32px 96px -12px rgba(0,0,0,.45),
+    0 12px 28px -12px rgba(0,0,0,.30),
+    0  2px  8px   0px rgba(0,0,0,.15);
+}
 .modal-card .close{ position:absolute; top:8px; right:8px; }
 
-.auth-card{ width:min(520px,92vw); background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:16px; padding:16px; position:relative; }
-.auth-card label{ display:block; margin:8px 0 4px; color:var(--muted); }
-.auth-card input{ width:100%; border:1px solid var(--line); border-radius:10px; padding:10px; background:transparent; color:var(--fg); }
-.auth-card .row{ display:flex; gap:8px; margin-top:10px; }
-.pane{ margin-top:6px; }
+/* reply-card */
+.reply-card {
+  width:min(680px,96vw);
+  background:var(--bg);
+  color:var(--fg);
+  border:none;
+  outline:none;
+  border-radius:16px;
+  padding:0;
+  position:relative;
+  box-shadow:
+    0 32px 96px -12px rgba(0,0,0,.45),
+    0 12px 28px -12px rgba(0,0,0,.30),
+    0  2px  8px   0px rgba(0,0,0,.15);
+}
+:root.dark .reply-card{ outline:none; }
+.reply-card .close{ position:absolute; top:10px; right:10px; }
 
-/* Reply modal quoted block */
-.reply-card .close{ position:absolute; top:8px; right:8px; }
-.quoted{ border-left:3px solid var(--line); padding-left:12px; margin:6px 0 8px; }
-.quoted .head{ font-weight:600; font-size:15px; margin-bottom:4px; }
-.quoted .text{ white-space:pre-wrap; line-height:1.5; }
+/* 去掉 dialog 默认描边和暗角 */
+dialog,
+dialog:focus,
+dialog:focus-visible,
+.reply-card:focus,
+.reply-card:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+dialog.modal {
+  background: transparent !important;
+  border: none !important;
+  padding: 0;
+  box-shadow: none !important;
+}
 
 /* =========================
    Thread Page (single post)
    ========================= */
-/* top bar of post page */
 .post-topbar{
   height:52px; display:flex; align-items:center; justify-content:space-between;
   padding:0 12px; border-bottom:1px solid var(--line); background:var(--bg);
@@ -188,7 +229,6 @@ body{
 }
 .btn-ghost:hover{ background:var(--hover); }
 
-/* grid rows with avatar rail (56px) */
 .post-thread{ background:var(--bg); }
 .post-thread .row{
   display:grid; grid-template-columns:56px 1fr; column-gap:12px; padding:12px 16px;
@@ -197,7 +237,6 @@ body{
 .post-thread .rail{ width:40px; height:40px; border-radius:50%; background:#ddd; object-fit:cover; grid-column:1; }
 .post-thread .body{ grid-column:2; }
 
-/* original post block */
 .post-thread .detail .head{ font-weight:700; font-size:15px; margin-bottom:4px; }
 .post-thread .detail .text{ font-size:17px; line-height:1.55; margin:8px 0 6px; }
 .post-thread .detail .body{ position:relative; }
@@ -209,28 +248,55 @@ body{
 .post-thread .action{ cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
 .post-thread .action.like.liked{ color:#e0245e; }
 
-/* timestamp row under the post */
 .post-thread .meta-row{
   display:grid; grid-template-columns:56px 1fr; column-gap:12px;
   padding:12px 16px; border-top:1px solid var(--line); border-bottom:1px solid var(--line);
 }
 .post-thread .timestamp{ color:var(--muted); font-size:14px; }
 
-/* inline reply composer (bottom) */
-.post-thread .row.composer{ align-items:center; }              /* avatar/grid items vertically centered */
-.reply-inline{ display:flex; align-items:center; gap:12px; }
+.post-thread .row.composer{ align-items: flex-start; }
+.reply-inline{ display:flex; align-items:flex-start; gap:12px; }
 .reply-inline .avatar{
   width:44px; height:44px; border-radius:50%; background:#ddd; flex-shrink:0;
 }
-
 .reply-inline .btn{
   display:inline-flex; align-items:center; justify-content:center;
   height:40px; padding:0 14px; border-radius:999px; font-weight:600;
 }
+.reply-editor{ flex:1; display:flex; flex-direction:column; }
+.reply-editor textarea{
+  display:block; width:100%;
+  border:none; outline:none; background:transparent; color:var(--fg);
+  box-sizing:border-box;
+  padding:12px 0;
+  font-size:16px; line-height:1.5;
+  resize:none;
+  overflow-y:hidden;
+  height:auto; min-height:28px;
+  transition:height .15s ease, padding .15s ease;
+}
+.reply-editor:focus-within textarea{ min-height:64px; padding:14px 0; }
+.reply-editor textarea::placeholder{
+  color:var(--muted); opacity:.75; font-weight:600; font-size:16px; text-align:left;
+}
+.reply-tools{
+  display:flex; align-items:center; justify-content:flex-end;
+  gap:8px; padding-top:8px;
+}
+.char-counter{
+  min-width:28px; height:28px; padding:0 8px;
+  border-radius:999px; display:flex; align-items:center; justify-content:center;
+  background:#f0f3f4; color:#606a73; font-weight:700; font-size:13px;
+}
+:root.dark .char-counter{ background:#1b1e20; color:#8b98a5; }
+.char-counter.over{ background:#ffe8e8; color:#c81e1e; }
+:root.dark .char-counter.over{ background:#3a0d0d; color:#ff7373; }
 
-/* comments list */
-.post-thread .comment .head{ font-weight:600; font-size:15px; margin-bottom:2px; }
-.post-thread .comment .text{ font-size:15px; line-height:1.5; }
+.upsell{
+  display:none; margin-top:8px; border:1px solid var(--line);
+  border-radius:12px; padding:10px 12px; color:var(--muted); font-size:14px;
+}
+.upsell.show{ display:block; }
 
 /* =========================
    Toast
@@ -259,317 +325,4 @@ body{
   .main{ border-right:none; }
   .right-rail{ display:none; }
   .topbar{ position:sticky; top:0; }
-}
-
-/* ===== 推特式无边框编辑框（回复栏） ===== */
-
-/* 行和容器允许随 textarea 一起长高，不隐藏溢出 */
-.post-thread .row,
-.post-thread .row .body,
-.reply-inline,
-.reply-editor{
-  height: auto;
-  overflow: visible;
-}
-
-/* 回复行顶部对齐，避免“居中”导致可视区域被吃掉 */
-.post-thread .row.composer{ align-items: flex-start; }
-.reply-inline{ align-items: flex-start; }
-
-/* 回复栏布局（头像 + 编辑区） */
-.reply-inline{
-  display: flex;
-  gap: 12px;
-}
-.reply-inline .avatar{
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: #ddd;
-  flex-shrink: 0;
-}
-
-/* 只保留这一套：textarea 无边框，由 JS 控高，禁用内部滚动 */
-.reply-editor{
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-.reply-editor textarea{
-  display: block;
-  width: 100%;
-  border: none;
-  outline: none;
-  background: transparent;
-  color: var(--fg);
-  box-sizing: border-box;
-
-  padding: 12px 0;
-  font-size: 16px;
-  line-height: 1.5;
-  resize: none;
-
-  overflow-y: hidden;  /* 不出现内部滚动条 */
-  height: auto;       /* 由 JS 设置高度 */
-  min-height: 28px;
-  transition: height .15s ease, padding .15s ease;
-}
-
-/* 聚焦时轻微展开（不妨碍 JS 自增高） */
-.reply-editor:focus-within textarea{
-  min-height: 64px;
-  padding: 14px 0;
-}
-
-/* 占位样式（更像推特） */
-.reply-editor textarea::placeholder{
-  color: var(--muted);
-  opacity: .75;
-  font-weight: 600;
-  font-size: 16px;
-  text-align: left;
-}
-
-/* 工具栏（计数 + 按钮）与 Upsell */
-.reply-tools{
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  padding-top: 8px;
-}
-.char-counter{
-  min-width: 28px;
-  height: 28px;
-  padding: 0 8px;
-  border-radius: 999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f0f3f4;
-  color: #606a73;
-  font-weight: 700;
-  font-size: 13px;
-}
-:root.dark .char-counter{ background:#1b1e20; color:#8b98a5; }
-.char-counter.over{ background:#ffe8e8; color:#c81e1e; }
-:root.dark .char-counter.over{ background:#3a0d0d; color:#ff7373; }
-
-.upsell{
-  display: none;
-  margin-top: 8px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 10px 12px;
-  color: var(--muted);
-  font-size: 14px;
-}
-.upsell.show{ display: block; }
-
-/* 左侧竖线只用于正文，不拦截事件，也不参与叠层遮挡 */
-.post-thread .detail .body{ position: relative; }
-.post-thread .detail .body::before{
-  content: "";
-  position: absolute;
-  left: -16px;
-  top: 44px;
-  bottom: 10px;
-  width: 2px;
-  background: var(--line);
-  pointer-events: none; /* 不拦截鼠标/输入事件 */
-}
-/* 确保回复行不受竖线影响 */
-.post-thread .row.composer .body::before{ content: none; }
-
-/* ===== Reply Modal: softer shadow + layout ===== */
-.modal{
-  border: none;
-  background: rgba(0,0,0,.50);
-}
-
-/* 仅用 backdrop 做遮罩；dialog 本体透明 */
-.modal{
-  border: none;
-  background: transparent; /* ← 关键：不要给 dialog 自己上黑底 */
-  padding: 0;              /* 避免内容四周再留黑边距 */
-}
-
-/* 更柔和的遮罩 */
-.modal::backdrop{
-  background: rgba(0,0,0,.35);
-}
-
-
-/* Reply 弹窗卡片：移除硬边框，改成多层软阴影 */
-.reply-card{
-  width: min(680px, 96vw);
-  background: var(--bg);
-  color: var(--fg);
-
-  /* 去掉硬边框，改为极浅的发光边缘 */
-  border: none;
-  outline: 1px solid rgba(0,0,0,.06);        /* 亮色主题下轻微描边 */
-}
-:root.dark .reply-card{
-  outline: 1px solid rgba(255,255,255,.06);  /* 暗色主题下轻微描边 */
-}
-
-.reply-card{
-  border: none;
-  outline: none;
-  border-radius: 16px;
-  background: var(--bg);
-  color: var(--fg);
-}
-
-/* 两行线程：左 56px 头像轨道，右正文；行距 12px */
-.reply-thread{
-  display:grid;
-  grid-template-columns:56px 1fr;
-  row-gap:12px; column-gap:12px;
-  padding:16px;
-}
-.reply-thread .rail{
-  grid-column:1; position:relative;
-  display:flex; justify-content:center;
-}
-.reply-thread .rail .avatar{
-  width:40px; height:40px; border-radius:50%; background:#ddd; object-fit:cover;
-}
-
-/* 连接竖线：从第1行头像底部连到第2行头像顶部 */
-.reply-thread .rail:first-of-type::after{
-  content:""; position:absolute; left:50%;
-  width:2px; transform:translateX(-50%);
-  top:48px;                      /* 40px头像 + 8px间距 */
-  bottom:-12px;                  /* 延伸到下一行顶部上方一点 */
-  background:var(--line);
-  pointer-events:none;
-}
-/* 最后一行不再延伸线条 */
-.reply-thread .rail.me::after{ display:none; }
-
-.reply-thread .body{ grid-column:2; }
-
-/* 上方原帖文字块更像推特小摘要 */
-.quoted-detail .head{ font-weight:700; font-size:15px; margin-bottom:4px; }
-.quoted-detail .text{
-  font-size:16px; line-height:1.5; margin-top:6px; white-space:pre-wrap;
-}
-
-/* 无边框编辑器（沿用你在单帖页的样式） */
-.reply-inline{ display:flex; align-items:flex-start; gap:12px; }
-.reply-editor{ flex:1; display:flex; flex-direction:column; }
-.reply-editor textarea{
-  display:block; width:100%;
-  border:none; outline:none; background:transparent; color:var(--fg);
-  box-sizing:border-box;
-  padding:12px 0;
-  font-size:16px; line-height:1.5;
-  resize:none;
-  overflow-y:hidden;   /* 禁止内部滚动，交给 JS 调整 height */
-  height:auto; min-height:28px;
-  transition:height .15s ease, padding .15s ease;
-}
-.reply-editor textarea::placeholder{
-  color:var(--muted); opacity:.75; font-weight:600; font-size:16px; text-align:left;
-}
-.reply-editor:focus-within textarea{
-  min-height:64px; padding:14px 0;  /* 聚焦轻微展开 */
-}
-
-.reply-tools{
-  display:flex; align-items:center; justify-content:flex-end;
-  gap:8px; padding-top:8px;
-}
-.char-counter{
-  min-width:28px; height:28px; padding:0 8px;
-  border-radius:999px; display:flex; align-items:center; justify-content:center;
-  background:#f0f3f4; color:#606a73; font-weight:700; font-size:13px;
-}
-:root.dark .char-counter{ background:#1b1e20; color:#8b98a5; }
-.char-counter.over{ background:#ffe8e8; color:#c81e1e; }
-:root.dark .char-counter.over{ background:#3a0d0d; color:#ff7373; }
-
-.upsell{
-  display:none; margin-top:8px; border:1px solid var(--line);
-  border-radius:12px; padding:10px 12px; color:var(--muted); font-size:14px;
-}
-.upsell.show{ display:block; }
-
-.modal::backdrop{
-  background: rgba(0,0,0,.50);
-}
-
-/* ❗把旧的 .modal-card 的边框去掉 —— 防止任何弹窗出现硬边 */
-.modal-card{
-  width:min(680px,92vw);
-  background:var(--bg);
-  color:var(--fg);
-  border:none;             /* 原来是 1px 实线，去掉 */
-  border-radius:16px;
-  padding:12px;
-  position:relative;
-  box-shadow:
-    0 32px 96px -12px rgba(0,0,0,.45),
-    0 12px 28px -12px rgba(0,0,0,.30),
-    0  2px  8px   0px rgba(0,0,0,.15);
-}
-
-/* Reply 弹窗卡片 —— 不要 outline，就用软阴影 */
-.reply-card{
-  width:min(680px,96vw);
-  background:var(--bg);
-  color:var(--fg);
-  border:none;
-  outline:none;            /* ← 去掉你先前加的细描边 */
-  border-radius:16px;
-  padding:0;
-  position:relative;
-  box-shadow:
-    0 32px 96px -12px rgba(0,0,0,.45),
-    0 12px 28px -12px rgba(0,0,0,.30),
-    0  2px  8px   0px rgba(0,0,0,.15);
-}
-:root.dark .reply-card{ outline:none; }
-
-/* 关闭按钮位置（保持） */
-.reply-card .close{ position:absolute; top:10px; right:10px; }
-
-/* 彻底关掉 <dialog> 和内部卡片的焦点描边（会导致四角像直角的那条淡线） */
-dialog,
-dialog:focus,
-dialog:focus-visible,
-.reply-card:focus,
-.reply-card:focus-visible {
-  outline: none !important;
-  box-shadow: none; /* 这里只对 dialog 起作用；reply-card 的阴影另外定义 */
-}
-
-/* 仍然保持对话框透明、只用 backdrop 作为遮罩 */
-dialog.modal {
-  background: transparent !important;
-  border: none !important;
-  padding: 0;
-  box-shadow: none !important;  /* 防止 UA 盒影 */
-}
-
-/* 阴影放在卡片上（圆角会让阴影也圆滑） */
-.reply-card {
-  border: none;
-  outline: none;
-  border-radius: 16px;
-  background: var(--bg);
-  color: var(--fg);
-  box-shadow:
-    0 32px 96px -16px rgba(0,0,0,.45),
-    0 12px 28px -12px rgba(0,0,0,.30),
-    0  2px  8px   0   rgba(0,0,0,.15);
-}
-
-dialog {
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-  background: transparent !important;
 }
