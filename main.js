@@ -570,10 +570,12 @@ async function showPostPage(id){
     bindPostPageEvents(d);
   }catch(e){
     $.feed.innerHTML = `<div class="empty">加载失败：${esc(e.message||'')}</div>`;
-  }finally{
+    }finally{
     $.loading.hidden = true;
+    applyClamp();   // ← 同样渲染单帖页后检查
   }
 }
+
 
 function formatFullTime(iso){
   // e.g. "1:15 AM · Sep 29, 2025"
