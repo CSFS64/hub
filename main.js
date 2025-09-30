@@ -167,7 +167,7 @@ function renderTextWithClamp(text) {
   const safe = esc(cleanText(text || ""));
   return `
     <div class="text clamped">${safe}</div>
-    <div class="show-more" onclick="this.previousElementSibling.classList.remove('clamped'); this.remove()">Show more</div>
+    <div class="show-more" onclick="event.stopPropagation(); this.previousElementSibling.classList.remove('clamped'); this.remove()">Show more</div>
   `;
 }
 
