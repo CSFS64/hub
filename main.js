@@ -154,8 +154,12 @@ async function loadFeed(tab="for_you"){
     bindCardEvents();
     hydrateSuggestions(items);
   }catch(e){ toast(e.message || "加载失败"); }
-  finally{ $.loading.hidden=true; }
+  finally{
+    $.loading.hidden = true;
+    applyClamp();   // ← 渲染完成后检查是否需要显示 Show more
+  }
 }
+
 
 function cleanText(s = "") {
   return s
@@ -176,7 +180,8 @@ function renderTextWithClamp(text) {
 
 function applyClamp(){
   document.querySelectorAll(".text.clamped").forEach(el=>{
-    if(el.scrollHeight > el.clientHeight + 4){
+    // 这里 el.clientHeight 是 5 行的高度，el.scrollHeight 是全文高度
+    if(el.scrollHeight > el.clientHeight + 2){  // 加 2 防止精度问题
       const btn = el.nextElementSibling;
       if(btn && btn.classList.contains("show-more")){
         btn.style.display = "inline-block";
