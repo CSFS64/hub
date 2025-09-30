@@ -828,3 +828,39 @@ dialog {
 .quote-embed .show-more{
   min-width: 0;
 }
+
+/* ① 父帖正文 与 引用卡 的间距再拉开（避免合并边距只取较大值） */
+.card .text + .quote-embed{
+  margin-top: 16px;        /* 需要更大就改成 18px/20px */
+}
+
+/* ② 引用卡正文与头像左对齐（不再向右错开） */
+.quote-embed{
+  /* 第三列允许收缩，避免中文竖排 */
+  grid-template-columns: 28px 8px minmax(0,1fr);
+}
+
+/* 展平 q-content，让内部元素成为网格项 */
+.quote-embed .q-content{ display: contents; }
+
+/* 标题仍在头像右侧（第3列、第1行） */
+.quote-embed .q-head{ grid-column: 3; grid-row: 1; }
+
+/* 正文改为从第1列开始，横跨整行 —— 与头像左边缘对齐 */
+.quote-embed .q-text{
+  grid-column: 1 / -1;     /* 关键：从最左到最右 */
+  margin: 0;                /* 间距由 .q-head 的 margin-bottom 控制 */
+  min-width: 0;
+}
+
+/* “Show more” 也跟正文一起左对齐 */
+.quote-embed .show-more{
+  grid-column: 1 / -1;
+  margin-top: 6px;
+  min-width: 0;
+}
+
+/* 兼容：万一浏览器不支持 display: contents */
+@supports not (display: contents){
+  .quote-embed .q-content{ grid-column: 1 / -1; }
+}
