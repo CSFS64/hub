@@ -754,3 +754,33 @@ dialog {
   font-weight: 400; 
 }
 .quote-embed .show-more{ margin-top: 4px; }
+
+/* 默认：引用块白底（或深色模式下卡片底色） */
+.quote-embed{
+  background: var(--card) !important;
+  border: 1px solid var(--line);
+  transition: background-color .12s ease;
+}
+
+/* 父卡悬停：父卡变灰，但引用块仍保持白底，形成层次 */
+.card.clickable:hover{
+  background: var(--hover);
+}
+.card.clickable:hover .quote-embed{
+  background: var(--card) !important;
+}
+
+/* 鼠标移到引用块：父卡保持灰，引用块比父卡更深一点 */
+.card.clickable:hover .quote-embed:hover{
+  /* 在 var(--hover) 基础上压一丢丢前景色，得到更深的灰 */
+  background: color-mix(in srgb, var(--hover) 82%, var(--fg) 18%) !important;
+}
+
+/* 如果你的环境不支持 color-mix，可以用轻微阴影模拟“更深” */
+@supports not (background: color-mix(in srgb, black 10%, white)){
+  .card.clickable:hover .quote-embed:hover{
+    background: var(--hover) !important;
+    box-shadow: inset 0 0 0 999px rgba(0,0,0,.04);
+  }
+}
+
