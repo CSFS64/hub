@@ -417,13 +417,25 @@ dialog {
 /* ===== Hotfix: 弹窗回复采用“推特式两头像 + 连接灰线”布局，且不被裁切 ===== */
 .reply-card{
   overflow: visible !important;     /* 防止内部线条/阴影被裁切 */
+  width: min(600px, 96vw) !important;   /* 更接近 X 的宽度 */
+  border-radius: 16px;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size: 15px;               /* X 的正文感受 */
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* 软阴影保留即可（你已有），不重复 */
 }
+:root.dark .reply-card{ outline:none; }
+
 .reply-thread{
   display: grid !important;
   grid-template-columns: 56px 1fr !important;
   column-gap: 12px !important;
   row-gap: 12px !important;
-  padding: 16px !important;
+  padding: 16px 20px 12px !important;   /* 内边距更舒适 */
   overflow: visible !important;
 }
 .reply-thread .rail{
@@ -451,6 +463,7 @@ dialog {
   pointer-events: none !important;
 }
 .reply-thread .rail.me::after{ display: none !important; }
+.reply-thread .body{ grid-column: 2; }
 
 /* ===== Hotfix: 输入框与头像精确对齐，并允许所在行随内容增高 ===== */
 #replyText,
@@ -473,62 +486,6 @@ dialog {
   overflow: visible !important;
 }
 
-/* ===== Reply 弹窗：宽度 & 版心 ===== */
-.reply-card{
-  width: min(600px, 96vw) !important;   /* 更接近 X 的宽度 */
-  border-radius: 16px;
-  background: var(--bg);
-  color: var(--fg);
-  /* 软阴影保留即可（你已有），不重复 */
-}
-.reply-thread{
-  padding: 16px 20px 12px !important;   /* 内边距更舒适 */
-}
-
-/* 弹窗内全局排版（不要影响全站） */
-.reply-card{
-  font-family: system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  font-size: 15px;               /* X 的正文感受 */
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-}
-
-/* ===== 保留原作者文本的段落/空行，且支持长链接换行 ===== */
-/* 你的 JS 把原文塞到 #replyHost；直接针对这里做白空格保留 */
-#replyHost .text,
-#replyHost,
-.quoted-detail .text,
-.post-thread .detail .text{
-  white-space: pre-wrap !important;  /* 保留换行/空行 */
-  word-break: break-word;            /* 不中断中文，长链接也能换行 */
-  overflow-wrap: anywhere;           /* 超长单词/URL 强制换行 */
-}
-
-/* 头像与连线维持现有两列布局（确保不被其它规则覆盖） */
-.reply-thread{
-  display: grid;
-  grid-template-columns: 56px 1fr;
-  row-gap: 12px; column-gap: 12px;
-}
-.reply-thread .rail{
-  grid-column: 1; position: relative;
-  display: flex; justify-content: center;
-}
-.reply-thread .rail .avatar{
-  width: 40px; height: 40px; border-radius: 50%; background:#ddd; object-fit: cover;
-}
-.reply-thread .rail:first-of-type::after{
-  content:""; position:absolute; left:50%; transform:translateX(-50%);
-  width:2px; top:48px; bottom:-12px; background:var(--line); pointer-events:none;
-}
-.reply-thread .rail.me::after{ display:none; }
-.reply-thread .body{ grid-column: 2; }
-
-/* ===== Upsell 只在超限时出现（双保险） ===== */
-.upsell{ display: none !important; }
-.upsell.show{ display: block !important; }
-
 /* ===== 输入区：和外层版式一致 ===== */
 .reply-editor textarea{
   font-size: 15px; line-height: 1.6;     /* 与弹窗正文统一 */
@@ -538,6 +495,16 @@ dialog {
 .reply-editor textarea::placeholder{
   color: rgba(83,100,113,.9);
   font-weight: 400;
+}
+
+/* ===== 保留原作者文本的段落/空行，且支持长链接换行 ===== */
+#replyHost .text,
+#replyHost,
+.quoted-detail .text,
+.post-thread .detail .text{
+  white-space: pre-wrap !important;  /* 保留换行/空行 */
+  word-break: break-word;            /* 不中断中文，长链接也能换行 */
+  overflow-wrap: anywhere;           /* 超长单词/URL 强制换行 */
 }
 
 /* ① 引用区的“空行太大” → 只在弹窗的原帖文本里压一点垂直间距  */
@@ -553,22 +520,20 @@ dialog {
 /* ② 名称位置与样式（加粗，靠近头像上边对齐） */
 .reply-card .quoted-detail .head,
 .reply-card #replyHost .head{
-  display: flex;
-  align-items: baseline;
+  display: flex !important;
+  align-items: center !important;  /* baseline → center，更贴近头像 */
   gap: 6px;
   font-weight: 700;        /* 名称加粗 */
   font-size: 15px;
-  margin-bottom: 4px;
+  margin: 0 0 4px !important;   /* 顶部 0，避免被别处加出的间距 */
 }
 .reply-card .quoted-detail .head .meta,
 .reply-card #replyHost .head .meta{
   font-weight: 400;
   color: var(--muted);
 }
-/* 让第一行正文块整体微微上提，贴近头像顶部 */
-.reply-card .reply-thread .row:first-child .body{ padding-top: 2px; }
 
-/* ③ 弹窗里的“Post your reply”输入框：完全沿用你单帖页评论栏的样式 */
+/* ③ 弹窗里的“Post your reply”输入框 */
 #replyText{
   font-family: system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   font-size: 15px;
@@ -583,37 +548,11 @@ dialog {
   font-weight: 400;
 }
 
-/* —— 仍保留两头像同列 + 灰线连接（防止被之前的整理规则覆盖） —— */
-.reply-card .reply-thread{
-  display: grid;
-  grid-template-columns: 56px 1fr;
-  row-gap: 12px; column-gap: 12px;
-  padding: 16px 20px 12px;
-}
-.reply-card .reply-thread .rail{
-  grid-column: 1; position: relative; display:flex; justify-content:center;
-}
-.reply-card .reply-thread .rail .avatar{
-  width: 40px; height: 40px; border-radius: 50%; background:#ddd; object-fit:cover;
-}
-.reply-card .reply-thread .rail:first-of-type::after{
-  content:""; position:absolute; left:50%; transform:translateX(-50%);
-  width:2px; top:48px; bottom:-12px; background:var(--line); pointer-events:none;
-}
-.reply-card .reply-thread .rail.me::after{ display:none; }
-.reply-card .reply-thread .body{ grid-column: 2; }
-
-/* Upsell 仍然只在超限时显示（和 JS .show 配合） */
-.reply-card .upsell{ display: none !important; }
-.reply-card .upsell.show{ display: block !important; }
-
-/* 让昵称行紧贴头像顶部 —— 切掉所有可能的顶边距/内边距 */
+/* ===== 让昵称行紧贴头像顶部 —— 切掉所有可能的顶边距/内边距 ===== */
 .reply-card .reply-thread .row:first-child .body{
   padding-top: 0 !important;
   margin-top: 0 !important;
 }
-
-/* #replyHost（你把原帖塞在这里）以及它的第一个块级子元素不许有顶边距 */
 .reply-card #replyHost{
   margin-top: 0 !important;
   padding-top: 0 !important;
@@ -622,43 +561,8 @@ dialog {
   margin-top: 0 !important;
 }
 
-/* 名称那一行的排版（加粗 + 与头像上边对齐） */
-.reply-card #replyHost .head{
-  display: flex !important;
-  align-items: baseline !important;
-  gap: 6px;
-  font-weight: 700;
-  font-size: 15px;
-  margin: 0 0 4px !important;   /* 顶部 0，避免被别处加出的间距 */
-}
-.reply-card #replyHost .head .meta{
-  font-weight: 400; color: var(--muted);
-}
-
-/* ===== 修复 Reply 弹窗的作者信息与正文排版 ===== */
-
-/* 作者信息行：昵称加粗、和头像顶端对齐 */
-.reply-card #replyHost .head {
-  display: flex !important;
-  align-items: center !important;  /* baseline → center，更贴近头像 */
-  gap: 6px;
-  font-weight: 700;
-  font-size: 15px;
-  margin: 0 0 4px !important;
-}
-.reply-card #replyHost .head .meta {
-  font-weight: 400;
-  color: var(--muted);
-}
-
 /* 确保正文紧跟在作者行之后，不留大空隙 */
 .reply-card #replyHost .text {
   line-height: 1.5 !important;
   margin-top: 2px !important;
-}
-
-/* 行整体上提，避免正文整体被下推 */
-.reply-card .reply-thread .row:first-child .body {
-  padding-top: 0 !important;
-  margin-top: 0 !important;
 }
