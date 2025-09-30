@@ -277,8 +277,9 @@ body{
 .reply-inline{ align-items: flex-start; }
 
 /* 回复栏布局（头像 + 编辑区） */
-.reply-inline{
+.reply-inline {
   display: flex;
+  align-items: baseline; /* 以文字基线对齐，而不是整体居中 */
   gap: 12px;
 }
 .reply-inline .avatar{
