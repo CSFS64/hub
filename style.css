@@ -748,14 +748,14 @@ dialog {
   /* 鼠标移到引用块本身：比父卡 hover 稍深，但不要太重 */
   .card.clickable:hover .quote-embed:hover{
     /* 以父卡 hover 为基，向前景色混 12% 得到微深的灰 */
-    background: color-mix(in srgb, var(--hover) 88%, var(--fg) 12%);
+    background: color-mix(in srgb, var(--hover) 94%, var(--fg) 6%);
   }
 }
 /* 不支持 color-mix 的浏览器：用极轻的内阴影模拟“更深一点” */
 @supports not (background: color-mix(in srgb, black 10%, white)){
   .card.clickable:hover .quote-embed:hover{
     background: var(--hover);
-    box-shadow: inset 0 0 0 999px rgba(0,0,0,.03);
+    box-shadow: inset 0 0 0 999px rgba(0,0,0,.02);
   }
 }
 
