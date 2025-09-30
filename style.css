@@ -738,7 +738,7 @@ dialog {
   border: 1px solid var(--line);
   background: var(--card);
   transition: background-color .22s ease, box-shadow .22s ease;
-  margin-top: 14px;
+  margin-top: 12px;
 }
 .quote-embed > img.avatar{
   grid-area: av;
