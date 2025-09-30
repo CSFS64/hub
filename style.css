@@ -785,3 +785,42 @@ dialog {
   margin-top: 4px;
   z-index: 2;
 }
+
+/* 卡片正文：基础 */
+.card .text{
+  font-size: 15px;
+  line-height: 1.6;
+  /* !!! 关键：让行内换行按普通段落来，否则 -webkit-line-clamp 失效 */
+  white-space: normal;           /* 覆盖你前面写的 pre-wrap */
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  position: relative;            /* 方便做渐隐层 */
+}
+
+/* 被夹时（5 行） */
+.card .text.clamped{
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;         /* 5 行 */
+  overflow: hidden;
+}
+
+/* 可选：底部渐隐（看起来更像被折叠） */
+.card .text.clamped::after{
+  content:"";
+  position:absolute;
+  left:0; right:0; bottom:0; height:2.2em;
+  background: linear-gradient(to bottom, rgba(0,0,0,0), var(--bg) 80%);
+  pointer-events:none;
+}
+
+/* Show more 样式（默认隐藏，JS 决定显示） */
+.show-more{
+  display:none;
+  cursor:pointer;
+  color:var(--primary);
+  font-weight:600;
+  margin-top:4px;
+  z-index:2;                     /* 比卡片 hover 更高 */
+  position: relative;            /* 让 z-index 生效 */
+}
