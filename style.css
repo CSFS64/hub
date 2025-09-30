@@ -326,3 +326,18 @@ dialog.modal {
   .right-rail{ display:none; }
   .topbar{ position:sticky; top:0; }
 }
+
+#commentTextPage::placeholder {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 15px;      /* Twitter 占位文字大小 */
+  font-weight: 400;     /* 普通字重，不要太粗 */
+  color: rgba(83,100,113,0.8); /* 推特风格的灰色（比 muted 更浅一些） */
+  line-height: 1.5;
+}
+
+#commentTextPage {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--fg);
+}
