@@ -610,11 +610,35 @@ dialog {
 /* ========== 编辑器（与主页风格统一） ========== */
 .mf-editor{ display: flex; flex-direction: column; gap: 8px; }
 
-.mf-input{
-  border: none; outline: none; background: transparent; color: var(--fg);
-  font-size: 15px; line-height: 1.6;
-  padding: 12px 0; min-height: 44px;
-  resize: none; width: 100%; box-sizing: border-box; overflow: hidden;
+/* Reply 弹窗输入框：与正文下方一致（20/20，首行 44px） */
+#replyDialog .mf-input{
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 20px;
+  line-height: 20px;
+  padding: 12px 0;     /* 12 + 20 + 12 = 44 */
+  min-height: 44px;
+
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--fg);
+  resize: none;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+#replyDialog .mf-input::placeholder{
+  font: inherit;          /* 继承 20/20 */
+  line-height: inherit;
+  color: rgba(83,100,113,.9);
+  font-weight: 500;
+}
+
+/* 聚焦不跳动（保持同一盒模型） */
+#replyDialog .mf-editor:focus-within .mf-input{
+  min-height: 44px;
+  padding: 12px 0;
 }
 
 .mf-tools{
