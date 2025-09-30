@@ -108,71 +108,45 @@
     </form>
   </dialog>
 
-  <!-- Reply Modal -->
-  <dialog id="replyDialog" class="tw-reply" aria-labelledby="replyModalTitle">
+  <dialog id="replyDialog">
     <div class="mf-shadow">
-      <div class="mf-modal-card" role="dialog" aria-modal="true">
-        <!-- 顶栏 -->
+      <div class="mf-modal-card">
         <div class="mf-modal-topbar">
-          <div id="replyModalTitle" class="title">Reply</div>
-          <button type="button" class="mf-modal-close" aria-label="Close" onclick="$.closeReply()">✕</button>
+          <div>Reply</div>
+          <button class="mf-modal-close" onclick="$.closeReply()">✕</button>
         </div>
   
-        <!-- 内容 -->
         <div class="mf-modal-body">
-          <div class="mf-thread reply-thread">
-            <!-- 原作者头像（左） -->
+          <!-- 两列线程布局 -->
+          <div class="mf-thread">
+            <!-- 上：原作者 rail + 文本 -->
             <div class="mf-rail">
-              <img id="replyAuthorAvatar" class="avatar" src="data:," alt="">
+              <img id="replyAuthorAvatar" class="avatar" alt="">
             </div>
-  
-            <!-- 原帖引用（右） -->
-            <div id="replyHost" class="body mf-quote">
-              <!-- JS 会把引用内容塞进来；结构参考：
-              <div class="head">
-                <span class="name">作者名</span>
-                <span class="meta">· 3m</span>
-              </div>
-              <div class="text clamped">原帖文本……</div>
-              <button class="show-more"
-                      onclick="event.stopPropagation(); this.previousElementSibling.classList.remove('clamped'); this.remove();">
-                Show more
-              </button>
-              -->
-            </div>
-  
-            <!-- 头像之间的连接灰线（跨行） -->
+            <div id="replyHost" class="mf-quote body"><!-- JS 填充原帖 --></div>
+
             <div class="mf-spine" aria-hidden="true"></div>
-  
-            <!-- 我的头像（左） -->
+
+            <!-- 下：我自己的 rail + 编辑器 -->
             <div class="mf-rail me">
-              <img id="replyMyAvatar" class="avatar" src="data:," alt="">
+              <img id="replyMyAvatar" class="avatar" alt="">
             </div>
-  
-            <!-- 编辑器（右） -->
-            <div class="body">
-              <div class="mf-editor">
-                <textarea id="replyText"
-                          class="mf-input"
-                          rows="1"
-                          placeholder="Post your reply"
-                          aria-label="Reply text"></textarea>
-  
-                <div class="mf-tools">
-                  <div id="replyModalCounter" class="mf-counter">280</div>
-                  <button id="btnReply" type="button" class="mf-btn primary">Reply</button>
-                </div>
-  
-                <div id="replyModalUpsell" class="upsell" aria-live="polite" style="display:none">
-                  Upgrade to <b>Premium+</b> to write longer posts and Articles.
-                  <a class="link" href="javascript:;">Learn more</a>
-                </div>
+            <div class="mf-editor body">
+              <textarea id="replyText" class="mf-input" rows="1" placeholder="Post your reply"></textarea>
+              <div class="mf-tools">
+                <div id="replyModalCounter" class="mf-counter">280</div>
+                <button id="btnReply" class="mf-btn primary" type="button">Reply</button>
+              </div>
+              <div id="replyModalUpsell" class="upsell">
+                Upgrade to <b>Premium+</b> to write longer posts and Articles.
+                <a class="link" href="javascript:;">Learn more</a>
               </div>
             </div>
-          </div> <!-- /.mf-thread -->
-        </div>   <!-- /.mf-modal-body -->
-      </div>     <!-- /.mf-modal-card -->
-    </div>       <!-- /.mf-shadow -->
+          </div>
+          <!-- /mf-thread -->
+        </div>
+      </div>
+    </div>
   </dialog>
 
   <!-- Toast -->
