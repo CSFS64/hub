@@ -58,6 +58,11 @@ async function toggleLike(postId, btnEl){
 }
 
 /* ====== Utils ====== */
+// 统计一个帖子的“分享数”（转发+引用）
+function getShareCount(p){
+  return (p?.reposts_count || 0) + (p?.quotes_count || 0);
+}
+
 // 同步整站内所有该 postId 的点赞显示（列表卡片 + 详情页）
 function updateLikeEverywhere(postId, liked, likes){
   try {
@@ -479,7 +484,7 @@ function renderCard(p){
         <div class="pics">${imgs}</div>
         <div class="actions">
           <div class="action open">💬 <span>${p.comments_count||0}</span></div>
-          <div class="action repost" title="转发">🔁 <span>${p.reposts_count || 0}</span></div>
+          <div class="action repost" title="转发">🔁 <span>${getShareCount(p)}</span></div>
           <div class="action like ${p.liked?'liked':''}">❤️ <span>${p.likes||0}</span></div>
           ${deletable ? `<div class="action del" title="删除">🗑️</div>` : ""}
         </div>
@@ -509,7 +514,7 @@ function renderOriginalCard(p){
       <div class="actions">
         <div class="action open">💬 <span>${p.comments_count||0}</span></div>
         <div class="action like ${p.liked?'liked':''}">❤️ <span>${p.likes||0}</span></div>
-        <div class="action repost" title="转发">🔁 <span>${p.reposts_count || 0}</span></div>
+        <div class="action repost" title="转发">🔁 <span>${getShareCount(p)}</span></div>
         ${deletable ? `<div class="action del" title="删除">🗑️</div>` : ""}
       </div>
     </div>
@@ -942,7 +947,10 @@ function formatFullTime(iso){
 
 function renderPostPage(p){
   const imgs = (p.images||[]).map(src=>`<img src="${esc(src)}" loading="lazy" alt="">`).join("");
-  const meAvatar = esc(session.get()?.user?.avatar || "data:,");
+  const me = session.get()?.user;
+  const meAvatar = esc(me?.avatar || "data:,");
+  const deletable = me && me.id === p.author.id;
+
   const comments = (p.comments||[]).map(c=>htm`
     <div class="row comment">
       <img class="rail avatar" src="${esc(c.author.avatar||'data:,')}" alt="">
@@ -956,7 +964,6 @@ function renderPostPage(p){
     </div>
   `).join("");
 
-  // 转发内容（如果有）
   let repostBlock = "";
   if (p.kind === "repost" && p.repost_of) {
     repostBlock = htm`
@@ -967,7 +974,6 @@ function renderPostPage(p){
     `;
   }
 
-  // 引用内容（如果有）
   let quoteBlock = "";
   if (p.quote_of) {
     quoteBlock = htm`
@@ -979,7 +985,6 @@ function renderPostPage(p){
   }
 
   return htm`
-  <!-- 顶部栏：左返回，右回复 -->
   <div class="post-topbar">
     <button class="icon-btn" id="btnBackTop" title="返回">←</button>
     <div class="title">Post</div>
@@ -987,7 +992,6 @@ function renderPostPage(p){
   </div>
 
   <div class="post-thread">
-    <!-- 原帖 -->
     <div class="row detail">
       <img class="rail avatar" src="${esc(p.author.avatar||'data:,')}" alt="">
       <div class="body">
@@ -1003,31 +1007,29 @@ function renderPostPage(p){
 
         <div class="actions">
           <div class="action like ${p.liked?'liked':''}" data-id="${esc(p.id)}">❤️ <span>${p.likes||0}</span></div>
+          <div class="action repost" title="转发" data-id="${esc(p.id)}">🔁 <span>${getShareCount(p)}</span></div>
+          ${deletable ? `<div class="action del" title="删除" data-id="${esc(p.id)}">🗑️</div>` : ""}
           <div class="action open" onclick="$.openReply('${p.id}')">💬 回复</div>
         </div>
       </div>
     </div>
 
-    <!-- 时间行（和推特一样在正文下单独一行） -->
     <div class="meta-row">
       <div></div>
       <div class="timestamp">${esc(formatFullTime(p.created_at))}</div>
     </div>
 
-    <!-- 回复输入行 -->
     <div class="row composer">
       <img class="rail avatar" src="${meAvatar}" alt="">
       <div class="body">
         <div class="reply-inline">
-          <img class="avatar" src="${meAvatar}" alt="" style="display:none"> <!-- 兼容保留，不显示 -->
+          <img class="avatar" src="${meAvatar}" alt="" style="display:none">
           <div class="reply-editor">
             <textarea id="commentTextPage" rows="1" placeholder="Post your reply"></textarea>
-
             <div class="reply-tools">
               <div class="char-counter" id="replyCounter">280</div>
               <button type="button" id="btnCommentPage" class="btn btn-primary">评论</button>
             </div>
-
             <div class="upsell" id="replyUpsell">
               Upgrade to <b>Premium+</b> to write longer posts and Articles.
               <a class="link" href="javascript:;">Learn more</a>
@@ -1037,7 +1039,6 @@ function renderPostPage(p){
       </div>
     </div>
 
-    <!-- 评论列表 -->
     ${comments || `<div class="row"><div class="body"><div class="empty">暂无评论</div></div></div>`}
   </div>`;
 }
@@ -1058,6 +1059,34 @@ function bindPostPageEvents(p){
       e.stopPropagation();
       const me = await ensureLogin(); if (!me) return;
       toggleLike(p.id, likeEl);
+    };
+  }
+
+  const repostEl = document.querySelector(".post-thread .row.detail .action.repost");
+  if (repostEl) {
+    repostEl.onclick = async (e)=>{
+      e.preventDefault();
+      e.stopPropagation();
+      const me = await ensureLogin(); if (!me) return;
+      $.openRepostChoice(p.id);
+    };
+  }
+
+  // —— 删除（详情页，仅作者显示）—— //
+  const delEl = document.querySelector(".post-thread .row.detail .action.del");
+  if (delEl) {
+    delEl.onclick = async (e)=>{
+      e.preventDefault();
+      e.stopPropagation();
+      if (!confirm("确定删除这条帖子吗？")) return;
+      try{
+        await api(`/posts/${p.id}`, { method:"DELETE" });
+        toast("已删除");
+        // 删除后返回首页（或根据需要回个人页）
+        location.hash = "";
+      }catch(err){
+        toast(err.message || "删除失败");
+      }
     };
   }
 
