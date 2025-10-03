@@ -597,14 +597,49 @@ function renderCard(p){
     `;
   }
 
-  if(isQuote){
-    const quote = p.quote_of; // 对象（发布时后端最好回传对象）
-    const imgs = (p.images||[]).map(src =>
-      `<img src="${esc(resolveMediaURL(src))}" loading="lazy" alt="">`
-    ).join("");
+  if (isQuote) {
     const me = session.get()?.user;
     const deletable = me && me.id===p.author.id;
-
+    const quote = p.quote_of; // 对象
+  
+    // —— 图片渲染：自动布局 + 点击放大 —— //
+    const renderPics = (imgs = [])=>{
+      const urls = (imgs||[]).map(src => resolveMediaURL(src));
+      if (urls.length === 0) return "";
+      const arr = `[${urls.map(u=>`'${esc(u)}'`).join(",")}]`;
+      const mk = (u,i,extra="") =>
+        `<img src="${esc(u)}" alt="" loading="lazy"
+              style="width:100%;height:100%;object-fit:cover;${extra}"
+              onclick="event.stopPropagation(); openImageViewer(${arr}, ${i})">`;
+      const n = urls.length;
+      if (n === 1) {
+        return `<div class="pics" style="display:grid;gap:6px;">
+          <div style="width:100%;aspect-ratio:16/9;border-radius:12px;overflow:hidden;">${mk(urls[0],0)}</div>
+        </div>`;
+      }
+      if (n === 2) {
+        return `<div class="pics" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <div style="aspect-ratio:1/1;border-radius:12px;overflow:hidden;">${mk(urls[0],0)}</div>
+          <div style="aspect-ratio:1/1;border-radius:12px;overflow:hidden;">${mk(urls[1],1)}</div>
+        </div>`;
+      }
+      if (n === 3) {
+        return `<div class="pics" style="display:grid;gap:6px;
+                      grid-template-columns:1fr 1fr;
+                      grid-template-rows:1fr 1fr;
+                      grid-template-areas:'a b' 'a c';
+                      height:360px;">
+          <div style="grid-area:a;border-radius:12px;overflow:hidden;">${mk(urls[0],0,"height:100%")}</div>
+          <div style="grid-area:b;border-radius:12px;overflow:hidden;">${mk(urls[1],1,"height:100%")}</div>
+          <div style="grid-area:c;border-radius:12px;overflow:hidden;">${mk(urls[2],2,"height:100%")}</div>
+        </div>`;
+      }
+      const show = urls.slice(0,4);
+      return `<div class="pics" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+        ${show.map((u,i)=>`<div style="aspect-ratio:1/1;border-radius:12px;overflow:hidden;">${mk(u,i)}</div>`).join("")}
+      </div>`;
+    };
+  
     const quoteHtml = quote ? `
       <div class="quote-embed" role="button"
            onclick="event.stopPropagation(); goToPost('${esc(quote.id)}')">
@@ -622,26 +657,26 @@ function renderCard(p){
         </div>
       </div>
     ` : "";
-
+  
     return htm`
-    <article class="card clickable" data-id="${esc(p.id)}">
-      <img class="avatar" src="${esc(p.author.avatar||'data:,')}" alt="">
-      <div class="content">
-        <div class="head">
-          <span class="name">${esc(p.author.nickname || p.author.username || "用户")}</span>
-          <span class="meta">· ${timeAgo(p.created_at)}</span>
+      <article class="card clickable" data-id="${esc(p.id)}">
+        <img class="avatar" src="${esc(p.author.avatar||'data:,')}" alt="">
+        <div class="content">
+          <div class="head">
+            <span class="name">${esc(p.author.nickname || p.author.username || "用户")}</span>
+            <span class="meta">· ${timeAgo(p.created_at)}</span>
+          </div>
+          ${renderTextWithClamp(p.text, p.id)}
+          ${quoteHtml}
+          ${renderPics(p.images)}
+          <div class="actions">
+            <div class="action open">💬 <span>${p.comments_count||0}</span></div>
+            <div class="action repost" title="转发">🔁 <span>${getShareCount(p)}</span></div>
+            <div class="action like ${p.liked?'liked':''}">❤️ <span>${p.likes||0}</span></div>
+            ${deletable ? `<div class="action del" title="删除">🗑️</div>` : ""}
+          </div>
         </div>
-        ${renderTextWithClamp(p.text, p.id)}
-        ${quoteHtml}
-        <div class="pics">${imgs}</div>
-        <div class="actions">
-          <div class="action open">💬 <span>${p.comments_count||0}</span></div>
-          <div class="action repost" title="转发">🔁 <span>${getShareCount(p)}</span></div>
-          <div class="action like ${p.liked?'liked':''}">❤️ <span>${p.likes||0}</span></div>
-          ${deletable ? `<div class="action del" title="删除">🗑️</div>` : ""}
-        </div>
-      </div>
-    </article>`;
+      </article>`;
   }
 
   // —— 默认：普通原帖（保持你原来的实现） —— //
