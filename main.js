@@ -11,6 +11,40 @@ const session = {
   clear(){ localStorage.removeItem("mini_forum_session"); }
 };
 
+// —— 点赞并发锁：同一帖子同一时刻只发一个请求 —— //
+$.likeLock = new Set();
+
+async function toggleLike(postId, btnEl){
+  if (!postId || !btnEl) return;
+  if ($.likeLock.has(postId)) return;        // 并发保护
+  $.likeLock.add(postId);
+  btnEl.style.pointerEvents = "none";        // UI 禁止连点
+
+  const wasLiked = btnEl.classList.contains("liked");
+  try{
+    // 以后端“真值”为准（见后端补丁）
+    const data = await api(`/posts/${postId}/like`, { method: wasLiked ? "DELETE" : "POST" });
+
+    // —— 对账：严格按服务端返回覆盖 —— //
+    btnEl.classList.toggle("liked", !!data?.liked);
+
+    const numEl = btnEl.querySelector("span");
+    if (numEl) {
+      if (typeof data?.likes === "number") {
+        numEl.textContent = data.likes;        // 真实计数
+      } else {
+        // 兼容旧后端（万一你还没发新后端）
+        numEl.textContent = (+numEl.textContent || 0) + (wasLiked ? -1 : 1);
+      }
+    }
+  }catch(e){
+    toast(e.message || "失败");
+  }finally{
+    $.likeLock.delete(postId);
+    btnEl.style.pointerEvents = "";
+  }
+}
+
 /* ====== Utils ====== */
 function htm(strings,...vals){ return strings.map((s,i)=>s+(vals[i]??"")).join(""); }
 function esc(s=""){ return s.replace(/[&<>"]/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[m])); }
@@ -478,16 +512,13 @@ function bindCardEvents(){
     b.onclick = async (e)=>{
       e.stopPropagation();
       const me = await ensureLogin(); if(!me) return;
-      const card = e.target.closest(".card");
-      const id = card.dataset.id;
-      const liked = b.classList.contains("liked");
-      try{
-        await api(`/posts/${id}/like`, { method: liked?"DELETE":"POST" });
-        b.classList.toggle("liked");
-        const num = b.querySelector("span"); num.textContent = (+num.textContent || 0) + (liked?-1:1);
-      }catch(err){ toast(err.message || "失败"); }
+      const card = e.currentTarget.closest(".card");   // 用 currentTarget 更稳
+      const id   = card?.dataset.id;
+      if (!id) return;
+      toggleLike(id, b);
     };
   });
+  
   document.querySelectorAll(".card .del, .repost-wrap .del").forEach(b => {
     b.onclick = async (e) => {
       e.stopPropagation();
@@ -980,18 +1011,11 @@ function bindPostPageEvents(p){
   // —— 正文点赞（单帖页）——
   const likeEl = document.querySelector(".post-thread .row.detail .action.like");
   if (likeEl) {
-    likeEl.onclick = async (e) => {
+    likeEl.onclick = async (e)=>{
       e.preventDefault();
       e.stopPropagation();
       const me = await ensureLogin(); if (!me) return;
-
-      const liked = likeEl.classList.contains("liked");
-      try{
-        await api(`/posts/${p.id}/like`, { method: liked ? "DELETE" : "POST" });
-        likeEl.classList.toggle("liked");
-        const num = likeEl.querySelector("span");
-        num.textContent = (+num.textContent || 0) + (liked ? -1 : 1);
-      }catch(err){ toast(err.message || "失败"); }
+      toggleLike(p.id, likeEl);
     };
   }
 
