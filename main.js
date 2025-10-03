@@ -762,6 +762,7 @@ async function openUser(uid){
     d.posts = await expandRefs(d.posts || []);
     $.feed.innerHTML = renderProfile(d);
     bindProfileActions(d);
+    bindCardEvents();
   }catch(e){ toast(e.message||"打开失败"); }
 }
 function renderProfile(d){
@@ -837,12 +838,23 @@ async function doSearch(){
 
 
 /* ====== Small helpers ====== */
-function bumpShareCountInDom(postId, delta){
+function bumpShareCountInDom(postId, delta) {
   if (!postId || !delta) return;
-  // 所有“原帖卡片”（出现在 feed、profile、转发包裹里复用）
-  const esc = (window.CSS && CSS.escape) ? CSS.escape(postId) : String(postId).replace(/"/g, '\\"');
-  document.querySelectorAll(`article.card[data-id="${esc}"] .action.repost span`)
-    .forEach(sp => sp.textContent = String((+sp.textContent || 0) + delta));
+
+  const pid = String(postId);
+  const escSel = (window.CSS && CSS.escape) ? CSS.escape(pid) : pid;
+
+  // 1) 列表里的卡片（含转发包裹里复用的原帖卡片）
+  document.querySelectorAll(`article.card[data-id="${escSel}"] .action.repost span`)
+    .forEach(sp => {
+      sp.textContent = String((+sp.textContent || 0) + delta);
+    });
+
+  // 2) 详情页正文的动作条
+  document.querySelectorAll(`.post-thread .action.repost[data-id="${escSel}"] span`)
+    .forEach(sp => {
+      sp.textContent = String((+sp.textContent || 0) + delta);
+    });
 }
 
 function getAvatarPlaceholder(name=""){ return "data:,"; }
@@ -944,7 +956,7 @@ function renderPostPage(p){
         <div class="actions">
           <div class="action like ${p.liked?'liked':''}" data-id="${esc(p.id)}">❤️ <span>${p.likes||0}</span></div>
           <div class="action open" onclick="$.openReply('${p.id}')">💬 回复</div>
-          <div class="action repost" title="转发/引用">🔁 <span>${shareCount(p)}</span></div>
+          <div class="action repost" data-id="${esc(shareOwner.id)}" title="转发/引用">🔁 <span>${shareCount(shareOwner)}</span></div>
         </div>
       </div>
     </div>
