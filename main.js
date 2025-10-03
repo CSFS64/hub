@@ -315,10 +315,19 @@ function bindNav(){
       document.querySelectorAll(".left-nav .nav-item").forEach(n=>n.classList.remove("is-active"));
       a.classList.add("is-active");
       const link = a.getAttribute("data-link");
-
-      // 统一：先把路由切回根，这样“返回”不会回到旧的 #/post/xxx
+      
+      // 统一：回到首页路由；如果本来就在首页，就直接刷新当前 Tab
       const goHomeRoute = () => {
-        if (location.hash !== "") location.hash = ""; // 触发 handleRoute（它会恢复 UI + loadFeed）
+        if (location.hash !== "") {
+          location.hash = "";              // 触发 handleRoute -> 恢复 UI + loadFeed
+        } else {
+          // 已经在首页，手动刷新列表 & 确保 UI 可见
+          document.getElementById("composeInline").style.display = "";
+          document.querySelector(".topbar .tabs").style.display = "";
+          loadFeed(getCurrentTab());
+          // 可选：回到顶部
+          // window.scrollTo({ top: 0, behavior: "instant" });
+        }
       };
 
       if (link === "home") {
