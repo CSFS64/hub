@@ -12,10 +12,6 @@ const session = {
 };
 
 /* ====== Utils ====== */
-function shareCount(p){
-  return (p?.reposts_count || 0) + (p?.quotes_count || 0);
-}
-
 function htm(strings,...vals){ return strings.map((s,i)=>s+(vals[i]??"")).join(""); }
 function esc(s=""){ return s.replace(/[&<>"]/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[m])); }
 function timeAgo(iso){
@@ -162,18 +158,13 @@ function initRepostDialogs(){
     $.btnRepostNow.onclick = async ()=>{
       const me = await ensureLogin(); if(!me) return;
       const id = $.repostTargetId; if(!id) return $.repostChoiceDialog?.close();
-      if ($.btnRepostNow.dataset.busy === '1') return;
-      $.btnRepostNow.dataset.busy = '1'; $.btnRepostNow.disabled = true;
       try{
         const fd1 = new FormData();
         fd1.append('repost_of', id);
         await api('/posts', { method:'POST', body: fd1 });
         $.repostChoiceDialog?.close();
-        toast("已转发");
-        bumpShareCountInDom(id, +1);
-        loadFeed(getCurrentTab());
+        toast("已转发"); loadFeed(getCurrentTab());
       }catch(e){ toast(e.message||"转发失败"); }
-      finally { delete $.btnRepostNow.dataset.busy; $.btnRepostNow.disabled = false; }
     };
   }
 
@@ -195,19 +186,14 @@ function initRepostDialogs(){
       const id = $.repostTargetId; if(!id) return $.quoteDialog?.close();
       const text = ($.quoteText?.value||"").trim();
       if (text.length>280) { toast("超出 280 字"); return; }
-      if ($.btnQuoteSend.dataset.busy === '1') return;
-      $.btnQuoteSend.dataset.busy = '1'; $.btnQuoteSend.disabled = true;
       try{
           const fd2 = new FormData();
           fd2.append('text', text);
           fd2.append('quote_of', id);
           await api('/posts', { method:'POST', body: fd2 });
         $.quoteDialog?.close();
-        toast("已发布引用");
-        bumpShareCountInDom(id, +1);
-        loadFeed(getCurrentTab());
+        toast("已发布引用"); loadFeed(getCurrentTab());
       }catch(e){ toast(e.message||"发布失败"); }
-      finally { delete $.btnQuoteSend.dataset.busy; $.btnQuoteSend.disabled = false; }
     };
   }
 
@@ -364,7 +350,7 @@ function renderCard(p){
     const originalPost = orig?.id ? orig : p.repost_of;
     const reposter = p.reposter || p.actor || p.author || {};
     const me = session.get()?.user;
-    const canDeleteRepost = me && me.id === (p.author?.id);
+    const canDeleteRepost = me && me.id === (p.author?.id); // 你自己发的这条“转发”
   
     const badge = `
       <div class="repost-badge">
@@ -372,20 +358,12 @@ function renderCard(p){
       </div>
     `;
   
-    // 内层原帖：隐藏删除按钮
-    const cardHtml = renderOriginalCard(originalPost, { hideDelete: true });
-  
-    // 外层转发：如果是自己发的，显示“删除转发”
-    const repostDelete = canDeleteRepost
-      ? `<div class="repost-actions">
-           <button class="action del" data-target-id="${esc(p.id)}" title="删除这条转发">🗑️ 删除转发</button>
-         </div>`
-      : "";
+    // 仍然复用原帖的可视卡片，但把外层包一个 data-repost-id
+    const cardHtml = renderOriginalCard(originalPost);
   
     return `
       <div class="repost-wrap" data-repost-id="${esc(p.id)}">
         ${badge}
-        ${repostDelete}
         ${cardHtml}
       </div>
     `;
@@ -428,7 +406,7 @@ function renderCard(p){
         <div class="pics">${imgs}</div>
         <div class="actions">
           <div class="action open">💬 <span>${p.comments_count||0}</span></div>
-          <div class="action repost" title="转发/引用">🔁 <span>${shareCount(p)}</span></div>
+          <div class="action repost" title="转发">🔁 <span>${p.reposts_count || 0}</span></div>
           <div class="action like ${p.liked?'liked':''}">❤️ <span>${p.likes||0}</span></div>
           ${deletable ? `<div class="action del" title="删除">🗑️</div>` : ""}
         </div>
@@ -441,25 +419,25 @@ function renderCard(p){
 }
 
 // 把“普通原帖卡片”抽出来（给转发复用）
-function renderOriginalCard(p, { hideDelete = false } = {}) {
+function renderOriginalCard(p){
   const imgs = (p.images||[]).map(src=>`<img src="${esc(src)}" loading="lazy" alt="">`).join("");
   const me = session.get()?.user;
   const deletable = me && me.id===p.author.id;
   return htm`
   <article class="card clickable" data-id="${esc(p.id)}">
-    <img class="rail avatar" src="${esc(p.author.avatar||'data:,')}" alt="">
-    <div class="body">
+    <img class="avatar" src="${esc(p.author.avatar||'data:,')}" alt="">
+    <div class="content">
       <div class="head">
-        <span class="name">${esc(p.author.nickname||p.author.username||"用户")}</span>
+        <span class="name">${esc(p.author.nickname || p.author.username || "用户")}</span>
         <span class="meta">· ${timeAgo(p.created_at)}</span>
       </div>
-      <div class="text">${esc(p.text||"")}</div>
+      ${renderTextWithClamp(p.text, p.id)}
       <div class="pics">${imgs}</div>
       <div class="actions">
         <div class="action open">💬 <span>${p.comments_count||0}</span></div>
         <div class="action like ${p.liked?'liked':''}">❤️ <span>${p.likes||0}</span></div>
-        <div class="action repost" title="转发/引用">🔁 <span>${shareCount(p)}</span></div>
-        ${(!hideDelete && deletable) ? `<div class="action del" title="删除">🗑️</div>` : ""}
+        <div class="action repost" title="转发">🔁 <span>${p.reposts_count || 0}</span></div>
+        ${deletable ? `<div class="action del" title="删除">🗑️</div>` : ""}
       </div>
     </div>
   </article>`;
@@ -500,8 +478,6 @@ function bindCardEvents(){
     b.onclick = async (e)=>{
       e.stopPropagation();
       const me = await ensureLogin(); if(!me) return;
-      if (b.dataset.busy === '1') return;
-      b.dataset.busy = '1';
       const card = e.target.closest(".card");
       const id = card.dataset.id;
       const liked = b.classList.contains("liked");
@@ -510,23 +486,26 @@ function bindCardEvents(){
         b.classList.toggle("liked");
         const num = b.querySelector("span"); num.textContent = (+num.textContent || 0) + (liked?-1:1);
       }catch(err){ toast(err.message || "失败"); }
-      finally { delete b.dataset.busy; }
     };
   });
-
   document.querySelectorAll(".card .del, .repost-wrap .del").forEach(b => {
     b.onclick = async (e) => {
       e.stopPropagation();
   
-      // 优先取 data-target-id（删转发用）
-      const explicitId = e.currentTarget?.dataset?.targetId;
+      // 先看是否在转发包裹里，如果是，就删这条“转发”的 id
+      const wrap = e.target.closest('.repost-wrap');
+      let id = wrap?.dataset.repostId;
   
-      // 回退到就近的 .card（普通帖/引用帖）
-      const card = e.target.closest(".card");
-      const fallbackId = card?.dataset?.id;
+      // 否则按原逻辑：删这张卡自身的 id（普通帖 / 引用帖）
+      if (!id) {
+        const card = e.target.closest(".card");
+        id = card?.dataset.id;
+      }
   
-      const id = explicitId || fallbackId;
-      if (!id || id.length !== 24) { toast("这条帖子数据异常，已过滤"); return; }
+      if (!id || id==='null' || id==='undefined' || id.length !== 24) {
+        toast("这条帖子数据异常，已过滤"); 
+        return;
+      }
   
       if (!confirm("确定删除这条帖子吗？")) return;
   
@@ -654,8 +633,7 @@ $.openComposer = async (postId, mode = "reply") => {
           await api('/posts', { method:'POST', body: fd });
           $.closeReply();
           toast("已发布引用");
-          bumpShareCountInDom(postId, +1);
-            loadFeed(getCurrentTab());
+          loadFeed(getCurrentTab());
         } catch (e) { toast(e.message || "发布失败"); }
       }
     };
@@ -779,7 +757,6 @@ async function openUser(uid){
     d.posts = await expandRefs(d.posts || []);
     $.feed.innerHTML = renderProfile(d);
     bindProfileActions(d);
-    bindCardEvents();
   }catch(e){ toast(e.message||"打开失败"); }
 }
 function renderProfile(d){
@@ -855,25 +832,6 @@ async function doSearch(){
 
 
 /* ====== Small helpers ====== */
-function bumpShareCountInDom(postId, delta) {
-  if (!postId || !delta) return;
-
-  const pid = String(postId);
-  const escSel = (window.CSS && CSS.escape) ? CSS.escape(pid) : pid;
-
-  // 1) 列表里的卡片（含转发包裹里复用的原帖卡片）
-  document.querySelectorAll(`article.card[data-id="${escSel}"] .action.repost span`)
-    .forEach(sp => {
-      sp.textContent = String((+sp.textContent || 0) + delta);
-    });
-
-  // 2) 详情页正文的动作条
-  document.querySelectorAll(`.post-thread .action.repost[data-id="${escSel}"] span`)
-    .forEach(sp => {
-      sp.textContent = String((+sp.textContent || 0) + delta);
-    });
-}
-
 function getAvatarPlaceholder(name=""){ return "data:,"; }
 
 async function showPostPage(id){
@@ -925,11 +883,6 @@ function renderPostPage(p){
     </div>
   `).join("");
 
-  // 谁的“转发数”要被加：如果这是转发/引用，计数归到原帖；否则归当前帖
-  const shareOwner = (p.repost_of && p.repost_of.id) ? p.repost_of
-                    : (p.quote_of && p.quote_of.id)   ? p.quote_of
-                    : p;
-
   // 转发内容（如果有）
   let repostBlock = "";
   if (p.kind === "repost" && p.repost_of) {
@@ -978,13 +931,11 @@ function renderPostPage(p){
         <div class="actions">
           <div class="action like ${p.liked?'liked':''}" data-id="${esc(p.id)}">❤️ <span>${p.likes||0}</span></div>
           <div class="action open" onclick="$.openReply('${p.id}')">💬 回复</div>
-          <!-- 这里一定要带 data-id=shareOwner.id，供 bumpShareCountInDom 精准命中 -->
-          <div class="action repost" data-id="${esc(shareOwner.id)}" title="转发/引用">🔁 <span>${shareCount(shareOwner)}</span></div>
         </div>
       </div>
     </div>
 
-    <!-- 时间行 -->
+    <!-- 时间行（和推特一样在正文下单独一行） -->
     <div class="meta-row">
       <div></div>
       <div class="timestamp">${esc(formatFullTime(p.created_at))}</div>
@@ -995,13 +946,15 @@ function renderPostPage(p){
       <img class="rail avatar" src="${meAvatar}" alt="">
       <div class="body">
         <div class="reply-inline">
-          <img class="avatar" src="${meAvatar}" alt="" style="display:none">
+          <img class="avatar" src="${meAvatar}" alt="" style="display:none"> <!-- 兼容保留，不显示 -->
           <div class="reply-editor">
             <textarea id="commentTextPage" rows="1" placeholder="Post your reply"></textarea>
+
             <div class="reply-tools">
               <div class="char-counter" id="replyCounter">280</div>
               <button type="button" id="btnCommentPage" class="btn btn-primary">评论</button>
             </div>
+
             <div class="upsell" id="replyUpsell">
               Upgrade to <b>Premium+</b> to write longer posts and Articles.
               <a class="link" href="javascript:;">Learn more</a>
@@ -1031,8 +984,7 @@ function bindPostPageEvents(p){
       e.preventDefault();
       e.stopPropagation();
       const me = await ensureLogin(); if (!me) return;
-      if (likeEl.dataset.busy === '1') return;
-      likeEl.dataset.busy = '1';
+
       const liked = likeEl.classList.contains("liked");
       try{
         await api(`/posts/${p.id}/like`, { method: liked ? "DELETE" : "POST" });
@@ -1040,20 +992,6 @@ function bindPostPageEvents(p){
         const num = likeEl.querySelector("span");
         num.textContent = (+num.textContent || 0) + (liked ? -1 : 1);
       }catch(err){ toast(err.message || "失败"); }
-      finally { delete likeEl.dataset.busy; }
-    };
-  }
-
-  // —— 正文转发/引用（单帖页）——
-  const repostEl = document.querySelector(".post-thread .row.detail .action.repost");
-  if (repostEl) {
-    repostEl.onclick = async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const me = await ensureLogin(); if (!me) return;
-      const targetId = p?.repost_of?.id || p?.quote_of?.id || p?.id;
-      if (!targetId) return;
-      $.openRepostChoice(targetId);
     };
   }
 
