@@ -63,6 +63,15 @@ function getShareCount(p){
   return (p?.reposts_count || 0) + (p?.quotes_count || 0);
 }
 
+function resolveMediaURL(src=""){
+  if (!src) return "";
+  if (/^https?:\/\//i.test(src)) return src;            // 已是绝对 URL
+  if (USE_BACKEND && src.startsWith("/media/")) {
+    return API_BASE + src;                               // 指向 Worker
+  }
+  return src;                                            // 其它相对路径维持原样
+}
+
 // 同步整站内所有该 postId 的点赞显示（列表卡片 + 详情页）
 function updateLikeEverywhere(postId, liked, likes){
   try {
@@ -458,7 +467,9 @@ function renderCard(p){
 
   if(isQuote){
     const quote = p.quote_of; // 对象（发布时后端最好回传对象）
-    const imgs = (p.images||[]).map(src=>`<img src="${esc(src)}" loading="lazy" alt="">`).join("");
+    const imgs = (p.images||[]).map(src =>
+      `<img src="${esc(resolveMediaURL(src))}" loading="lazy" alt="">`
+    ).join("");
     const me = session.get()?.user;
     const deletable = me && me.id===p.author.id;
 
@@ -507,7 +518,9 @@ function renderCard(p){
 
 // 把“普通原帖卡片”抽出来（给转发复用）
 function renderOriginalCard(p){
-  const imgs = (p.images||[]).map(src=>`<img src="${esc(src)}" loading="lazy" alt="">`).join("");
+  const imgs = (p.images||[]).map(src =>
+    `<img src="${esc(resolveMediaURL(src))}" loading="lazy" alt="">`
+  ).join("");
   const me = session.get()?.user;
   const deletable = me && me.id===p.author.id;
   return htm`
@@ -1000,7 +1013,9 @@ function formatFullTime(iso){
 }
 
 function renderPostPage(p){
-  const imgs = (p.images||[]).map(src=>`<img src="${esc(src)}" loading="lazy" alt="">`).join("");
+  const imgs = (p.images||[]).map(src =>
+    `<img src="${esc(resolveMediaURL(src))}" loading="lazy" alt="">`
+  ).join("");
   const me = session.get()?.user;
   const meAvatar = esc(me?.avatar || "data:,");
   const deletable = me && me.id === p.author.id;
