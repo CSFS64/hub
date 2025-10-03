@@ -829,14 +829,40 @@ async function gotoMyProfile(){
   if(!me) { $.openAuth(); return; }
   openUser(me.id);
 }
+
 async function openUser(uid){
+  // 清理点赞并发锁，避免“第一次点没反应”
+  if ($.likeLock) $.likeLock.clear();
+
+  // 简单的加载状态（可选）
+  $.loading.hidden = false; $.empty.hidden = true; $.feed.innerHTML = "";
+
   try{
     const d = await api(`/users/${uid}`, { method:"GET", auth: !!session.get() });
     d.posts = await expandRefs(d.posts || []);
+
+    // 渲染页面
     $.feed.innerHTML = renderProfile(d);
+
+    // 先绑定“关注/取关”
     bindProfileActions(d);
-  }catch(e){ toast(e.message||"打开失败"); }
+
+    // ⭐ 关键：给帖子卡片重新绑定交互（点赞/转发/删除/进详情…）
+    bindCardEvents();
+
+    // ⭐ 关键：计算是否展示“Show more”
+    applyClamp();
+
+    // 若没有帖子给个空态
+    if (!d.posts || d.posts.length === 0) $.empty.hidden = false;
+  }catch(e){
+    toast(e.message||"打开失败");
+    $.feed.innerHTML = `<div class="empty">加载失败：${esc(e.message||'')}</div>`;
+  }finally{
+    $.loading.hidden = true;
+  }
 }
+
 function renderProfile(d){
   const u = d.user;
   const me = session.get()?.user;
