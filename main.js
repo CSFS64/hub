@@ -488,6 +488,8 @@ function bindCardEvents(){
     b.onclick = async (e)=>{
       e.stopPropagation();
       const me = await ensureLogin(); if(!me) return;
+      if (b.dataset.busy === '1') return;
+      b.dataset.busy = '1';
       const card = e.target.closest(".card");
       const id = card.dataset.id;
       const liked = b.classList.contains("liked");
@@ -496,6 +498,7 @@ function bindCardEvents(){
         b.classList.toggle("liked");
         const num = b.querySelector("span"); num.textContent = (+num.textContent || 0) + (liked?-1:1);
       }catch(err){ toast(err.message || "失败"); }
+      finally { delete b.dataset.busy; }
     };
   });
   document.querySelectorAll(".card .del, .repost-wrap .del").forEach(b => {
@@ -995,7 +998,8 @@ function bindPostPageEvents(p){
       e.preventDefault();
       e.stopPropagation();
       const me = await ensureLogin(); if (!me) return;
-
+      if (likeEl.dataset.busy === '1') return;
+      likeEl.dataset.busy = '1';
       const liked = likeEl.classList.contains("liked");
       try{
         await api(`/posts/${p.id}/like`, { method: liked ? "DELETE" : "POST" });
@@ -1003,6 +1007,7 @@ function bindPostPageEvents(p){
         const num = likeEl.querySelector("span");
         num.textContent = (+num.textContent || 0) + (liked ? -1 : 1);
       }catch(err){ toast(err.message || "失败"); }
+      finally { delete likeEl.dataset.busy; }
     };
   }
 
