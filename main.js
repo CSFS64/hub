@@ -162,8 +162,7 @@ function openImageViewer(urls, startIdx=0){
   _viewer.idx = Math.min(Math.max(0, startIdx|0), _viewer.urls.length-1);
   const box = document.getElementById('imgViewer');
   const img = document.getElementById('imgViewerImg');
-  if (!box || !img) return;
-  if (_viewer.urls.length === 0) return;
+  if (!box || !img || _viewer.urls.length === 0) return;
 
   const show = ()=>{
     img.src = _viewer.urls[_viewer.idx];
@@ -171,26 +170,31 @@ function openImageViewer(urls, startIdx=0){
   };
   show();
 
-  // 按钮
   const close = ()=> box.hidden = true;
-  const prev = ()=> { if (_viewer.idx>0){ _viewer.idx--; show(); } };
-  const next = ()=> { if (_viewer.idx<_viewer.urls.length-1){ _viewer.idx++; show(); } };
+  const prev  = ()=> { if (_viewer.idx>0){ _viewer.idx--; show(); } };
+  const next  = ()=> { if (_viewer.idx<_viewer.urls.length-1){ _viewer.idx++; show(); } };
 
-  document.getElementById('imgViewerClose')?.addEventListener('click', close, { once:true });
-  document.getElementById('imgViewerPrev')?.addEventListener('click', prev, { once:true });
-  document.getElementById('imgViewerNext')?.addEventListener('click', next, { once:true });
+  const btnClose = document.getElementById('imgViewerClose');
+  const btnPrev  = document.getElementById('imgViewerPrev');
+  const btnNext  = document.getElementById('imgViewerNext');
+
+  if (btnClose) btnClose.onclick = (e)=>{ e.stopPropagation(); close(); };
+  if (btnPrev)  btnPrev.onclick  = (e)=>{ e.stopPropagation(); prev();  };
+  if (btnNext)  btnNext.onclick  = (e)=>{ e.stopPropagation(); next();  };
 
   // 背景点击关闭
   box.onclick = (ev)=>{ if (ev.target === box) close(); };
 
-  // 键盘操作（Esc/Left/Right）
+  // 键盘（不要 once）
   const onKey = (ev)=>{
     if (box.hidden) return;
-    if (ev.key === 'Escape') close();
+    if (ev.key === 'Escape')     close();
     if (ev.key === 'ArrowLeft')  prev();
     if (ev.key === 'ArrowRight') next();
   };
-  window.addEventListener('keydown', onKey, { once:true });
+  // 为避免重复绑定，先移除再绑一次
+  window.removeEventListener('keydown', onKey);
+  window.addEventListener('keydown', onKey);
 }
 
 /* ====== API ====== */
