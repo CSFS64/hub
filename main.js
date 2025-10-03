@@ -12,36 +12,45 @@ const session = {
 };
 
 // —— 点赞并发锁：同一帖子同一时刻只发一个请求 —— //
-$.likeLock = new Set();
+// —— 点赞并发锁：同一帖子同一时刻只发一个请求 —— //
+$.likeLock = $.likeLock || new Set();
 
 async function toggleLike(postId, btnEl){
   if (!postId || !btnEl) return;
-  if ($.likeLock.has(postId)) return;        // 并发保护
+
+  // 若已锁，直接提示，避免“第一次点没反应”的错觉
+  if ($.likeLock.has(postId)) {
+    toast("正在处理中…");   // 可换成别的文案
+    return;
+  }
+
   $.likeLock.add(postId);
-  btnEl.style.pointerEvents = "none";        // UI 禁止连点
+  btnEl.style.pointerEvents = "none";
+
+  // 保险丝：就算网络异常/导航导致 finally 没执行，最多 4 秒自动释放
+  let released = false;
+  const release = ()=>{
+    if (released) return;
+    released = true;
+    $.likeLock.delete(postId);
+    btnEl.style.pointerEvents = "";
+  };
+  const fuse = setTimeout(release, 4000);
 
   const wasLiked = btnEl.classList.contains("liked");
   try{
-    // 以后端“真值”为准（见后端补丁）
     const data = await api(`/posts/${postId}/like`, { method: wasLiked ? "DELETE" : "POST" });
-
-    // —— 对账：严格按服务端返回覆盖 —— //
     btnEl.classList.toggle("liked", !!data?.liked);
-
     const numEl = btnEl.querySelector("span");
     if (numEl) {
-      if (typeof data?.likes === "number") {
-        numEl.textContent = data.likes;        // 真实计数
-      } else {
-        // 兼容旧后端（万一你还没发新后端）
-        numEl.textContent = (+numEl.textContent || 0) + (wasLiked ? -1 : 1);
-      }
+      if (typeof data?.likes === "number") numEl.textContent = data.likes;
+      else numEl.textContent = (+numEl.textContent || 0) + (wasLiked ? -1 : 1);
     }
   }catch(e){
     toast(e.message || "失败");
   }finally{
-    $.likeLock.delete(postId);
-    btnEl.style.pointerEvents = "";
+    clearTimeout(fuse);
+    release();
   }
 }
 
@@ -343,6 +352,7 @@ async function publish(){
 /* ====== Feed ====== */
 function getCurrentTab(){ return [...$.tabs].find(t=>t.classList.contains("is-active"))?.dataset.tab || "for_you"; }
 async function loadFeed(tab="for_you"){
+  if ($.likeLock) $.likeLock.clear();
   $.loading.hidden=false; $.empty.hidden=true; $.feed.innerHTML="";
   try{
     const data = await api(`/feed?tab=${encodeURIComponent(tab)}`, { method:"GET", auth:false });
@@ -681,6 +691,8 @@ $.openQuote = (postId) => $.openComposer(postId, "quote");
 
 /* ====== Router ====== */
 function handleRoute(){
+  if ($.likeLock) $.likeLock.clear();
+
   const m = location.hash.match(/^#\/post\/([0-9a-f]{24})$/i);
   if (m) {
     showPostPage(m[1]);
@@ -691,6 +703,7 @@ function handleRoute(){
     loadFeed(getCurrentTab());
   }
 }
+
 function goToPost(id){
   location.hash = `#/post/${id}`;
 }
