@@ -354,18 +354,25 @@ function getCurrentTab(){ return [...$.tabs].find(t=>t.classList.contains("is-ac
 async function loadFeed(tab="for_you"){
   if ($.likeLock) $.likeLock.clear();
   $.loading.hidden=false; $.empty.hidden=true; $.feed.innerHTML="";
+
   try{
-    const data = await api(`/feed?tab=${encodeURIComponent(tab)}`, { method:"GET", auth:false });
+    const authed = !!session.get();  // ★ 已登录就带上 Authorization
+    const data = await api(`/feed?tab=${encodeURIComponent(tab)}`, {
+      method: "GET",
+      auth: authed
+    });
+
     let items = data.items || [];
-    items = await expandRefs(items);
+    items = await expandRefs(items);  // expandRefs 里本来也会根据是否登录去带 token
     if(items.length===0){ $.empty.hidden=false; }
     $.feed.innerHTML = items.map(renderCard).join("");
     bindCardEvents();
     hydrateSuggestions(items);
-  }catch(e){ toast(e.message || "加载失败"); }
-  finally{
+  }catch(e){
+    toast(e.message || "加载失败");
+  }finally{
     $.loading.hidden = true;
-    applyClamp();   // ← 渲染完成后检查是否需要显示 Show more
+    applyClamp();
   }
 }
 
