@@ -889,20 +889,39 @@ function renderProfile(d){
   ${posts || `<div class="empty">还没有发布内容</div>`}
   `;
 }
+
 function bindProfileActions(d){
   const btn = document.getElementById("btnFollow");
   if(!btn) return;
+
   btn.onclick = async ()=>{
     const me = await ensureLogin(); if(!me) return;
     const uid = d.user.id;
     const followed = d.user.following;
+
     try{
-      await api(`/users/${uid}/follow`, { method: followed?"DELETE":"POST" });
-      toast(followed?"已取关":"已关注");
-      openUser(uid);
-    }catch(e){ toast(e.message||"失败"); }
+      await api(`/users/${uid}/follow`, { method: followed ? "DELETE" : "POST" });
+
+      // 1) 立刻刷新对方主页（其粉丝数实时变）
+      await openUser(uid);
+
+      // 2) 如果此刻看的就是“我的主页”，顺带刷新我自己（我的关注数实时变）
+      if (me && uid === me.id) {
+        await openUser(me.id);
+      }
+
+      // 3) 若顶部 tab 在 following，刷新关注流帖子
+      if (getCurrentTab() === "following") {
+        loadFeed("following");
+      }
+
+      toast(followed ? "已取关" : "已关注");
+    }catch(e){
+      toast(e.message||"失败");
+    }
   };
 }
+
 function hydrateSuggestions(items){
   const sug = document.getElementById("suggestions");
   const set = new Map();
