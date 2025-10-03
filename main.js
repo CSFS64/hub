@@ -364,7 +364,7 @@ function renderCard(p){
     const originalPost = orig?.id ? orig : p.repost_of;
     const reposter = p.reposter || p.actor || p.author || {};
     const me = session.get()?.user;
-    const canDeleteRepost = me && me.id === (p.author?.id); // 你自己发的这条“转发”
+    const canDeleteRepost = me && me.id === (p.author?.id);
   
     const badge = `
       <div class="repost-badge">
@@ -372,12 +372,20 @@ function renderCard(p){
       </div>
     `;
   
-    // 仍然复用原帖的可视卡片，但把外层包一个 data-repost-id
-    const cardHtml = renderOriginalCard(originalPost);
+    // 内层原帖：隐藏删除按钮
+    const cardHtml = renderOriginalCard(originalPost, { hideDelete: true });
+  
+    // 外层转发：如果是自己发的，显示“删除转发”
+    const repostDelete = canDeleteRepost
+      ? `<div class="repost-actions">
+           <button class="action del" data-target-id="${esc(p.id)}" title="删除这条转发">🗑️ 删除转发</button>
+         </div>`
+      : "";
   
     return `
       <div class="repost-wrap" data-repost-id="${esc(p.id)}">
         ${badge}
+        ${repostDelete}
         ${cardHtml}
       </div>
     `;
@@ -433,25 +441,25 @@ function renderCard(p){
 }
 
 // 把“普通原帖卡片”抽出来（给转发复用）
-function renderOriginalCard(p){
+function renderOriginalCard(p, { hideDelete = false } = {}) {
   const imgs = (p.images||[]).map(src=>`<img src="${esc(src)}" loading="lazy" alt="">`).join("");
   const me = session.get()?.user;
   const deletable = me && me.id===p.author.id;
   return htm`
   <article class="card clickable" data-id="${esc(p.id)}">
-    <img class="avatar" src="${esc(p.author.avatar||'data:,')}" alt="">
-    <div class="content">
+    <img class="rail avatar" src="${esc(p.author.avatar||'data:,')}" alt="">
+    <div class="body">
       <div class="head">
-        <span class="name">${esc(p.author.nickname || p.author.username || "用户")}</span>
+        <span class="name">${esc(p.author.nickname||p.author.username||"用户")}</span>
         <span class="meta">· ${timeAgo(p.created_at)}</span>
       </div>
-      ${renderTextWithClamp(p.text, p.id)}
+      <div class="text">${esc(p.text||"")}</div>
       <div class="pics">${imgs}</div>
       <div class="actions">
         <div class="action open">💬 <span>${p.comments_count||0}</span></div>
         <div class="action like ${p.liked?'liked':''}">❤️ <span>${p.likes||0}</span></div>
         <div class="action repost" title="转发/引用">🔁 <span>${shareCount(p)}</span></div>
-        ${deletable ? `<div class="action del" title="删除">🗑️</div>` : ""}
+        ${(!hideDelete && deletable) ? `<div class="action del" title="删除">🗑️</div>` : ""}
       </div>
     </div>
   </article>`;
@@ -506,13 +514,22 @@ function bindCardEvents(){
     };
   });
 
-  document.querySelectorAll(".card .del").forEach(b => {
+  document.querySelectorAll(".card .del, .repost-wrap .del").forEach(b => {
     b.onclick = async (e) => {
       e.stopPropagation();
+  
+      // 优先取 data-target-id（删转发用）
+      const explicitId = e.currentTarget?.dataset?.targetId;
+  
+      // 回退到就近的 .card（普通帖/引用帖）
       const card = e.target.closest(".card");
-      const id = card?.dataset.id;
+      const fallbackId = card?.dataset?.id;
+  
+      const id = explicitId || fallbackId;
       if (!id || id.length !== 24) { toast("这条帖子数据异常，已过滤"); return; }
+  
       if (!confirm("确定删除这条帖子吗？")) return;
+  
       try {
         await api(`/posts/${id}`, { method: "DELETE" });
         toast("已删除");
