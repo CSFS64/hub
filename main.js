@@ -406,7 +406,7 @@ function renderCard(p){
         <div class="pics">${imgs}</div>
         <div class="actions">
           <div class="action open">💬 <span>${p.comments_count||0}</span></div>
-          <div class="action repost" title="转发">🔁 <span>${p.reposts_count || 0}</span></div>
+          <div class="action quote"  title="引用">💬🧷 <span>${p.quotes_count || 0}</span></div>
           <div class="action like ${p.liked?'liked':''}">❤️ <span>${p.likes||0}</span></div>
           ${deletable ? `<div class="action del" title="删除">🗑️</div>` : ""}
         </div>
