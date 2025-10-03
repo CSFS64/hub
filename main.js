@@ -4,15 +4,15 @@ const API_BASE = "https://mini-forum-backend.20060303jjc.workers.dev"; // ← �
 const FRONTEND_PROFILE_PREFIX = "#/user/"; // 简单 hash 路由
 
 /* ====== State ====== */
-// 统一缓存当前待发送的图片（来自选择、粘贴、拖拽）
-$.images = [];
-
 const $ = {};
 const session = {
   get(){ try{ return JSON.parse(localStorage.getItem("mini_forum_session")||"null"); }catch{ return null; } },
   set(v){ localStorage.setItem("mini_forum_session", JSON.stringify(v)); },
   clear(){ localStorage.removeItem("mini_forum_session"); }
 };
+
+// 统一缓存当前待发送的图片（来自选择、粘贴、拖拽）
+$.images = [];
 
 // —— 点赞并发锁：同一帖子同一时刻只发一个请求 —— //
 $.likeLock = $.likeLock || new Set();
