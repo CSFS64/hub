@@ -118,14 +118,79 @@ async function addImageFile(f){
   if (!f || !f.type?.startsWith("image/")) return;
   if ($.images.length >= 3) { toast("最多 3 张图片"); return; }
 
-  $.images.push(f);
-
-  // 预览
   const url = await fileToDataURL(f);
-  const img = new Image();
-  img.src = url;
-  img.alt = "";
-  $.imgPreview.append(img);
+  $.images.push({ file: f, url });
+
+  renderPreview();
+}
+
+function renderPreview(){
+  if (!$.imgPreview) return;
+  $.imgPreview.innerHTML = $.images.map((it, idx) => `
+    <div class="img-wrap" data-idx="${idx}">
+      <img src="${esc(it.url)}" alt="">
+      <button class="remove" title="移除">×</button>
+    </div>
+  `).join("");
+
+  // 删除按钮
+  $.imgPreview.querySelectorAll(".remove").forEach(btn=>{
+    btn.onclick = (e)=>{
+      e.stopPropagation();
+      const box = btn.closest(".img-wrap");
+      const i = +box.dataset.idx;
+      $.images.splice(i, 1);
+      renderPreview();
+    };
+  });
+
+  // 预览图点击 => 放大查看
+  $.imgPreview.querySelectorAll("img").forEach(img=>{
+    img.onclick = ()=>{
+      const urls = $.images.map(it=>it.url);
+      const idx = [...$.imgPreview.querySelectorAll("img")].indexOf(img);
+      openImageViewer(urls, idx);
+    };
+  });
+}
+
+// 简易图片查看器（支持组切换）
+let _viewer = { urls: [], idx: 0 };
+
+function openImageViewer(urls, startIdx=0){
+  _viewer.urls = urls || [];
+  _viewer.idx = Math.min(Math.max(0, startIdx|0), _viewer.urls.length-1);
+  const box = document.getElementById('imgViewer');
+  const img = document.getElementById('imgViewerImg');
+  if (!box || !img) return;
+  if (_viewer.urls.length === 0) return;
+
+  const show = ()=>{
+    img.src = _viewer.urls[_viewer.idx];
+    box.hidden = false;
+  };
+  show();
+
+  // 按钮
+  const close = ()=> box.hidden = true;
+  const prev = ()=> { if (_viewer.idx>0){ _viewer.idx--; show(); } };
+  const next = ()=> { if (_viewer.idx<_viewer.urls.length-1){ _viewer.idx++; show(); } };
+
+  document.getElementById('imgViewerClose')?.addEventListener('click', close, { once:true });
+  document.getElementById('imgViewerPrev')?.addEventListener('click', prev, { once:true });
+  document.getElementById('imgViewerNext')?.addEventListener('click', next, { once:true });
+
+  // 背景点击关闭
+  box.onclick = (ev)=>{ if (ev.target === box) close(); };
+
+  // 键盘操作（Esc/Left/Right）
+  const onKey = (ev)=>{
+    if (box.hidden) return;
+    if (ev.key === 'Escape') close();
+    if (ev.key === 'ArrowLeft')  prev();
+    if (ev.key === 'ArrowRight') next();
+  };
+  window.addEventListener('keydown', onKey, { once:true });
 }
 
 /* ====== API ====== */
@@ -200,6 +265,20 @@ window.addEventListener("DOMContentLoaded", () => {
   handleRoute();                 // ← 用路由决定是首页还是单帖页
   window.addEventListener("hashchange", handleRoute);
 });
+
+// 让所有 .pics 内的图片点开全屏查看
+(function bindGlobalImageZoom(){
+  const root = document.body;
+  root.addEventListener('click', (e)=>{
+    const img = e.target.closest('.pics img');
+    if (!img) return;
+
+    const pics = img.closest('.pics');
+    const all = [...pics.querySelectorAll('img')].map(i => i.src);
+    const idx = [...pics.querySelectorAll('img')].indexOf(img);
+    openImageViewer(all, idx);
+  });
+})();
 
 /* ====== DOM cache ====== */
 function cacheDom(){
@@ -428,20 +507,18 @@ async function publish(){
   const me = await ensureLogin(); if(!me) return;
   const text = ($.postText.value||"").trim();
 
-  // 现在使用统一缓存的图片数组 $.images
   if(!text && ($.images?.length||0)===0) return toast("写点什么吧");
 
   const fd = new FormData();
   fd.append("text", text.slice(0,500));
-  for (const f of ($.images||[])) fd.append("images", f);  // 最多 3 张在 addImageFile 里已控制
+  for (const it of ($.images||[])) fd.append("images", it.file);
 
   try{
     await api("/posts", { method:"POST", body: fd });
-    // 清理状态
     $.postText.value = "";
     $.postImages.value = "";
-    $.images = [];                    // 清空缓存
-    $.imgPreview.innerHTML = "";      // 清空预览
+    $.images = [];
+    renderPreview();          // 清空预览
     toast("发布成功");
     loadFeed(getCurrentTab());
   }catch(e){
@@ -572,12 +649,75 @@ function renderCard(p){
 }
 
 // 把“普通原帖卡片”抽出来（给转发复用）
+// ① 普通原帖卡片（给转发复用）
 function renderOriginalCard(p){
-  const imgs = (p.images||[]).map(src =>
-    `<img src="${esc(resolveMediaURL(src))}" loading="lazy" alt="">`
-  ).join("");
   const me = session.get()?.user;
   const deletable = me && me.id===p.author.id;
+
+  // —— 内联图片渲染：自动布局 + 点击放大 —— //
+  const renderPics = (imgs = [])=>{
+    const urls = (imgs||[]).map(src => resolveMediaURL(src));
+    if (urls.length === 0) return "";
+    const arr = `[${urls.map(u=>`'${esc(u)}'`).join(",")}]`;
+
+    // 生成 <img>，统一 cover 裁剪
+    const mkImg = (u, i, extraStyle="") =>
+      `<img src="${esc(u)}" alt="" loading="lazy"
+            style="width:100%;height:100%;object-fit:cover;${extraStyle}"
+            onclick="event.stopPropagation(); openImageViewer(${arr}, ${i})">`;
+
+    // Twitter 风：1/2/3 张特别布局，其它走均分网格
+    const n = urls.length;
+    if (n === 1) {
+      return `
+        <div class="pics"
+             style="display:grid; gap:6px;">
+          <div style="width:100%; aspect-ratio:16/9; border-radius:12px; overflow:hidden;">
+            ${mkImg(urls[0], 0)}
+          </div>
+        </div>`;
+    }
+    if (n === 2) {
+      return `
+        <div class="pics"
+             style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+          <div style="aspect-ratio:1/1; border-radius:12px; overflow:hidden;">${mkImg(urls[0],0)}</div>
+          <div style="aspect-ratio:1/1; border-radius:12px; overflow:hidden;">${mkImg(urls[1],1)}</div>
+        </div>`;
+    }
+    if (n === 3) {
+      // 左 1 张纵向，占两行；右侧上下两张
+      return `
+        <div class="pics"
+             style="display:grid; gap:6px;
+                    grid-template-columns:1fr 1fr;
+                    grid-template-rows:1fr 1fr;
+                    grid-template-areas:'a b' 'a c';
+                    height:360px;">
+          <div style="grid-area:a; border-radius:12px; overflow:hidden;">
+            ${mkImg(urls[0],0,"height:100%")}
+          </div>
+          <div style="grid-area:b; border-radius:12px; overflow:hidden;">
+            ${mkImg(urls[1],1,"height:100%")}
+          </div>
+          <div style="grid-area:c; border-radius:12px; overflow:hidden;">
+            ${mkImg(urls[2],2,"height:100%")}
+          </div>
+        </div>`;
+    }
+    // 4+：均分网格（最多显示 4 张；若你想显示全部，可改 slice）
+    const show = urls.slice(0,4);
+    return `
+      <div class="pics"
+           style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+        ${show.map((u,i)=>`
+          <div style="aspect-ratio:1/1; border-radius:12px; overflow:hidden;">
+            ${mkImg(u,i)}
+          </div>
+        `).join("")}
+      </div>`;
+  };
+
   return htm`
   <article class="card clickable" data-id="${esc(p.id)}">
     <img class="avatar" src="${esc(p.author.avatar||'data:,')}" alt="">
@@ -587,7 +727,7 @@ function renderOriginalCard(p){
         <span class="meta">· ${timeAgo(p.created_at)}</span>
       </div>
       ${renderTextWithClamp(p.text, p.id)}
-      <div class="pics">${imgs}</div>
+      ${renderPics(p.images)}
       <div class="actions">
         <div class="action open">💬 <span>${p.comments_count||0}</span></div>
         <div class="action like ${p.liked?'liked':''}">❤️ <span>${p.likes||0}</span></div>
@@ -1067,13 +1207,63 @@ function formatFullTime(iso){
   return `${time} · ${date}`;
 }
 
+// ③ 单帖页（详情）
 function renderPostPage(p){
-  const imgs = (p.images||[]).map(src =>
-    `<img src="${esc(resolveMediaURL(src))}" loading="lazy" alt="">`
-  ).join("");
   const me = session.get()?.user;
   const meAvatar = esc(me?.avatar || "data:,");
   const deletable = me && me.id === p.author.id;
+
+  // 详情页图片（同样点击放大 + 自动布局）
+  const renderPics = (imgs = [])=>{
+    const urls = (imgs||[]).map(src => resolveMediaURL(src));
+    if (urls.length === 0) return "";
+    const arr = `[${urls.map(u=>`'${esc(u)}'`).join(",")}]`;
+    const mk = (u,i,extra="") =>
+      `<img src="${esc(u)}" alt="" loading="lazy"
+            style="width:100%;height:100%;object-fit:cover;${extra}"
+            onclick="openImageViewer(${arr}, ${i})">`;
+    const n = urls.length;
+    if (n === 1) {
+      return `<div class="pics" style="display:grid;gap:8px;margin-top:8px;">
+        <div style="width:100%;aspect-ratio:16/9;border-radius:12px;overflow:hidden;">${mk(urls[0],0)}</div>
+      </div>`;
+    }
+    if (n === 2) {
+      return `<div class="pics" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+        <div style="aspect-ratio:1/1;border-radius:12px;overflow:hidden;">${mk(urls[0],0)}</div>
+        <div style="aspect-ratio:1/1;border-radius:12px;overflow:hidden;">${mk(urls[1],1)}</div>
+      </div>`;
+    }
+    if (n === 3) {
+      return `<div class="pics" style="display:grid;gap:8px;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;grid-template-areas:'a b' 'a c';height:420px;margin-top:8px;">
+        <div style="grid-area:a;border-radius:12px;overflow:hidden;">${mk(urls[0],0,"height:100%")}</div>
+        <div style="grid-area:b;border-radius:12px;overflow:hidden;">${mk(urls[1],1,"height:100%")}</div>
+        <div style="grid-area:c;border-radius:12px;overflow:hidden;">${mk(urls[2],2,"height:100%")}</div>
+      </div>`;
+    }
+    const show = urls.slice(0,4);
+    return `<div class="pics" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+      ${show.map((u,i)=>`<div style="aspect-ratio:1/1;border-radius:12px;overflow:hidden;">${mk(u,i)}</div>`).join("")}
+    </div>`;
+  };
+
+  // 可选：转发/引用块简化
+  let repostBlock = "";
+  if (p.kind === "repost" && p.repost_of) {
+    repostBlock = htm`
+      <div class="repost-block">
+        <div class="repost-author">${esc(p.repost_of.author.nickname||p.repost_of.author.username||"用户")}</div>
+        <div class="repost-text">${esc(p.repost_of.text||"")}</div>
+      </div>`;
+  }
+  let quoteBlock = "";
+  if (p.quote_of) {
+    quoteBlock = htm`
+      <div class="quote-block" onclick="goToPost('${esc(p.quote_of.id)}')" style="cursor:pointer">
+        <div class="quote-author">${esc(p.quote_of.author.nickname||p.quote_of.author.username||"用户")}</div>
+        <div class="quote-text">${esc(p.quote_of.text||"")}</div>
+      </div>`;
+  }
 
   const comments = (p.comments||[]).map(c=>htm`
     <div class="row comment">
@@ -1087,26 +1277,6 @@ function renderPostPage(p){
       </div>
     </div>
   `).join("");
-
-  let repostBlock = "";
-  if (p.kind === "repost" && p.repost_of) {
-    repostBlock = htm`
-      <div class="repost-block">
-        <div class="repost-author">${esc(p.repost_of.author.nickname||p.repost_of.author.username||"用户")}</div>
-        <div class="repost-text">${esc(p.repost_of.text||"")}</div>
-      </div>
-    `;
-  }
-
-  let quoteBlock = "";
-  if (p.quote_of) {
-    quoteBlock = htm`
-      <div class="quote-block">
-        <div class="quote-author">${esc(p.quote_of.author.nickname||p.quote_of.author.username||"用户")}</div>
-        <div class="quote-text">${esc(p.quote_of.text||"")}</div>
-      </div>
-    `;
-  }
 
   return htm`
   <div class="post-topbar">
@@ -1124,8 +1294,8 @@ function renderPostPage(p){
           <span class="meta">· ${timeAgo(p.created_at)}</span>
         </div>
         <div class="text">${esc(p.text||"")}</div>
-        <div class="pics">${imgs}</div>
 
+        ${renderPics(p.images)}
         ${repostBlock}
         ${quoteBlock}
 
