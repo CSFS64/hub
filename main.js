@@ -941,6 +941,7 @@ function renderPostPage(p){
         <div class="actions">
           <div class="action like ${p.liked?'liked':''}" data-id="${esc(p.id)}">❤️ <span>${p.likes||0}</span></div>
           <div class="action open" onclick="$.openReply('${p.id}')">💬 回复</div>
+          <div class="action repost" title="转发/引用">🔁 <span>${shareCount(p)}</span></div>
         </div>
       </div>
     </div>
