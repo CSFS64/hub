@@ -637,7 +637,7 @@ $.openComposer = async (postId, mode = "reply") => {
           await api('/posts', { method:'POST', body: fd });
           $.closeReply();
           toast("已发布引用");
-          bumpShareCountInDom(postId, +1)
+          bumpShareCountInDom(postId, +1);
             loadFeed(getCurrentTab());
         } catch (e) { toast(e.message || "发布失败"); }
       }
