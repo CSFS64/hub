@@ -18,16 +18,12 @@ $.likeLock = $.likeLock || new Set();
 async function toggleLike(postId, btnEl){
   if (!postId || !btnEl) return;
 
-  // 若已锁，直接提示，避免“第一次点没反应”的错觉
-  if ($.likeLock.has(postId)) {
-    toast("正在处理中…");   // 可换成别的文案
-    return;
-  }
-
+  // 并发锁：同一贴同一时刻只允许一个请求
+  if ($.likeLock.has(postId)) { toast("正在处理中…"); return; }
   $.likeLock.add(postId);
   btnEl.style.pointerEvents = "none";
 
-  // 保险丝：就算网络异常/导航导致 finally 没执行，最多 4 秒自动释放
+  // 保险丝：最多 4 秒自动释放
   let released = false;
   const release = ()=>{
     if (released) return;
@@ -37,15 +33,22 @@ async function toggleLike(postId, btnEl){
   };
   const fuse = setTimeout(release, 4000);
 
+  // 读取当前 UI 状态，用于在后端不回 liked/likes 时做兜底
   const wasLiked = btnEl.classList.contains("liked");
+  const numEl = btnEl.querySelector("span");
+  const currentCount = +((numEl && numEl.textContent) || 0) | 0;
+
   try{
+    // 发请求
     const data = await api(`/posts/${postId}/like`, { method: wasLiked ? "DELETE" : "POST" });
-    btnEl.classList.toggle("liked", !!data?.liked);
-    const numEl = btnEl.querySelector("span");
-    if (numEl) {
-      if (typeof data?.likes === "number") numEl.textContent = data.likes;
-      else numEl.textContent = (+numEl.textContent || 0) + (wasLiked ? -1 : 1);
-    }
+
+    // 兼容：后端若返回 { liked, likes } 就用后端；否则用本地推算
+    const nextLiked = (typeof data?.liked === "boolean") ? data.liked : !wasLiked;
+    const nextLikes = (typeof data?.likes  === "number")  ? data.likes  : Math.max(0, currentCount + (wasLiked ? -1 : 1));
+
+    // 一处更新，处处同步（列表多处副本 + 详情）
+    updateLikeEverywhere(postId, nextLiked, nextLikes);
+
   }catch(e){
     toast(e.message || "失败");
   }finally{
@@ -55,6 +58,25 @@ async function toggleLike(postId, btnEl){
 }
 
 /* ====== Utils ====== */
+// 同步整站内所有该 postId 的点赞显示（列表卡片 + 详情页）
+function updateLikeEverywhere(postId, liked, likes){
+  try {
+    // 列表卡片
+    document.querySelectorAll(`.card[data-id="${postId}"] .action.like`).forEach(el=>{
+      el.classList.toggle("liked", !!liked);
+      const s = el.querySelector("span");
+      if (s) s.textContent = String(Math.max(0, likes|0));
+    });
+    // 详情页（如果在详情页上）
+    const detailEl = document.querySelector(`.post-thread .action.like[data-id="${postId}"]`);
+    if (detailEl){
+      detailEl.classList.toggle("liked", !!liked);
+      const s = detailEl.querySelector("span");
+      if (s) s.textContent = String(Math.max(0, likes|0));
+    }
+  } catch (_) {}
+}
+
 function htm(strings,...vals){ return strings.map((s,i)=>s+(vals[i]??"")).join(""); }
 function esc(s=""){ return s.replace(/[&<>"]/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[m])); }
 function timeAgo(iso){
