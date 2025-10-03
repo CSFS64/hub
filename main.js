@@ -4,6 +4,9 @@ const API_BASE = "https://mini-forum-backend.20060303jjc.workers.dev"; // ← �
 const FRONTEND_PROFILE_PREFIX = "#/user/"; // 简单 hash 路由
 
 /* ====== State ====== */
+// 统一缓存当前待发送的图片（来自选择、粘贴、拖拽）
+$.images = [];
+
 const $ = {};
 const session = {
   get(){ try{ return JSON.parse(localStorage.getItem("mini_forum_session")||"null"); }catch{ return null; } },
@@ -11,7 +14,6 @@ const session = {
   clear(){ localStorage.removeItem("mini_forum_session"); }
 };
 
-// —— 点赞并发锁：同一帖子同一时刻只发一个请求 —— //
 // —— 点赞并发锁：同一帖子同一时刻只发一个请求 —— //
 $.likeLock = $.likeLock || new Set();
 
@@ -111,6 +113,20 @@ function toast(msg, ms=1800){
   $.toastT = setTimeout(()=> el.hidden = true, ms);
 }
 function fileToDataURL(f){ return new Promise(r=>{ const fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(f); }); }
+
+async function addImageFile(f){
+  if (!f || !f.type?.startsWith("image/")) return;
+  if ($.images.length >= 3) { toast("最多 3 张图片"); return; }
+
+  $.images.push(f);
+
+  // 预览
+  const url = await fileToDataURL(f);
+  const img = new Image();
+  img.src = url;
+  img.alt = "";
+  $.imgPreview.append(img);
+}
 
 /* ====== API ====== */
 async function api(path, {method="GET", body=null, auth=true, raw=false, headers={}}={}){
@@ -373,25 +389,64 @@ function setActiveTab(tab){
 
 /* ====== Composer ====== */
 function bindComposer(){
+  // 文件选择（input）
   $.postImages.onchange = async ()=>{
-    $.imgPreview.innerHTML = "";
-    const files = [...$.postImages.files].slice(0,3);
-    for(const f of files){ const url = await fileToDataURL(f); const img = new Image(); img.src=url; $.imgPreview.append(img); }
+    const files = [...$.postImages.files];
+    for (const f of files) await addImageFile(f);
+    $.postImages.value = ""; // 清空，便于再次选择同名文件
   };
+
+  // 在发帖文本框中粘贴图片（支持从剪贴板直接粘贴）
+  $.postText.addEventListener('paste', async (e) => {
+    const items = e.clipboardData?.items || [];
+    let added = false;
+    for (const it of items) {
+      if (it.kind === 'file' && it.type?.startsWith('image/')) {
+        const f = it.getAsFile();
+        if (f) { await addImageFile(f); added = true; }
+      }
+    }
+    // 如果只粘贴了图片（没有文字），阻止默认，避免插入奇怪占位
+    const hasText = !!(e.clipboardData && e.clipboardData.getData('text/plain'));
+    if (added && !hasText) e.preventDefault();
+  });
+
+  // 拖拽图片到输入框或预览区
+  [$.postText, $.imgPreview].forEach(el=>{
+    el.addEventListener('dragover', (e)=>{ e.preventDefault(); });
+    el.addEventListener('drop', async (e)=>{
+      e.preventDefault();
+      const files = [...(e.dataTransfer?.files||[])];
+      for (const f of files) await addImageFile(f);
+    });
+  });
+
   $.btnPublish.onclick = publish;
 }
+
 async function publish(){
   const me = await ensureLogin(); if(!me) return;
   const text = ($.postText.value||"").trim();
-  if(!text && $.postImages.files.length===0) return toast("写点什么吧");
+
+  // 现在使用统一缓存的图片数组 $.images
+  if(!text && ($.images?.length||0)===0) return toast("写点什么吧");
+
   const fd = new FormData();
   fd.append("text", text.slice(0,500));
-  [...$.postImages.files].slice(0,3).forEach(f=> fd.append("images", f));
+  for (const f of ($.images||[])) fd.append("images", f);  // 最多 3 张在 addImageFile 里已控制
+
   try{
     await api("/posts", { method:"POST", body: fd });
-    $.postText.value=""; $.postImages.value=""; $.imgPreview.innerHTML="";
-    toast("发布成功"); loadFeed(getCurrentTab());
-  }catch(e){ toast(e.message || "发布失败"); }
+    // 清理状态
+    $.postText.value = "";
+    $.postImages.value = "";
+    $.images = [];                    // 清空缓存
+    $.imgPreview.innerHTML = "";      // 清空预览
+    toast("发布成功");
+    loadFeed(getCurrentTab());
+  }catch(e){
+    toast(e.message || "发布失败");
+  }
 }
 
 /* ====== Feed ====== */
