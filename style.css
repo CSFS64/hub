@@ -987,3 +987,9 @@ dialog {
 .pics.tw-grid img{
   width:100%; height:100%; object-fit:cover; display:block;
 }
+
+/* 正文到图片的间距；show-more 展开按钮到图片的间距 */
+.card .text{ margin-bottom: 6px; }
+.card .show-more{ margin-bottom: 10px; }  /* 稍微大一点 */
+.card .text + .pics,
+.card .show-more + .pics{ margin-top: 8px; }
