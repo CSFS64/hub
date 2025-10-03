@@ -169,7 +169,9 @@ function initRepostDialogs(){
         fd1.append('repost_of', id);
         await api('/posts', { method:'POST', body: fd1 });
         $.repostChoiceDialog?.close();
-        toast("已转发"); loadFeed(getCurrentTab());
+        toast("已转发");
+        bumpShareCountInDom(id, +1);
+        loadFeed(getCurrentTab());
       }catch(e){ toast(e.message||"转发失败"); }
       finally { delete $.btnRepostNow.dataset.busy; $.btnRepostNow.disabled = false; }
     };
@@ -201,7 +203,9 @@ function initRepostDialogs(){
           fd2.append('quote_of', id);
           await api('/posts', { method:'POST', body: fd2 });
         $.quoteDialog?.close();
-        toast("已发布引用"); loadFeed(getCurrentTab());
+        toast("已发布引用");
+        bumpShareCountInDom(id, +1);
+        loadFeed(getCurrentTab());
       }catch(e){ toast(e.message||"发布失败"); }
       finally { delete $.btnQuoteSend.dataset.busy; $.btnQuoteSend.disabled = false; }
     };
@@ -501,6 +505,23 @@ function bindCardEvents(){
       finally { delete b.dataset.busy; }
     };
   });
+
+  document.querySelectorAll(".card .del").forEach(b => {
+    b.onclick = async (e) => {
+      e.stopPropagation();
+      const card = e.target.closest(".card");
+      const id = card?.dataset.id;
+      if (!id || id.length !== 24) { toast("这条帖子数据异常，已过滤"); return; }
+      if (!confirm("确定删除这条帖子吗？")) return;
+      try {
+        await api(`/posts/${id}`, { method: "DELETE" });
+        toast("已删除");
+        loadFeed(getCurrentTab());
+      } catch (err) {
+        toast(err.message || "删除失败");
+      }
+    };
+  });
 }
 
 //-----回复弹窗-----//
@@ -616,7 +637,8 @@ $.openComposer = async (postId, mode = "reply") => {
           await api('/posts', { method:'POST', body: fd });
           $.closeReply();
           toast("已发布引用");
-          loadFeed(getCurrentTab());
+          bumpShareCountInDom(postId, +1)
+            loadFeed(getCurrentTab());
         } catch (e) { toast(e.message || "发布失败"); }
       }
     };
@@ -815,6 +837,14 @@ async function doSearch(){
 
 
 /* ====== Small helpers ====== */
+function bumpShareCountInDom(postId, delta){
+  if (!postId || !delta) return;
+  // 所有“原帖卡片”（出现在 feed、profile、转发包裹里复用）
+  const esc = (window.CSS && CSS.escape) ? CSS.escape(postId) : String(postId).replace(/"/g, '\\"');
+  document.querySelectorAll(`article.card[data-id="${esc}"] .action.repost span`)
+    .forEach(sp => sp.textContent = String((+sp.textContent || 0) + delta));
+}
+
 function getAvatarPlaceholder(name=""){ return "data:,"; }
 
 async function showPostPage(id){
@@ -981,19 +1011,18 @@ function bindPostPageEvents(p){
     };
   }
 
-  +  // —— 正文转发/引用（单帖页）——
-  +  const repostEl = document.querySelector(".post-thread .row.detail .action.repost");
-  +  if (repostEl) {
-  +    repostEl.onclick = async (e) => {
-  +      e.preventDefault();
-  +      e.stopPropagation();
-  +      const me = await ensureLogin(); if (!me) return;
-  +      // 纯转发详情：转发目标是原帖；普通/引用：就是当前帖
-  +      const targetId = p?.repost_of?.id || p?.quote_of?.id || p?.id;
-  +      if (!targetId) return;
-  +      $.openRepostChoice(targetId);   // 打开“转发 / 引用”选择弹窗
-  +    };
-  +  }
+  // —— 正文转发/引用（单帖页）——
+  const repostEl = document.querySelector(".post-thread .row.detail .action.repost");
+  if (repostEl) {
+    repostEl.onclick = async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const me = await ensureLogin(); if (!me) return;
+      const targetId = p?.repost_of?.id || p?.quote_of?.id || p?.id;
+      if (!targetId) return;
+      $.openRepostChoice(targetId);
+    };
+  }
 
   // —— 无边框回复框：自动增高 + 字数计数 + 超限 Upsell —— //
   setupExpandableComposer('#commentTextPage', '#replyCounter', '#replyUpsell', 280);
