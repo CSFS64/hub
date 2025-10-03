@@ -12,6 +12,10 @@ const session = {
 };
 
 /* ====== Utils ====== */
+function shareCount(p){
+  return (p?.reposts_count || 0) + (p?.quotes_count || 0);
+}
+
 function htm(strings,...vals){ return strings.map((s,i)=>s+(vals[i]??"")).join(""); }
 function esc(s=""){ return s.replace(/[&<>"]/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[m])); }
 function timeAgo(iso){
@@ -158,6 +162,8 @@ function initRepostDialogs(){
     $.btnRepostNow.onclick = async ()=>{
       const me = await ensureLogin(); if(!me) return;
       const id = $.repostTargetId; if(!id) return $.repostChoiceDialog?.close();
+      if ($.btnRepostNow.dataset.busy === '1') return;
+      $.btnRepostNow.dataset.busy = '1'; $.btnRepostNow.disabled = true;
       try{
         const fd1 = new FormData();
         fd1.append('repost_of', id);
@@ -165,6 +171,7 @@ function initRepostDialogs(){
         $.repostChoiceDialog?.close();
         toast("已转发"); loadFeed(getCurrentTab());
       }catch(e){ toast(e.message||"转发失败"); }
+      finally { delete $.btnRepostNow.dataset.busy; $.btnRepostNow.disabled = false; }
     };
   }
 
@@ -186,6 +193,8 @@ function initRepostDialogs(){
       const id = $.repostTargetId; if(!id) return $.quoteDialog?.close();
       const text = ($.quoteText?.value||"").trim();
       if (text.length>280) { toast("超出 280 字"); return; }
+      if ($.btnQuoteSend.dataset.busy === '1') return;
+      $.btnQuoteSend.dataset.busy = '1'; $.btnQuoteSend.disabled = true;
       try{
           const fd2 = new FormData();
           fd2.append('text', text);
@@ -194,6 +203,7 @@ function initRepostDialogs(){
         $.quoteDialog?.close();
         toast("已发布引用"); loadFeed(getCurrentTab());
       }catch(e){ toast(e.message||"发布失败"); }
+      finally { delete $.btnQuoteSend.dataset.busy; $.btnQuoteSend.disabled = false; }
     };
   }
 
@@ -406,7 +416,7 @@ function renderCard(p){
         <div class="pics">${imgs}</div>
         <div class="actions">
           <div class="action open">💬 <span>${p.comments_count||0}</span></div>
-          <div class="action quote"  title="引用">💬🧷 <span>${p.quotes_count || 0}</span></div>
+          <div class="action repost" title="转发/引用">🔁 <span>${shareCount(p)}</span></div>
           <div class="action like ${p.liked?'liked':''}">❤️ <span>${p.likes||0}</span></div>
           ${deletable ? `<div class="action del" title="删除">🗑️</div>` : ""}
         </div>
@@ -436,7 +446,7 @@ function renderOriginalCard(p){
       <div class="actions">
         <div class="action open">💬 <span>${p.comments_count||0}</span></div>
         <div class="action like ${p.liked?'liked':''}">❤️ <span>${p.likes||0}</span></div>
-        <div class="action repost" title="转发">🔁 <span>${p.reposts_count || 0}</span></div>
+        <div class="action repost" title="转发/引用">🔁 <span>${shareCount(p)}</span></div>
         ${deletable ? `<div class="action del" title="删除">🗑️</div>` : ""}
       </div>
     </div>
