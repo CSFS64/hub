@@ -501,36 +501,6 @@ function bindCardEvents(){
       finally { delete b.dataset.busy; }
     };
   });
-  document.querySelectorAll(".card .del, .repost-wrap .del").forEach(b => {
-    b.onclick = async (e) => {
-      e.stopPropagation();
-  
-      // 先看是否在转发包裹里，如果是，就删这条“转发”的 id
-      const wrap = e.target.closest('.repost-wrap');
-      let id = wrap?.dataset.repostId;
-  
-      // 否则按原逻辑：删这张卡自身的 id（普通帖 / 引用帖）
-      if (!id) {
-        const card = e.target.closest(".card");
-        id = card?.dataset.id;
-      }
-  
-      if (!id || id==='null' || id==='undefined' || id.length !== 24) {
-        toast("这条帖子数据异常，已过滤"); 
-        return;
-      }
-  
-      if (!confirm("确定删除这条帖子吗？")) return;
-  
-      try {
-        await api(`/posts/${id}`, { method: "DELETE" });
-        toast("已删除");
-        loadFeed(getCurrentTab());
-      } catch (err) {
-        toast(err.message || "删除失败");
-      }
-    };
-  });
 }
 
 //-----回复弹窗-----//
@@ -1010,6 +980,20 @@ function bindPostPageEvents(p){
       finally { delete likeEl.dataset.busy; }
     };
   }
+
+  +  // —— 正文转发/引用（单帖页）——
+  +  const repostEl = document.querySelector(".post-thread .row.detail .action.repost");
+  +  if (repostEl) {
+  +    repostEl.onclick = async (e) => {
+  +      e.preventDefault();
+  +      e.stopPropagation();
+  +      const me = await ensureLogin(); if (!me) return;
+  +      // 纯转发详情：转发目标是原帖；普通/引用：就是当前帖
+  +      const targetId = p?.repost_of?.id || p?.quote_of?.id || p?.id;
+  +      if (!targetId) return;
+  +      $.openRepostChoice(targetId);   // 打开“转发 / 引用”选择弹窗
+  +    };
+  +  }
 
   // —— 无边框回复框：自动增高 + 字数计数 + 超限 Upsell —— //
   setupExpandableComposer('#commentTextPage', '#replyCounter', '#replyUpsell', 280);
