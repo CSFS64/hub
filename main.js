@@ -908,6 +908,11 @@ function renderPostPage(p){
     </div>
   `).join("");
 
+  // 谁的“转发数”要被加：如果这是转发/引用，计数归到原帖；否则归当前帖
+  const shareOwner = (p.repost_of && p.repost_of.id) ? p.repost_of
+                    : (p.quote_of && p.quote_of.id)   ? p.quote_of
+                    : p;
+
   // 转发内容（如果有）
   let repostBlock = "";
   if (p.kind === "repost" && p.repost_of) {
@@ -956,12 +961,13 @@ function renderPostPage(p){
         <div class="actions">
           <div class="action like ${p.liked?'liked':''}" data-id="${esc(p.id)}">❤️ <span>${p.likes||0}</span></div>
           <div class="action open" onclick="$.openReply('${p.id}')">💬 回复</div>
+          <!-- 这里一定要带 data-id=shareOwner.id，供 bumpShareCountInDom 精准命中 -->
           <div class="action repost" data-id="${esc(shareOwner.id)}" title="转发/引用">🔁 <span>${shareCount(shareOwner)}</span></div>
         </div>
       </div>
     </div>
 
-    <!-- 时间行（和推特一样在正文下单独一行） -->
+    <!-- 时间行 -->
     <div class="meta-row">
       <div></div>
       <div class="timestamp">${esc(formatFullTime(p.created_at))}</div>
@@ -972,15 +978,13 @@ function renderPostPage(p){
       <img class="rail avatar" src="${meAvatar}" alt="">
       <div class="body">
         <div class="reply-inline">
-          <img class="avatar" src="${meAvatar}" alt="" style="display:none"> <!-- 兼容保留，不显示 -->
+          <img class="avatar" src="${meAvatar}" alt="" style="display:none">
           <div class="reply-editor">
             <textarea id="commentTextPage" rows="1" placeholder="Post your reply"></textarea>
-
             <div class="reply-tools">
               <div class="char-counter" id="replyCounter">280</div>
               <button type="button" id="btnCommentPage" class="btn btn-primary">评论</button>
             </div>
-
             <div class="upsell" id="replyUpsell">
               Upgrade to <b>Premium+</b> to write longer posts and Articles.
               <a class="link" href="javascript:;">Learn more</a>
