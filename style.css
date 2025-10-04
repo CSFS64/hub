@@ -975,3 +975,60 @@ dialog {
 }
 .img-viewer .prev{ left:20px; }
 .img-viewer .next{ right:20px; }
+
+/* ========== 统一：推特风图片拼贴（列表 + 详情） ========== */
+.pics.tw-grid{
+  display:grid;
+  gap:2px !important;             /* 强制 2px，压过旧的 .pics gap */
+  overflow:visible;                /* 圆角交给 cell，不用容器裁剪 */
+}
+
+/* 通用：cell 负责裁剪，内部直角 */
+.pics.tw-grid .cell{
+  position:relative;
+  overflow:hidden;
+  border-radius:0;                 /* 先清零，按布局分别加外角 */
+}
+.pics.tw-grid img{
+  display:block; width:100%; height:100%;
+  object-fit:cover;
+}
+
+/* 1 张：16:9，大圆角四角 */
+.pics.tw-grid.n1{ grid-template-columns:1fr; }
+.pics.tw-grid.n1 .cell{ aspect-ratio:16/9; border-radius:12px; }
+
+/* 2 张：左右各方图，只给外侧两个边做圆角 */
+.pics.tw-grid.n2{ grid-template-columns:1fr 1fr; }
+.pics.tw-grid.n2 .cell{ aspect-ratio:1/1; }
+.pics.tw-grid.n2 .cell:first-child{
+  border-top-left-radius:12px; border-bottom-left-radius:12px;
+}
+.pics.tw-grid.n2 .cell:last-child{
+  border-top-right-radius:12px; border-bottom-right-radius:12px;
+}
+
+/* 3 张：左 1 张占两行 + 右侧上下两张（高度略矮） */
+.pics.tw-grid.n3{
+  grid-template-columns:1fr 1fr;
+  grid-template-rows:1fr 1fr;
+  grid-template-areas:'a b' 'a c';
+  height:300px;
+}
+@media (max-width:480px){ .pics.tw-grid.n3{ height:240px; } }
+.pics.tw-grid.n3 .a{ grid-area:a; border-top-left-radius:12px; border-bottom-left-radius:12px; }
+.pics.tw-grid.n3 .b{ grid-area:b; border-top-right-radius:12px; }
+.pics.tw-grid.n3 .c{ grid-area:c; border-bottom-right-radius:12px; }
+
+/* 4 张：2x2，只给四个外角加圆角 */
+.pics.tw-grid.n4{ grid-template-columns:1fr 1fr; }
+.pics.tw-grid.n4 .cell{ aspect-ratio:1/1; }
+.pics.tw-grid.n4 .cell:nth-child(1){ border-top-left-radius:12px; }
+.pics.tw-grid.n4 .cell:nth-child(2){ border-top-right-radius:12px; }
+.pics.tw-grid.n4 .cell:nth-child(3){ border-bottom-left-radius:12px; }
+.pics.tw-grid.n4 .cell:nth-child(4){ border-bottom-right-radius:12px; }
+
+/* 文本与图片的间距（列表 + 详情统一） */
+.card .text, .post-thread .text{ margin-bottom:8px; }
+.card .text + .pics, .card .show-more + .pics,
+.post-thread .text + .pics{ margin-top:10px; }
