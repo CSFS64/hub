@@ -952,6 +952,31 @@ dialog {
 .pics.tw-grid.n1 .cell.ratio-1x1{ aspect-ratio:1/1;  max-height:none; }
 .pics.tw-grid.n1 .cell.ratio-4x5{ aspect-ratio:4/5;  max-height:none; }
 
+/* —— 单图：当是方图或竖图时，不再拉满整列，按高度上限换算宽度 —— */
+
+/* 让容器列宽由内容决定（而不是 1fr 拉满）并靠左对齐 */
+.pics.tw-grid.n1:has(.ratio-1x1),
+.pics.tw-grid.n1:has(.ratio-4x5){
+  grid-template-columns: auto;         /* 关键：列宽=内容宽 */
+  justify-content: flex-start;         /* 和推特一样靠左，不居中 */
+}
+
+/* 方图：宽度 = 单图高度上限（默认 560px 或 70vh） */
+.pics.tw-grid.n1:has(.ratio-1x1) .cell{
+  width: min(100%, var(--single-max-h));
+}
+
+/* 竖图 4:5：宽度 = 高度上限 * 4/5（≈ Twitter 的视觉效果） */
+.pics.tw-grid.n1:has(.ratio-4x5) .cell{
+  width: min(100%, calc(var(--single-max-h) * 0.8));
+}
+
+/* 仍保持你之前的上限与圆角 */
+.pics.tw-grid.n1{
+  --single-max-h: min(70vh, 560px);
+}
+.pics.tw-grid.n1 .cell{ border-radius:12px; }
+
 /* ===== 双图：左右方图，仅外侧两边圆角 ===== */
 .pics.tw-grid.n2{
   gap:2px;
