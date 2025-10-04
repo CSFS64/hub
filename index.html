@@ -195,5 +195,14 @@
   </div>
 
   <script src="./main.js"></script>
+
+  <script type="module">
+    import { playLoader } from './loader.js';
+    // 首次进入就播
+    playLoader();
+  
+    // 如果你是 SPA，有路由切换时再播一次：
+    // router.on('navigate', () => playLoader({ durSpin: 900, durMerge: 450 }));
+  </script>
 </body>
 </html>
