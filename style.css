@@ -896,141 +896,106 @@ dialog {
 }
 
 /* ===================== 统一：推特风图片拼贴（列表 + 详情） ===================== */
+:root { --outline-strong:#CFD9DE; }
 
-/* 文本与图片的间距（列表 + 详情统一） */
-.card .text, .post-thread .text{ margin-bottom:8px; }
+/* 文本与图片之间的间距 */
+.card .text, .post-thread .text { margin-bottom:8px; }
 .card .text + .pics,
 .card .show-more + .pics,
-.post-thread .text + .pics{ margin-top:10px; }
+.post-thread .text + .pics { margin-top:10px; }
 
-/* tw-grid 容器：不设底色，让缝隙继承卡片的 hover 背景 */
+/* 容器：强制使用 grid，统一外圈描边与圆角 */
 .card .pics.tw-grid,
 .post-thread .pics.tw-grid{
-  background: var(--card);
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 0 0 1.5px var(--outline-strong);
+  display:grid !important;               /* 覆盖旧的 .card .pics { display:flex } */
+  gap:2px !important;
+  border-radius:12px;
+  overflow:hidden;                        /* 用容器裁切外四角 */
+  background:var(--card);
+  box-shadow:0 0 0 1.5px var(--outline-strong);  /* 2px 外框（视觉 1.5px 更接近推特） */
 }
 
-/* tw-grid 子项：由 cell 负责裁剪，内部直角 */
+/* 子项：cell 负责裁剪，内部直角 */
 .pics.tw-grid .cell{
-  position: relative;
-  overflow: hidden;
-  border-radius: 0;              /* 先清零，按布局单独给外角 */
+  position:relative;
+  overflow:hidden;
+  border-radius:0;
 }
 
 /* 统一覆盖：撤销旧规则在 tw-grid 内对 <img> 的限制/圆角/边框 */
 .pics.tw-grid img{
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-
-  max-width: none !important;    /* ← 取消 260px 限制（修复宽屏空白 & 大缝） */
-  border: none !important;       /* ← 去掉内部描边，避免出现“白缝” */
-  border-radius: 0 !important;   /* ← 内部直角，由 cell 的外角控制 */
-}
-
-/* 防御性：清掉可能遗留的子项 margin（某些主题会给 .pics > * 设 margin） */
-.pics.tw-grid > *{ margin: 0 !important; }
-
-/* ====== 按照片数量定义布局 & 外角 ====== */
-
-/* ===== 单图：自动比例（横 16:9 / 方 1:1 / 竖 4:5），并限制最大高度 ===== */
-.pics.tw-grid.n1{
-  --single-max-h: min(70vh, 560px);
-}
-
-.pics.tw-grid.n1{
-  grid-template-columns: 1fr;
-  gap: 0 !important;                       /* 单图不留内缝 */
-  --single-max-h: min(70vh, 560px);
-}
-
-.pics.tw-grid.n1 .cell{
-  /* 默认横图：16:9 */
-  aspect-ratio: 16 / 9;
-  max-height: var(--single-max-h);
-  border-radius: 12px;     /* 四角圆 */
-  overflow: hidden;        /* 让裁剪生效 */
-}
-
-/* 方图 */
-.pics.tw-grid.n1 .cell.ratio-1x1{ aspect-ratio: 1 / 1; }
-
-/* 竖图（Twitter/IG 常用 4:5，避免太高） */
-.pics.tw-grid.n1 .cell.ratio-4x5{ aspect-ratio: 4 / 5; }
-
-/* 保险：img 全覆盖、内部直角 */
-.pics.tw-grid.n1 img{
+  display:block;
   width:100%; height:100%;
-  object-fit: cover;
-  border-radius: 0 !important;
-  border: none !important;
+  object-fit:cover;
+  max-width:none !important;              /* 取消 260px 限制，修复宽屏大缝 */
+  max-height:none !important;             /* 关键：避免竖图“虚空占位” */
+  border:0 !important;
+  border-radius:0 !important;
 }
 
-:root { --outline-strong: #CFD9DE; }
+/* 防御：清掉可能遗留的子项 margin */
+.pics.tw-grid > *{ margin:0 !important; }
 
-/* 2 张：左右方图，只有外侧两边圆 */
-.pics.tw-grid.n2{ grid-template-columns: 1fr 1fr; }
-.pics.tw-grid.n2 .cell{ aspect-ratio: 1/1; }
+/* ===== 单图：横 16:9 / 方 1:1 / 竖 4:5（由 JS 动态加类） ===== */
+.pics.tw-grid.n1{
+  grid-template-columns:1fr;
+  gap:0 !important;                        /* 单图不留内缝 */
+  --single-max-h:min(70vh,560px);
+}
+.pics.tw-grid.n1 .cell{
+  aspect-ratio:16/9;                       /* 默认横图 */
+  max-height:var(--single-max-h);
+  border-radius:12px;                      /* 四角圆 */
+}
+.pics.tw-grid.n1 .cell.ratio-1x1{ aspect-ratio:1/1; }
+.pics.tw-grid.n1 .cell.ratio-4x5{ aspect-ratio:4/5; }
+
+/* ===== 双图：左右方图，仅外侧两边圆角 ===== */
+.pics.tw-grid.n2{ grid-template-columns:1fr 1fr; }
+.pics.tw-grid.n2 .cell{ aspect-ratio:1/1; }
 .pics.tw-grid.n2 .cell:first-child{
-  border-top-left-radius: 12px; border-bottom-left-radius: 12px;
+  border-top-left-radius:12px; border-bottom-left-radius:12px;
 }
 .pics.tw-grid.n2 .cell:last-child{
-  border-top-right-radius: 12px; border-bottom-right-radius: 12px;
+  border-top-right-radius:12px; border-bottom-right-radius:12px;
 }
 
-/* 3 张：左 1 张占两行，右侧上下两张；只给外四角圆 */
+/* ===== 三图：左一张占两行；右上/右下 ===== */
 .pics.tw-grid.n3{
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
-  grid-template-areas: 'a b' 'a c';
-  height: 300px;
+  grid-template-columns:1fr 1fr;
+  grid-template-rows:1fr 1fr;
+  grid-template-areas:'a b' 'a c';
+  height:300px;
 }
 @media (max-width:480px){ .pics.tw-grid.n3{ height:240px; } }
-.pics.tw-grid.n3 .a{ grid-area: a; border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
-.pics.tw-grid.n3 .b{ grid-area: b; border-top-right-radius: 12px; }
-.pics.tw-grid.n3 .c{ grid-area: c; border-bottom-right-radius: 12px; }
+.pics.tw-grid.n3 .a{ grid-area:a; border-top-left-radius:12px; border-bottom-left-radius:12px; }
+.pics.tw-grid.n3 .b{ grid-area:b; border-top-right-radius:12px; }
+.pics.tw-grid.n3 .c{ grid-area:c; border-bottom-right-radius:12px; }
 
-/* 4 张：2x2，只有外四角圆 */
-.pics.tw-grid.n4{ grid-template-columns: 1fr 1fr; }
-.pics.tw-grid.n4 .cell{ aspect-ratio: 1/1; }
-.pics.tw-grid.n4 .cell:nth-child(1){ border-top-left-radius: 12px; }
-.pics.tw-grid.n4 .cell:nth-child(2){ border-top-right-radius: 12px; }
-.pics.tw-grid.n4 .cell:nth-child(3){ border-bottom-left-radius: 12px; }
-.pics.tw-grid.n4 .cell:nth-child(4){ border-bottom-right-radius: 12px; }
+/* ===== 四图：2x2，仅外四角圆角 ===== */
+.pics.tw-grid.n4{ grid-template-columns:1fr 1fr; }
+.pics.tw-grid.n4 .cell{ aspect-ratio:1/1; }
+.pics.tw-grid.n4 .cell:nth-child(1){ border-top-left-radius:12px; }
+.pics.tw-grid.n4 .cell:nth-child(2){ border-top-right-radius:12px; }
+.pics.tw-grid.n4 .cell:nth-child(3){ border-bottom-left-radius:12px; }
+.pics.tw-grid.n4 .cell:nth-child(4){ border-bottom-right-radius:12px; }
 
-/* ---- Image Viewer (hardening) ---- */
+/* ---- Image Viewer（保持不变，略） ---- */
 .img-viewer{
-  position: fixed !important;
-  inset: 0 !important;
-  z-index: 9999 !important;
-  display: flex !important;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0,0,0,.9) !important;
+  position:fixed !important; inset:0 !important; z-index:9999 !important;
+  display:flex !important; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.9) !important;
 }
-.img-viewer[hidden]{ display: none !important; }
+.img-viewer[hidden]{ display:none !important; }
 .img-viewer img{
-  max-width: min(92vw, 1400px) !important;
-  max-height: 92vh !important;
-  object-fit: contain !important;
-  border: none !important;
-  border-radius: 6px;
-  box-shadow: 0 10px 40px rgba(0,0,0,.5);
+  max-width:min(92vw,1400px) !important; max-height:92vh !important;
+  object-fit:contain !important; border:0 !important; border-radius:6px;
+  box-shadow:0 10px 40px rgba(0,0,0,.5);
 }
-.img-viewer .close,
-.img-viewer .nav{
-  position: absolute;
-  border: 0;
-  border-radius: 50%;
-  background: rgba(255,255,255,.12);
-  color: #fff;
-  width: 36px; height: 36px;
-  cursor: pointer;
+.img-viewer .close,.img-viewer .nav{
+  position:absolute; border:0; border-radius:50%;
+  background:rgba(255,255,255,.12); color:#fff; cursor:pointer;
 }
-.img-viewer .close{ top:16px; right:16px; }
-.img-viewer .nav{ top:50%; transform: translateY(-50%); width:44px; height:44px; }
-.img-viewer .prev{ left:20px; }
-.img-viewer .next{ right:20px; }
+.img-viewer .close{ top:16px; right:16px; width:36px; height:36px; }
+.img-viewer .nav{ top:50%; transform:translateY(-50%); width:44px; height:44px; }
+.img-viewer .prev{ left:20px; } .img-viewer .next{ right:20px; }
