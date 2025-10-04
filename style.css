@@ -912,7 +912,7 @@ dialog {
   border-radius:12px;
   overflow:hidden;                        /* 用容器裁切外四角 */
   background:var(--card);
-  box-shadow:0 0 0 1.5px var(--outline-strong);  /* 2px 外框（视觉 1.5px 更接近推特） */
+  box-shadow:0 0 0 1px var(--outline-strong);  /* 2px 外框（视觉 1.5px 更接近推特） */
 }
 
 /* 子项：cell 负责裁剪，内部直角 */
