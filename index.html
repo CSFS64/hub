@@ -198,22 +198,16 @@
 
   <script type="module">
     import { playLoader } from './loader.js';
-  
-    // 首次进入播放
     playLoader({
+      // 这些默认值已经接近你截图的比例与间距
       brand: '#2da7ff',
       text: 'FreeLand',
       durSpin: 1200,
       durMerge: 600,
-      // 可选微调：
-      // size: 56,
-      // bite: { x: 64, y1: 19, y2: 45 }, // 缺口大小/角度
-      // shiftLeft: -12,
-      // wordRight: 18,
+      shiftLeft: -12,   // 图标左移
+      wordRight: 18,    // 文字相对图标的最终右侧距离
+      // 可选：startDeg: -90  // 从上方开始扫
     });
-  
-    // SPA 路由切换时也想播放：
-    // router.on('navigate', () => playLoader({ durSpin: 900, durMerge: 500 }));
   </script>
   
 </body>
