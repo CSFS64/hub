@@ -937,45 +937,47 @@ dialog {
 /* 防御：清掉可能遗留的子项 margin */
 .pics.tw-grid > *{ margin:0 !important; }
 
-/* ===== 单图：横 16:9 / 方 1:1 / 竖 4:5（由 JS 动态加类） ===== */
+/* ===== 单图（n1）：横 16:9 / 方 1:1 / 竖 4:5 ===== */
+/* 统一高度上限：桌面不超 560px，小屏不超 70vh */
 .pics.tw-grid.n1{
-  grid-template-columns:1fr;
-  gap:0 !important;                        /* 单图不留内缝 */
-  --single-max-h:min(70vh,560px);
+  --single-max-h: min(70vh, 560px);
+  grid-template-columns: 1fr;   /* 默认横图铺满列 */
+  gap: 0 !important;            /* 单图不留内缝 */
 }
+
+/* 默认横图：16:9，受高度上限约束 */
 .pics.tw-grid.n1 .cell{
-  aspect-ratio:16/9;                       /* 默认横图 */
-  max-height:var(--single-max-h);
-  border-radius:12px;                      /* 四角圆 */
+  aspect-ratio: 16 / 9;
+  max-height: var(--single-max-h);
+  border-radius: 12px;          /* 四角圆 */
+  overflow: hidden;
 }
-/* 方/竖图不夹高度，避免右侧“空白” */
-.pics.tw-grid.n1 .cell.ratio-1x1{ aspect-ratio:1/1;  max-height:none; }
-.pics.tw-grid.n1 .cell.ratio-4x5{ aspect-ratio:4/5;  max-height:none; }
 
-/* —— 单图：当是方图或竖图时，不再拉满整列，按高度上限换算宽度 —— */
+/* 方图 & 竖图：只改比例，不夹高度（避免被上限挤出“空白”） */
+.pics.tw-grid.n1 .cell.ratio-1x1{ aspect-ratio: 1 / 1;  max-height: none; }
+.pics.tw-grid.n1 .cell.ratio-4x5{ aspect-ratio: 4 / 5;  max-height: none; }
 
-/* 让容器列宽由内容决定（而不是 1fr 拉满）并靠左对齐 */
+/* —— 方/竖图时：容器按内容收缩，靠左显示（消除右侧“虚空占位”） —— */
 .pics.tw-grid.n1:has(.ratio-1x1),
 .pics.tw-grid.n1:has(.ratio-4x5){
-  grid-template-columns: auto;         /* 关键：列宽=内容宽 */
-  justify-content: flex-start;         /* 和推特一样靠左，不居中 */
+  grid-template-columns: auto;          /* 列宽由内容决定 */
+  display: inline-grid !important;      /* 容器按内容宽度收缩 */
+  width: fit-content;                   /* 新内核 */
+  width: -moz-fit-content;              /* 旧版 Firefox 兜底 */
+  max-width: 100%;
+  justify-content: start;               /* 靠左 */
+  box-sizing: border-box;               /* 外框阴影计入盒模型 */
 }
 
-/* 方图：宽度 = 单图高度上限（默认 560px 或 70vh） */
+/* 方图宽度 = 高度上限（正方形） */
 .pics.tw-grid.n1:has(.ratio-1x1) .cell{
   width: min(100%, var(--single-max-h));
 }
 
-/* 竖图 4:5：宽度 = 高度上限 * 4/5（≈ Twitter 的视觉效果） */
+/* 竖图宽度 = 高度上限 * 0.8 （≈ 4:5 的视觉宽度，比横图窄） */
 .pics.tw-grid.n1:has(.ratio-4x5) .cell{
   width: min(100%, calc(var(--single-max-h) * 0.8));
 }
-
-/* 仍保持你之前的上限与圆角 */
-.pics.tw-grid.n1{
-  --single-max-h: min(70vh, 560px);
-}
-.pics.tw-grid.n1 .cell{ border-radius:12px; }
 
 /* ===== 双图：左右方图，仅外侧两边圆角 ===== */
 .pics.tw-grid.n2{
