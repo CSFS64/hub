@@ -906,16 +906,10 @@ dialog {
 /* tw-grid 容器：不设底色，让缝隙继承卡片的 hover 背景 */
 .card .pics.tw-grid,
 .post-thread .pics.tw-grid{
-  display: grid !important;
-  width: 100%;
-  gap: 2px !important;
-  row-gap: 2px !important;
-  column-gap: 2px !important;
-
-  box-shadow: 0 0 0 1px var(--line);
+  background: var(--card);
   border-radius: 12px;
   overflow: hidden;
-  background: transparent !important;
+  box-shadow: 0 0 0 1.5px var(--outline-strong);
 }
 
 /* tw-grid 子项：由 cell 负责裁剪，内部直角 */
@@ -944,11 +938,15 @@ dialog {
 
 /* ===== 单图：自动比例（横 16:9 / 方 1:1 / 竖 4:5），并限制最大高度 ===== */
 .pics.tw-grid.n1{
-  /* Twitter 的单图不会太高，给个上限：桌面 ≤560px，小屏按视口 70vh */
   --single-max-h: min(70vh, 560px);
 }
 
-.pics.tw-grid.n1 { grid-template-columns: 1fr; }
+.pics.tw-grid.n1{
+  grid-template-columns: 1fr;
+  gap: 0 !important;                       /* 单图不留内缝 */
+  --single-max-h: min(70vh, 560px);
+}
+
 .pics.tw-grid.n1 .cell{
   /* 默认横图：16:9 */
   aspect-ratio: 16 / 9;
@@ -970,6 +968,8 @@ dialog {
   border-radius: 0 !important;
   border: none !important;
 }
+
+:root { --outline-strong: #CFD9DE; }
 
 /* 2 张：左右方图，只有外侧两边圆 */
 .pics.tw-grid.n2{ grid-template-columns: 1fr 1fr; }
