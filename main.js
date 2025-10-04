@@ -60,13 +60,14 @@ async function toggleLike(postId, btnEl){
 }
 
 /* ====== Utils ====== */
-// tw-grid” 图片网格
+// tw-grid 图片网格（稳妥：每张图自带 onclick）
 function buildPics(urls = []) {
-  const abs = (urls || []).filter(Boolean).map(u => resolveMediaURL(u));
-  if (abs.length === 0) return "";
+  urls = (urls || []).filter(Boolean);
+  if (urls.length === 0) return "";
 
-  const arr = `[${abs.map(u => `'${esc(u)}'`).join(',')}]`;
-  const n = Math.min(abs.length, 4); // 最多展示 4 张
+  const resolved = urls.map(u => resolveMediaURL(u));
+  const arr = `[${resolved.map(u => `'${esc(u)}'`).join(",")}]`;
+  const n = Math.min(resolved.length, 4);
   const cls = `pics tw-grid n${n}`;
 
   const imgCell = (u, i, extraClass = "") => `
@@ -75,27 +76,22 @@ function buildPics(urls = []) {
            onclick="event.stopPropagation(); openImageViewer(${arr}, ${i})">
     </div>`;
 
-  if (n === 1) {
-    return `<div class="${cls}">${imgCell(abs[0], 0, "a")}</div>`;
-  }
-  if (n === 2) {
-    return `<div class="${cls}">
-      ${imgCell(abs[0], 0, "a")}
-      ${imgCell(abs[1], 1, "b")}
-    </div>`;
-  }
-  if (n === 3) {
-    return `<div class="${cls}">
-      ${imgCell(abs[0], 0, "a")}
-      ${imgCell(abs[1], 1, "b")}
-      ${imgCell(abs[2], 2, "c")}
-    </div>`;
-  }
+  if (n === 1)  return `<div class="${cls}">${imgCell(resolved[0], 0, "a")}</div>`;
+  if (n === 2)  return `<div class="${cls}">
+    ${imgCell(resolved[0], 0, "a")}
+    ${imgCell(resolved[1], 1, "b")}
+  </div>`;
+  if (n === 3)  return `<div class="${cls}">
+    ${imgCell(resolved[0], 0, "a")}
+    ${imgCell(resolved[1], 1, "b")}
+    ${imgCell(resolved[2], 2, "c")}
+  </div>`;
+
   return `<div class="${cls}">
-    ${imgCell(abs[0], 0, "a")}
-    ${imgCell(abs[1], 1, "b")}
-    ${imgCell(abs[2], 2, "c")}
-    ${imgCell(abs[3], 3, "d")}
+    ${imgCell(resolved[0], 0, "a")}
+    ${imgCell(resolved[1], 1, "b")}
+    ${imgCell(resolved[2], 2, "c")}
+    ${imgCell(resolved[3], 3, "d")}
   </div>`;
 }
 
