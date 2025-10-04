@@ -941,9 +941,35 @@ dialog {
 
 /* ====== 按照片数量定义布局 & 外角 ====== */
 
-/* 1 张：16:9，四角圆 */
-.pics.tw-grid.n1{ grid-template-columns: 1fr; }
-.pics.tw-grid.n1 .cell{ aspect-ratio: 16/9; border-radius: 12px; }
+/* === 单图：跟随原始比例（列表 + 详情）=== */
+
+/* 容器仍负责外轮廓圆角与裁切 */
+.card .pics.tw-grid.n1,
+.post-thread .pics.tw-grid.n1{
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
+/* 关键：取消 16:9，交给内容决定高度 */
+.pics.tw-grid.n1 .cell{
+  aspect-ratio: auto !important;   /* 覆盖之前的 16/9 */
+  border-radius: 12px;             /* 视觉上仍有圆角 */
+}
+
+/* 让图片按自身比例撑高容器（不裁切） */
+.pics.tw-grid.n1 img{
+  width: 100%;
+  height: auto !important;         /* ← 不再强制填满高度 */
+  object-fit: contain !important;  /* 保留完整画面 */
+  display: block;
+  margin: 0;                        /* 以防遗留 margin */
+  border: 0;
+  border-radius: 0;
+}
+
+/* 可选：给列表与详情页分别设一个“友好上限”，避免超高图把页面拉得太长 */
+.card .pics.tw-grid.n1 img{ max-height: 560px; }     /* 列表卡片 */
+.post-thread .pics.tw-grid.n1 img{ max-height: 80vh; }/* 详情页更宽松 */
 
 /* 2 张：左右方图，只有外侧两边圆 */
 .pics.tw-grid.n2{ grid-template-columns: 1fr 1fr; }
