@@ -60,6 +60,48 @@ async function toggleLike(postId, btnEl){
 }
 
 /* ====== Utils ====== */
+// tw-grid” 图片网格
+function buildPics(urls = [], stop = (e)=>e && e.stopPropagation()) {
+  urls = (urls || []).filter(Boolean);
+  if (urls.length === 0) return "";
+
+  const arr = `[${urls.map(u => `'${esc(resolveMediaURL(u))}'`).join(',')}]`;
+  const n = Math.min(urls.length, 4); // 最多展示 4 张
+  const cls = `pics tw-grid n${n}`;
+
+  // 小工具：生成一个 cell
+  const imgCell = (u, i, extraClass = "") =>
+    `<div class="cell ${extraClass}">
+       <img src="${esc(resolveMediaURL(u))}"
+            alt="" loading="lazy"
+            onclick="event.stopPropagation(); openImageViewer(${arr}, ${i})">
+     </div>`;
+
+  if (n === 1) {
+    return `<div class="${cls}">${imgCell(urls[0], 0, "a")}</div>`;
+  }
+  if (n === 2) {
+    return `<div class="${cls}">
+      ${imgCell(urls[0], 0, "a")}
+      ${imgCell(urls[1], 1, "b")}
+    </div>`;
+  }
+  if (n === 3) {
+    return `<div class="${cls}">
+      ${imgCell(urls[0], 0, "a")}
+      ${imgCell(urls[1], 1, "b")}
+      ${imgCell(urls[2], 2, "c")}
+    </div>`;
+  }
+  // 4+
+  return `<div class="${cls}">
+    ${imgCell(urls[0], 0, "a")}
+    ${imgCell(urls[1], 1, "b")}
+    ${imgCell(urls[2], 2, "c")}
+    ${imgCell(urls[3], 3, "d")}
+  </div>`;
+}
+
 // 统计一个帖子的“分享数”（转发+引用）
 function getShareCount(p){
   return (p?.reposts_count || 0) + (p?.quotes_count || 0);
@@ -604,44 +646,9 @@ function renderCard(p){
     const me = session.get()?.user;
     const deletable = me && me.id===p.author.id;
     const quote = p.quote_of; // 对象
-  
-    // —— 图片渲染：自动布局 + 点击放大 —— //
-    const renderPics = (imgs = [])=>{
-      const urls = (imgs||[]).map(src => resolveMediaURL(src));
-      if (urls.length === 0) return "";
-      const arr = `[${urls.map(u=>`'${esc(u)}'`).join(",")}]`;
-      const mk = (u,i,extra="") =>
-        `<img src="${esc(u)}" alt="" loading="lazy"
-              style="width:100%;height:100%;object-fit:cover;${extra}"
-              onclick="event.stopPropagation(); openImageViewer(${arr}, ${i})">`;
-      const n = urls.length;
-      if (n === 1) {
-        return `<div class="pics" style="display:grid;gap:6px;">
-          <div style="width:100%;aspect-ratio:16/9;border-radius:12px;overflow:hidden;">${mk(urls[0],0)}</div>
-        </div>`;
-      }
-      if (n === 2) {
-        return `<div class="pics" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-          <div style="aspect-ratio:1/1;border-radius:12px;overflow:hidden;">${mk(urls[0],0)}</div>
-          <div style="aspect-ratio:1/1;border-radius:12px;overflow:hidden;">${mk(urls[1],1)}</div>
-        </div>`;
-      }
-      if (n === 3) {
-        return `<div class="pics" style="display:grid;gap:6px;
-                      grid-template-columns:1fr 1fr;
-                      grid-template-rows:1fr 1fr;
-                      grid-template-areas:'a b' 'a c';
-                      height:360px;">
-          <div style="grid-area:a;border-radius:12px;overflow:hidden;">${mk(urls[0],0,"height:100%")}</div>
-          <div style="grid-area:b;border-radius:12px;overflow:hidden;">${mk(urls[1],1,"height:100%")}</div>
-          <div style="grid-area:c;border-radius:12px;overflow:hidden;">${mk(urls[2],2,"height:100%")}</div>
-        </div>`;
-      }
-      const show = urls.slice(0,4);
-      return `<div class="pics" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-        ${show.map((u,i)=>`<div style="aspect-ratio:1/1;border-radius:12px;overflow:hidden;">${mk(u,i)}</div>`).join("")}
-      </div>`;
-    };
+
+    // —— 图片渲染：使用 tw-grid —— //
+    const renderPics = (imgs = []) => buildPics(imgs);
   
     const quoteHtml = quote ? `
       <div class="quote-embed" role="button"
@@ -692,69 +699,8 @@ function renderOriginalCard(p){
   const me = session.get()?.user;
   const deletable = me && me.id===p.author.id;
 
-  // —— 内联图片渲染：自动布局 + 点击放大 —— //
-  const renderPics = (imgs = [])=>{
-    const urls = (imgs||[]).map(src => resolveMediaURL(src));
-    if (urls.length === 0) return "";
-    const arr = `[${urls.map(u=>`'${esc(u)}'`).join(",")}]`;
-
-    // 生成 <img>，统一 cover 裁剪
-    const mkImg = (u, i, extraStyle="") =>
-      `<img src="${esc(u)}" alt="" loading="lazy"
-            style="width:100%;height:100%;object-fit:cover;${extraStyle}"
-            onclick="event.stopPropagation(); openImageViewer(${arr}, ${i})">`;
-
-    // Twitter 风：1/2/3 张特别布局，其它走均分网格
-    const n = urls.length;
-    if (n === 1) {
-      return `
-        <div class="pics"
-             style="display:grid; gap:6px;">
-          <div style="width:100%; aspect-ratio:16/9; border-radius:12px; overflow:hidden;">
-            ${mkImg(urls[0], 0)}
-          </div>
-        </div>`;
-    }
-    if (n === 2) {
-      return `
-        <div class="pics"
-             style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-          <div style="aspect-ratio:1/1; border-radius:12px; overflow:hidden;">${mkImg(urls[0],0)}</div>
-          <div style="aspect-ratio:1/1; border-radius:12px; overflow:hidden;">${mkImg(urls[1],1)}</div>
-        </div>`;
-    }
-    if (n === 3) {
-      // 左 1 张纵向，占两行；右侧上下两张
-      return `
-        <div class="pics"
-             style="display:grid; gap:6px;
-                    grid-template-columns:1fr 1fr;
-                    grid-template-rows:1fr 1fr;
-                    grid-template-areas:'a b' 'a c';
-                    height:360px;">
-          <div style="grid-area:a; border-radius:12px; overflow:hidden;">
-            ${mkImg(urls[0],0,"height:100%")}
-          </div>
-          <div style="grid-area:b; border-radius:12px; overflow:hidden;">
-            ${mkImg(urls[1],1,"height:100%")}
-          </div>
-          <div style="grid-area:c; border-radius:12px; overflow:hidden;">
-            ${mkImg(urls[2],2,"height:100%")}
-          </div>
-        </div>`;
-    }
-    // 4+：均分网格（最多显示 4 张；若你想显示全部，可改 slice）
-    const show = urls.slice(0,4);
-    return `
-      <div class="pics"
-           style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-        ${show.map((u,i)=>`
-          <div style="aspect-ratio:1/1; border-radius:12px; overflow:hidden;">
-            ${mkImg(u,i)}
-          </div>
-        `).join("")}
-      </div>`;
-  };
+  // 用通用 tw-grid 渲染图片
+  const renderPics = (imgs = []) => buildPics(imgs);
 
   return htm`
   <article class="card clickable" data-id="${esc(p.id)}">
@@ -1251,39 +1197,8 @@ function renderPostPage(p){
   const meAvatar = esc(me?.avatar || "data:,");
   const deletable = me && me.id === p.author.id;
 
-  // 详情页图片（同样点击放大 + 自动布局）
-  const renderPics = (imgs = [])=>{
-    const urls = (imgs||[]).map(src => resolveMediaURL(src));
-    if (urls.length === 0) return "";
-    const arr = `[${urls.map(u=>`'${esc(u)}'`).join(",")}]`;
-    const mk = (u,i,extra="") =>
-      `<img src="${esc(u)}" alt="" loading="lazy"
-            style="width:100%;height:100%;object-fit:cover;${extra}"
-            onclick="openImageViewer(${arr}, ${i})">`;
-    const n = urls.length;
-    if (n === 1) {
-      return `<div class="pics" style="display:grid;gap:8px;margin-top:8px;">
-        <div style="width:100%;aspect-ratio:16/9;border-radius:12px;overflow:hidden;">${mk(urls[0],0)}</div>
-      </div>`;
-    }
-    if (n === 2) {
-      return `<div class="pics" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
-        <div style="aspect-ratio:1/1;border-radius:12px;overflow:hidden;">${mk(urls[0],0)}</div>
-        <div style="aspect-ratio:1/1;border-radius:12px;overflow:hidden;">${mk(urls[1],1)}</div>
-      </div>`;
-    }
-    if (n === 3) {
-      return `<div class="pics" style="display:grid;gap:8px;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;grid-template-areas:'a b' 'a c';height:420px;margin-top:8px;">
-        <div style="grid-area:a;border-radius:12px;overflow:hidden;">${mk(urls[0],0,"height:100%")}</div>
-        <div style="grid-area:b;border-radius:12px;overflow:hidden;">${mk(urls[1],1,"height:100%")}</div>
-        <div style="grid-area:c;border-radius:12px;overflow:hidden;">${mk(urls[2],2,"height:100%")}</div>
-      </div>`;
-    }
-    const show = urls.slice(0,4);
-    return `<div class="pics" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
-      ${show.map((u,i)=>`<div style="aspect-ratio:1/1;border-radius:12px;overflow:hidden;">${mk(u,i)}</div>`).join("")}
-    </div>`;
-  };
+  // 详情页图片：使用 tw-grid
+  const renderPics = (imgs = []) => buildPics(imgs);
 
   // 可选：转发/引用块简化
   let repostBlock = "";
