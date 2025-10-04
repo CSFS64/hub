@@ -155,46 +155,45 @@ function renderPreview(){
 }
 
 // 简易图片查看器（支持组切换）
+// ========= 修复版：图片查看器 =========
 let _viewer = { urls: [], idx: 0 };
 
-function openImageViewer(urls, startIdx=0){
-  _viewer.urls = urls || [];
-  _viewer.idx = Math.min(Math.max(0, startIdx|0), _viewer.urls.length-1);
+function openImageViewer(urls, startIdx = 0) {
+  _viewer.urls = Array.isArray(urls) ? urls : [];
+  _viewer.idx  = Math.min(Math.max(0, startIdx | 0), Math.max(0, _viewer.urls.length - 1));
+
   const box = document.getElementById('imgViewer');
   const img = document.getElementById('imgViewerImg');
   if (!box || !img || _viewer.urls.length === 0) return;
 
-  const show = ()=>{
-    img.src = _viewer.urls[_viewer.idx];
-    box.hidden = false;
-  };
+  const show  = () => { img.src = _viewer.urls[_viewer.idx]; box.hidden = false; };
+  const close = () => { box.hidden = true; };
+  const prev  = () => { if (_viewer.idx > 0)                   { _viewer.idx--; show(); } };
+  const next  = () => { if (_viewer.idx < _viewer.urls.length-1){ _viewer.idx++; show(); } };
+
   show();
 
-  const close = ()=> box.hidden = true;
-  const prev  = ()=> { if (_viewer.idx>0){ _viewer.idx--; show(); } };
-  const next  = ()=> { if (_viewer.idx<_viewer.urls.length-1){ _viewer.idx++; show(); } };
-
+  // 覆盖式绑定（不会叠加）
   const btnClose = document.getElementById('imgViewerClose');
   const btnPrev  = document.getElementById('imgViewerPrev');
   const btnNext  = document.getElementById('imgViewerNext');
 
-  if (btnClose) btnClose.onclick = (e)=>{ e.stopPropagation(); close(); };
-  if (btnPrev)  btnPrev.onclick  = (e)=>{ e.stopPropagation(); prev();  };
-  if (btnNext)  btnNext.onclick  = (e)=>{ e.stopPropagation(); next();  };
+  if (btnClose) btnClose.onclick = (e)=>{ e.preventDefault(); e.stopPropagation(); close(); };
+  if (btnPrev)  btnPrev.onclick  = (e)=>{ e.preventDefault(); e.stopPropagation(); prev();  };
+  if (btnNext)  btnNext.onclick  = (e)=>{ e.preventDefault(); e.stopPropagation(); next();  };
 
-  // 背景点击关闭
+  // 点击遮罩关闭
   box.onclick = (ev)=>{ if (ev.target === box) close(); };
 
-  // 键盘（不要 once）
-  const onKey = (ev)=>{
+  // 键盘监听：先卸旧的再挂新的（用全局引用保存旧函数）
+  if (window.__viewerOnKey) window.removeEventListener('keydown', window.__viewerOnKey);
+  window.__viewerOnKey = (ev)=>{
     if (box.hidden) return;
     if (ev.key === 'Escape')     close();
     if (ev.key === 'ArrowLeft')  prev();
     if (ev.key === 'ArrowRight') next();
   };
-  // 为避免重复绑定，先移除再绑一次
-  window.removeEventListener('keydown', onKey);
-  window.addEventListener('keydown', onKey);
+  window.addEventListener('keydown', window.__viewerOnKey);
 }
 
 /* ====== API ====== */
