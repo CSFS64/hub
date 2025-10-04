@@ -230,7 +230,8 @@ body{
 .post-thread .detail .body::before{
   content:""; position:absolute; left:-16px; top:44px; bottom:10px; width:2px; background:var(--line);
 }
-.post-thread .pics img{ max-width:100%; border-radius:12px; margin-top:10px; }
+/* 仅控制“正文到图片块”的间距，不碰图片自身 */
+.post-thread .text + .pics{ margin-top:10px; }
 .post-thread .actions{ display:flex; gap:22px; margin-top:10px; color:var(--muted); }
 .post-thread .action{ cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
 .post-thread .action.like.liked{ color:#e0245e; }
