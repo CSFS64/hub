@@ -1,34 +1,52 @@
-// loader.js
-// 用法：import { playLoader } from './loader.js'; await playLoader();
+// loader.js  — FreeLand loader (radial sweep + left/right merge)
+// 用法：
+//   import { playLoader } from './loader.js';
+//   await playLoader(); // 或传参 playLoader({ brand:'#2da7ff', text:'FreeLand' ... })
+
 let STYLE_READY = false;
 
 function injectStyle() {
   if (STYLE_READY) return;
   const css = `
-  .fl-loader{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:#fff}
-  .fl-logo{display:flex;align-items:center;gap:10px}
-  .fl-word{font:600 28px/1.1 system-ui,-apple-system,"Segoe UI",Arial;color:#111;opacity:0}
-  .fl-mark{width:54px;height:54px;display:block}
-  .fl-mark path{fill:none;stroke:var(--brand,#2da7ff);stroke-width:14;stroke-linecap:round;
-    stroke-dasharray:200;stroke-dashoffset:200}
-  .fl-mark-shifter,.fl-mark-rotator{display:inline-block}
-  /* 第一段：逆时针旋转 + 画线（ease-out） */
-  .fl-mark-rotator{animation:fl-spin-ccw var(--dur-spin,1.2s) cubic-bezier(.17,.84,.44,1) both}
-  .fl-mark path{animation:fl-draw var(--dur-spin,1.2s) cubic-bezier(.17,.84,.44,1) both}
-  /* 第二段：图案左移 + 文字右移淡入（延迟为第一段时长） */
-  .fl-mark-shifter{animation:fl-left var(--dur-merge,.6s) ease-out var(--dur-spin,1.2s) both}
-  .fl-word{animation:fl-wordin var(--dur-merge,.6s) ease-out var(--dur-spin,1.2s) both}
-  @keyframes fl-spin-ccw{from{transform:rotate(0)}to{transform:rotate(-540deg)}}
-  @keyframes fl-draw{from{stroke-dashoffset:200}to{stroke-dashoffset:0}}
-  @keyframes fl-left{from{transform:translateX(0)}to{transform:translateX(-12px)}}
-  @keyframes fl-wordin{from{transform:translateX(18px);opacity:0}to{transform:translateX(0);opacity:1}}
-  .fl-loader.is-done{animation:fl-hide .35s ease both}
-  @keyframes fl-hide{to{opacity:0;visibility:hidden}}
+  /* ===== FreeLand Loader (scoped) ===== */
+  .fl-loader{
+    position:fixed; inset:0; z-index:9999;
+    display:grid; place-items:center;
+    background:var(--fl-bg,#fff);
+  }
+  .fl-logo{ display:flex; align-items:center; gap:10px; }
+  .fl-word{ font: var(--fl-font, 600 28px/1.1 system-ui,-apple-system,"Segoe UI",Arial); color:#111; opacity:0; }
+
+  /* SVG 尺寸与颜色 */
+  .fl-mark-wrap{ display:inline-block; }
+  .fl-mark-sweep{ width:var(--fl-size,54px); height:var(--fl-size,54px); display:block; color:var(--fl-brand,#2da7ff); }
+
+  /* 第一阶段：扇形扫出（由快到慢，逆时针） */
+  .fl-mark-sweep .sweep{
+    /* pathLength=100 后，dasharray 0->100 就表示 0%->100% 的扇形面积 */
+    stroke-dasharray: 0 100;
+    animation: fl-sweep var(--fl-dur-spin,1200ms) cubic-bezier(.17,.84,.44,1) both;
+  }
+
+  /* 第二阶段：图案左移、文字从中心向右淡入 */
+  .fl-mark-wrap{ animation: fl-left var(--fl-dur-merge,600ms) ease-out var(--fl-dur-spin,1200ms) both; }
+  .fl-word     { animation: fl-wordin var(--fl-dur-merge,600ms) ease-out var(--fl-dur-spin,1200ms) both; }
+
+  @keyframes fl-sweep { from{ stroke-dasharray:0 100 } to{ stroke-dasharray:100 0 } }
+  @keyframes fl-left  { from{ transform:translateX(0) } to{ transform:translateX(var(--fl-shift-left,-12px)) } }
+  @keyframes fl-wordin{ from{ transform:translateX(0); opacity:0 } to{ transform:translateX(var(--fl-word-right,18px)); opacity:1 } }
+
+  /* 覆盖层淡出 */
+  .fl-loader.is-done{ animation: fl-hide .35s ease both; }
+  @keyframes fl-hide{ to{ opacity:0; visibility:hidden } }
+
+  /* 无动画模式：尊重系统设置 */
   @media (prefers-reduced-motion: reduce){
-    .fl-mark-rotator,.fl-mark path,.fl-mark-shifter,.fl-word{animation:none !important}
-    .fl-word{opacity:1}
-    .fl-loader{display:none}
-  }`;
+    .fl-mark-sweep .sweep, .fl-mark-wrap, .fl-word{ animation:none !important; }
+    .fl-word{ opacity:1 }
+    .fl-loader{ display:none }
+  }
+  `;
   const el = document.createElement('style');
   el.setAttribute('data-fl-loader', '');
   el.textContent = css;
@@ -36,90 +54,116 @@ function injectStyle() {
   STYLE_READY = true;
 }
 
+function escapeHtml(s=''){
+  return String(s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+}
+
 /**
- * 播放一次加载动画
+ * 播放一次加载动画（返回 Promise，动画完成后 resolve）
  * @param {Object} opts
- * @param {number} [opts.durSpin=1200] 第一段旋转+画线时长（ms）
- * @param {number} [opts.durMerge=600]  第二段左右合拢时长（ms）
+ * @param {number} [opts.durSpin=1200]   第一段逆时针扫出的时长 (ms)
+ * @param {number} [opts.durMerge=600]   第二段左右合拢时长 (ms)
  * @param {string} [opts.brand='#2da7ff'] 蓝色
  * @param {string} [opts.text='FreeLand'] 右侧文字
- * @param {string} [opts.pathD='M 46 12 A 22 22 0 1 0 46 52'] SVG 路径（蓝色“C”）
  * @param {string} [opts.background='#fff'] 覆盖层背景色
  * @param {number} [opts.zIndex=9999] 覆盖层 z-index
- * @param {boolean} [opts.fadeOut=true] 是否在结尾淡出后移除
+ * @param {boolean} [opts.fadeOut=true] 结束是否淡出覆盖层
  * @param {HTMLElement} [opts.mount=document.body] 覆盖层挂载处
- * @returns {Promise<void>} 动画结束后 resolve
+ * @param {number} [opts.size=54] SVG 显示尺寸（px）
+ * @param {string} [opts.font='600 28px/1.1 system-ui,-apple-system,"Segoe UI",Arial'] 文字字体
+ * @param {string|number} [opts.shiftLeft='-12px'] 图案向左位移
+ * @param {string|number} [opts.wordRight='18px'] 文字向右位移
+ * @param {number} [opts.radius=16] 圆半径（与 viewBox=64 配套）
+ * @param {number} [opts.strokeWidth=32] 扇形厚度（建议 = 2*radius）
+ * @param {{x:number,y1:number,y2:number}} [opts.bite] 缺口三角形（默认 {x:64,y1:18,y2:46}）
+ * @returns {Promise<void>}
  */
 export function playLoader(opts = {}) {
   injectStyle();
+
   const {
     durSpin = 1200,
     durMerge = 600,
     brand = '#2da7ff',
     text = 'FreeLand',
-    pathD = 'M 46 12 A 22 22 0 1 0 46 52',
     background = '#fff',
     zIndex = 9999,
     fadeOut = true,
     mount = document.body,
+    size = 54,
+    font = '600 28px/1.1 system-ui,-apple-system,"Segoe UI",Arial',
+    shiftLeft = '-12px',
+    wordRight = '18px',
+    radius = 16,         // 圆半径（配合 64×64 viewBox）
+    strokeWidth = 32,    //= 直径，模拟“实心扇形”
+    bite = { x:64, y1:18, y2:46 }, // 右侧缺口三角
   } = opts;
 
-  // 建立 DOM
+  // 防重复：同一时刻只保留一个 overlay
+  const existing = mount.querySelector('.fl-loader');
+  if (existing) existing.remove();
+
   const overlay = document.createElement('div');
   overlay.className = 'fl-loader';
-  overlay.style.setProperty('--brand', brand);
-  overlay.style.setProperty('--dur-spin', `${durSpin}ms`);
-  overlay.style.setProperty('--dur-merge', `${durMerge}ms`);
-  overlay.style.background = background;
+  overlay.style.setProperty('--fl-bg', background);
   overlay.style.zIndex = String(zIndex);
+  overlay.style.setProperty('--fl-brand', brand);
+  overlay.style.setProperty('--fl-dur-spin', durSpin + 'ms');
+  overlay.style.setProperty('--fl-dur-merge', durMerge + 'ms');
+  overlay.style.setProperty('--fl-size', size + 'px');
+  overlay.style.setProperty('--fl-font', font);
+  overlay.style.setProperty('--fl-shift-left', typeof shiftLeft === 'number' ? shiftLeft + 'px' : String(shiftLeft));
+  overlay.style.setProperty('--fl-word-right', typeof wordRight === 'number' ? wordRight + 'px' : String(wordRight));
+
+  // 组装 SVG（通过超粗描边 + dasharray 模拟扇形；镜像以呈现“逆时针”）
+  const biteX = Number(bite?.x ?? 64);
+  const biteY1 = Number(bite?.y1 ?? 18);
+  const biteY2 = Number(bite?.y2 ?? 46);
 
   overlay.innerHTML = `
     <div class="fl-logo" aria-label="${escapeHtml(text)}">
-      <span class="fl-mark-shifter">
-        <span class="fl-mark-rotator" aria-hidden="true">
-          <svg class="fl-mark" viewBox="0 0 64 64" role="img" aria-hidden="true">
-            <path d="${pathD}"></path>
-          </svg>
-        </span>
+      <span class="fl-mark-wrap">
+        <svg class="fl-mark-sweep" viewBox="0 0 64 64" role="img" aria-hidden="true">
+          <defs>
+            <mask id="fl-bite-mask">
+              <rect fill="white" x="0" y="0" width="64" height="64"/>
+              <polygon fill="black" points="32,32 ${biteX},${biteY1} ${biteX},${biteY2}"/>
+            </mask>
+          </defs>
+          <!-- 通过 translate+scaleX(-1) 镜像，让动画观感为逆时针 -->
+          <g transform="translate(64,0) scale(-1,1)" mask="url(#fl-bite-mask)">
+            <circle class="sweep"
+              cx="32" cy="32" r="${radius}"
+              fill="none" stroke="${brand}"
+              stroke-linecap="butt" stroke-width="${strokeWidth}"
+              pathLength="100" />
+          </g>
+        </svg>
       </span>
       <span class="fl-word">${escapeHtml(text)}</span>
     </div>
   `;
 
-  // 防重复：同一时刻最多一个 overlay
-  const existing = mount.querySelector('.fl-loader');
-  if (existing) existing.remove();
-
   mount.appendChild(overlay);
 
-  // 结束时序：两段动画 + 可选淡出
+  // 结束时序：以“文字进入”动画结束为准，同时设保险定时器
   const total = durSpin + durMerge;
   return new Promise((resolve) => {
     const finish = () => {
       if (fadeOut) {
         overlay.classList.add('is-done');
-        setTimeout(() => {
-          overlay.remove();
-          resolve();
-        }, 350);
+        setTimeout(() => { overlay.remove(); resolve(); }, 350);
       } else {
         overlay.remove();
         resolve();
       }
     };
-    // 保险：若页面很快卸载/切路由，仍能清理
-    const t = setTimeout(finish, total);
-    // 也监听最后一段动画结束（更鲁棒）
+    const timer = setTimeout(finish, total + 50);
     overlay.addEventListener('animationend', (e) => {
-      // 文字进入是最后触发的动画
       if (e.animationName === 'fl-wordin') {
-        clearTimeout(t);
+        clearTimeout(timer);
         finish();
       }
-    }, { once: true });
+    }, { once:true });
   });
-}
-
-function escapeHtml(s=''){
-  return String(s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 }
