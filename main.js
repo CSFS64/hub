@@ -76,7 +76,15 @@ function buildPics(urls = []) {
            onclick="event.stopPropagation(); openImageViewer(${arr}, ${i})">
     </div>`;
 
-  if (n === 1)  return `<div class="${cls}">${imgCell(resolved[0], 0, "a")}</div>`;
+  if (n === 1) {
+    return `<div class="${cls}">
+      <div class="cell a">
+        <img src="${esc(resolveMediaURL(urls[0]))}" alt="" loading="lazy"
+             onload="__setSinglePicRatio(this)"
+             onclick="event.stopPropagation(); openImageViewer(${arr}, 0)">
+      </div>
+    </div>`;
+  }
   if (n === 2)  return `<div class="${cls}">
     ${imgCell(resolved[0], 0, "a")}
     ${imgCell(resolved[1], 1, "b")}
@@ -94,6 +102,29 @@ function buildPics(urls = []) {
     ${imgCell(resolved[3], 3, "d")}
   </div>`;
 }
+
+window.__setSinglePicRatio = function setSinglePicRatio(img){
+  const wrap = img.closest('.pics.tw-grid.n1');
+  if (!wrap) return;
+  const cell = wrap.querySelector('.cell');
+  if (!cell) return;
+
+  const w = img.naturalWidth || img.width;
+  const h = img.naturalHeight || img.height;
+  if (!w || !h) return;
+
+  const r = w / h;                 // 宽高比
+  cell.classList.remove('ratio-1x1','ratio-4x5'); // 清理旧标记
+
+  // 判定阈值：1.1 以上当横图；0.9~1.1 当方图；小于 0.9 当竖图
+  if (r >= 1.1) {
+    // 横图：用默认 16:9（不加类）
+  } else if (r > 0.9) {
+    cell.classList.add('ratio-1x1');
+  } else {
+    cell.classList.add('ratio-4x5');
+  }
+};
 
 // 统计一个帖子的“分享数”（转发+引用）
 function getShareCount(p){
