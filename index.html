@@ -2,6 +2,10 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
+  <link rel="preconnect" href="https://mini-forum-backend.20060303jjc.workers.dev" crossorigin>
+  <link rel="dns-prefetch" href="https://mini-forum-backend.20060303jjc.workers.dev">
+  <link rel="preload" href="./style.css" as="style">
+  <link rel="preload" href="./main.js" as="script" crossorigin>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>FreeLand</title>
   <link rel="stylesheet" href="./style.css" />
@@ -194,20 +198,26 @@
     <button class="nav next" id="imgViewerNext" title="下一张">›</button>
   </div>
 
-  <script src="./main.js"></script>
+  <script src="./main.js" defer></script>
 
   <script type="module">
     import { playLoader } from './loader.js';
-    playLoader({
-      // 这些默认值已经接近你截图的比例与间距
+  
+    // 播放动画（保持你的参数）
+    const loaderDone = playLoader({
       brand: '#2da7ff',
       text: 'FreeLand',
       durSpin: 1200,
       durMerge: 600,
-      shiftLeft: -55,   // 图标左移
-      wordRight: 0,    // 文字相对图标的最终右侧距离
-      // 可选：startDeg: -90  // 从上方开始扫
+      shiftLeft: -50,
+      wordRight: 5,
+      // startDeg: -90,
     });
+  
+    // 如果 main.js 暴露了首屏就绪 Promise，就一起等；否则直接只等动画
+    const appReady = window.appReadyPromise || Promise.resolve();
+  
+    Promise.all([loaderDone, appReady]).catch(() => {});
   </script>
   
 </body>
