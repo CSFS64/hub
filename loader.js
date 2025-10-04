@@ -56,7 +56,10 @@ function injectStyle() {
   /* 终点 = 图标左移绝对值 + 目标字距（保持最终间隔与比例） */
   @keyframes fl-wordin{
     from{ transform: translate(-50%, -50%); opacity:0; }
-    to  { transform: translate(calc(-50% + var(--fl-shift-abs,12px) + var(--fl-word-right,18px)), -50%); opacity:1; }
+    to  { transform: translate(
+            calc(-50% + (var(--fl-shift-abs,12px)) + var(--fl-word-right,18px)),
+            -50%
+          ); opacity:1; }
   }
 
   .fl-loader.is-done{ animation: fl-hide .35s ease both; }
@@ -139,7 +142,7 @@ export function playLoader(opts = {}) {
   // 位移相关变量（文字终点会用到“绝对值”）
   const shiftLeftStr = typeof shiftLeft === 'number' ? `${shiftLeft}px` : String(shiftLeft);
   overlay.style.setProperty('--fl-shift-left', shiftLeftStr);
-  overlay.style.setProperty('--fl-shift-abs', String(Math.abs(parseFloat(shiftLeftStr))));
+  overlay.style.setProperty('--fl-shift-abs', `${Math.abs(parseFloat(shiftLeftStr))}px`);
   overlay.style.setProperty('--fl-word-right', typeof wordRight === 'number' ? wordRight + 'px' : String(wordRight));
 
   const biteX  = Number(bite?.x ?? 64);
