@@ -25,6 +25,7 @@ function injectStyle() {
     stroke-dasharray: 0 100;    /* 起始：只有一条半径线 */
     stroke-dashoffset: 0;       /* 固定，不再移动，避免双端伪影 */
     animation: fl-sweep var(--fl-dur-spin,1200ms) cubic-bezier(.17,.84,.44,1) both;
+    .fl-mark-sweep{ width:var(--fl-size,54px); height:var(--fl-size,54px); display:block; color:var(--fl-brand,#2da7ff); overflow:visible; }
   }
 
   /* 第二阶段：图案向左、文字从中心向右并渐显 */
@@ -126,16 +127,21 @@ export function playLoader(opts = {}) {
       <span class="fl-mark-wrap">
         <svg class="fl-mark-sweep" viewBox="0 0 64 64" role="img" aria-hidden="true">
           <defs>
-            <mask id="fl-bite-mask">
+            <!-- 修复点 ①：使用用户坐标系，避免 mask 把边缘裁成方块 -->
+            <mask id="fl-bite-mask" maskUnits="userSpaceOnUse">
               <rect fill="white" x="0" y="0" width="64" height="64"/>
               <polygon fill="black" points="32,32 ${biteX},${biteY1} ${biteX},${biteY2}"/>
             </mask>
           </defs>
+  
+          <!-- 修复点 ②：给外圈留边距，外半径 < 32。建议 r=15，strokeWidth=30 -->
           <g mask="url(#fl-bite-mask)" transform="rotate(${startDeg} 32 32)">
             <circle class="sweep"
-              cx="32" cy="32" r="${radius}"
+              cx="32" cy="32"
+              r="${radius ?? 15}"                 <!-- 建议默认 15 -->
               fill="none" stroke="${brand}"
-              stroke-linecap="butt" stroke-width="${strokeWidth}"
+              stroke-linecap="butt"
+              stroke-width="${strokeWidth ?? 30}" <!-- 建议默认 30 -->
               pathLength="100" />
           </g>
         </svg>
