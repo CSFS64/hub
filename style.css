@@ -903,18 +903,18 @@ dialog {
 .card .show-more + .pics,
 .post-thread .text + .pics{ margin-top:10px; }
 
-/* tw-grid 容器：交给 grid 管，缝隙固定 2px，外轮廓圆角由容器裁切 */
+/* tw-grid 容器：不设底色，让缝隙继承卡片的 hover 背景 */
 .card .pics.tw-grid,
 .post-thread .pics.tw-grid{
   display: grid !important;
   width: 100%;
-  gap: 2px !important;           /* 彻底覆盖旧 gap / flex gap */
+  gap: 2px !important;
   row-gap: 2px !important;
   column-gap: 2px !important;
 
-  border-radius: 12px;           /* 外轮廓圆角（列表 + 详情） */
-  overflow: hidden;              /* 用容器裁切外四角 */
-  background: var(--card);       /* 缝隙颜色一致，避免白边错觉 */
+  border-radius: 12px;
+  overflow: hidden;
+  background: transparent !important;
 }
 
 /* tw-grid 子项：由 cell 负责裁剪，内部直角 */
@@ -969,10 +969,6 @@ dialog {
   border-radius: 0 !important;
   border: none !important;
 }
-
-/* 可选：给列表与详情页分别设一个“友好上限”，避免超高图把页面拉得太长 */
-.card .pics.tw-grid.n1 img{ max-height: 560px; }     /* 列表卡片 */
-.post-thread .pics.tw-grid.n1 img{ max-height: 80vh; }/* 详情页更宽松 */
 
 /* 2 张：左右方图，只有外侧两边圆 */
 .pics.tw-grid.n2{ grid-template-columns: 1fr 1fr; }
