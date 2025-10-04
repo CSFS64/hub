@@ -912,6 +912,7 @@ dialog {
   row-gap: 2px !important;
   column-gap: 2px !important;
 
+  box-shadow: 0 0 0 2px var(--line);
   border-radius: 12px;
   overflow: hidden;
   background: transparent !important;
