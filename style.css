@@ -973,3 +973,38 @@ dialog {
 .pics.tw-grid.n4 .cell:nth-child(2){ border-top-right-radius: 12px; }
 .pics.tw-grid.n4 .cell:nth-child(3){ border-bottom-left-radius: 12px; }
 .pics.tw-grid.n4 .cell:nth-child(4){ border-bottom-right-radius: 12px; }
+
+/* ---- Image Viewer (hardening) ---- */
+.img-viewer{
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9999 !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,.9) !important;
+}
+.img-viewer[hidden]{ display: none !important; }
+.img-viewer img{
+  max-width: min(92vw, 1400px) !important;
+  max-height: 92vh !important;
+  object-fit: contain !important;
+  border: none !important;
+  border-radius: 6px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.5);
+}
+.img-viewer .close,
+.img-viewer .nav{
+  position: absolute;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255,255,255,.12);
+  color: #fff;
+  width: 36px; height: 36px;
+  cursor: pointer;
+}
+.img-viewer .close{ top:16px; right:16px; }
+.img-viewer .nav{ top:50%; transform: translateY(-50%); width:44px; height:44px; }
+.img-viewer .prev{ left:20px; }
+.img-viewer .next{ right:20px; }
+
