@@ -1,5 +1,4 @@
-// loader.js — FreeLand loader v3 (clean CCW pie sweep + right bite)
-// 用法：import { playLoader } from './loader.js'; await playLoader();
+// loader.js — FreeLand loader v3 (clean CCW pie sweep + right bite, fixed CSS)
 
 let STYLE_READY = false;
 
@@ -18,6 +17,7 @@ function injectStyle() {
   .fl-mark-sweep{
     width:var(--fl-size,54px); height:var(--fl-size,54px);
     display:block; color:var(--fl-brand,#2da7ff);
+    overflow: visible; /* ← 这行要在这里，不能写进 .sweep 的规则块里 */
   }
 
   /* 第一阶段：只动画 dasharray 的首段，从 0% → 100%，形成单端“扇形” */
@@ -25,7 +25,6 @@ function injectStyle() {
     stroke-dasharray: 0 100;    /* 起始：只有一条半径线 */
     stroke-dashoffset: 0;       /* 固定，不再移动，避免双端伪影 */
     animation: fl-sweep var(--fl-dur-spin,1200ms) cubic-bezier(.17,.84,.44,1) both;
-    .fl-mark-sweep{ width:var(--fl-size,54px); height:var(--fl-size,54px); display:block; color:var(--fl-brand,#2da7ff); overflow:visible; }
   }
 
   /* 第二阶段：图案向左、文字从中心向右并渐显 */
@@ -62,22 +61,22 @@ function escapeHtml(s=''){
 /**
  * 播放一次加载动画
  * @param {Object} opts
- * @param {number} [opts.durSpin=1200]   第一段时长 (ms)
- * @param {number} [opts.durMerge=600]   第二段时长 (ms)
- * @param {string} [opts.brand='#2da7ff'] 圆盘颜色
- * @param {string} [opts.text='FreeLand'] 文字
- * @param {string} [opts.background='#fff'] 覆盖层背景
- * @param {number} [opts.zIndex=9999] z-index
- * @param {boolean} [opts.fadeOut=true] 结束淡出
- * @param {HTMLElement} [opts.mount=document.body] 挂载点
- * @param {number} [opts.size=54] 直径（px）
- * @param {string} [opts.font='600 28px/1.1 system-ui,-apple-system,"Segoe UI",Arial'] 字体
- * @param {string|number} [opts.shiftLeft='-12px'] 图案左移
- * @param {string|number} [opts.wordRight='18px'] 文字右移
- * @param {number} [opts.radius=16] 圆半径（viewBox=64 配套）
- * @param {number} [opts.strokeWidth=32] 描边厚度（建议=2*radius）
- * @param {{x:number,y1:number,y2:number}} [opts.bite] 右侧缺口三角 {x,y1,y2}
- * @param {number} [opts.startDeg=0] 起始角（度，0=指向右，逆时针为正）
+ * @param {number} [opts.durSpin=1200]
+ * @param {number} [opts.durMerge=600]
+ * @param {string} [opts.brand='#2da7ff']
+ * @param {string} [opts.text='FreeLand']
+ * @param {string} [opts.background='#fff']
+ * @param {number} [opts.zIndex=9999]
+ * @param {boolean} [opts.fadeOut=true]
+ * @param {HTMLElement} [opts.mount=document.body]
+ * @param {number} [opts.size=54]
+ * @param {string} [opts.font='600 28px/1.1 system-ui,-apple-system,"Segoe UI",Arial']
+ * @param {string|number} [opts.shiftLeft='-12px']
+ * @param {string|number} [opts.wordRight='18px']
+ * @param {number} [opts.radius=15]          // 给外圈留边距，避免碰到 viewBox 变“方”
+ * @param {number} [opts.strokeWidth=30]     // 建议 = 2 * radius
+ * @param {{x:number,y1:number,y2:number}} [opts.bite]
+ * @param {number} [opts.startDeg=0]
  * @returns {Promise<void>}
  */
 export function playLoader(opts = {}) {
@@ -96,8 +95,8 @@ export function playLoader(opts = {}) {
     font = '600 28px/1.1 system-ui,-apple-system,"Segoe UI",Arial',
     shiftLeft = '-12px',
     wordRight = '18px',
-    radius = 16,
-    strokeWidth = 32,
+    radius = 15,
+    strokeWidth = 30,
     bite = { x:64, y1:18, y2:46 },
     startDeg = 0,
   } = opts;
@@ -121,27 +120,26 @@ export function playLoader(opts = {}) {
   const biteY1 = Number(bite?.y1 ?? 18);
   const biteY2 = Number(bite?.y2 ?? 46);
 
-  // 组装 SVG：纯圆 + 超粗描边（扇形），mask 掏右侧缺口；通过旋转设定起始角
   overlay.innerHTML = `
     <div class="fl-logo" aria-label="${escapeHtml(text)}">
       <span class="fl-mark-wrap">
         <svg class="fl-mark-sweep" viewBox="0 0 64 64" role="img" aria-hidden="true">
           <defs>
-            <!-- 修复点 ①：使用用户坐标系，避免 mask 把边缘裁成方块 -->
+            <!-- 使用用户坐标系，避免 mask 把边缘裁成方块 -->
             <mask id="fl-bite-mask" maskUnits="userSpaceOnUse">
               <rect fill="white" x="0" y="0" width="64" height="64"/>
+              <!-- 右侧缺口（>） -->
               <polygon fill="black" points="32,32 ${biteX},${biteY1} ${biteX},${biteY2}"/>
             </mask>
           </defs>
-  
-          <!-- 修复点 ②：给外圈留边距，外半径 < 32。建议 r=15，strokeWidth=30 -->
+
           <g mask="url(#fl-bite-mask)" transform="rotate(${startDeg} 32 32)">
             <circle class="sweep"
               cx="32" cy="32"
-              r="${radius ?? 15}"                 <!-- 建议默认 15 -->
+              r="${radius}"
               fill="none" stroke="${brand}"
               stroke-linecap="butt"
-              stroke-width="${strokeWidth ?? 30}" <!-- 建议默认 30 -->
+              stroke-width="${strokeWidth}"
               pathLength="100" />
           </g>
         </svg>
