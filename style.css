@@ -999,3 +999,38 @@ dialog {
 .img-viewer .close{ top:16px; right:16px; width:36px; height:36px; }
 .img-viewer .nav{ top:50%; transform:translateY(-50%); width:44px; height:44px; }
 .img-viewer .prev{ left:20px; } .img-viewer .next{ right:20px; }
+
+/* 统一：容器底色用卡片色，遮住所有缝；外圈描边 */
+.card .pics.tw-grid,
+.post-thread .pics.tw-grid{
+  background: var(--card);              /* ← 别用透明，避免露出“虚空” */
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1.5px solid var(--outline-strong);  /* 或保留你的 box-shadow 版本 */
+  /* 如果坚持用阴影：box-shadow: 0 0 0 1.5px var(--outline-strong); */
+}
+
+/* ——— 子像素稳定：两列布局都用“减去 gap 后再平分”的写法 ——— */
+
+/* 2 张： */
+.pics.tw-grid.n2{
+  gap: 2px;
+  grid-template-columns: calc((100% - 2px)/2) calc((100% - 2px)/2);
+}
+
+/* 3 张：左 1 右 2；右侧也是两列之一，所以同样用 calc */
+.pics.tw-grid.n3{
+  gap: 2px;
+  grid-template-columns: calc((100% - 2px)/2) calc((100% - 2px)/2);
+  grid-template-rows: 1fr 1fr;
+  grid-template-areas: 'a b' 'a c';
+}
+
+/* 4 张：2×2 */
+.pics.tw-grid.n4{
+  gap: 2px;
+  grid-template-columns: calc((100% - 2px)/2) calc((100% - 2px)/2);
+}
+
+/* 单图仍然 gap:0，由容器做圆角即可（你现在的 n1 逻辑保持不变） */
+.pics.tw-grid.n1{ gap:0 !important; }
