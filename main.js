@@ -61,44 +61,41 @@ async function toggleLike(postId, btnEl){
 
 /* ====== Utils ====== */
 // tw-grid” 图片网格
-function buildPics(urls = [], stop = (e)=>e && e.stopPropagation()) {
-  urls = (urls || []).filter(Boolean);
-  if (urls.length === 0) return "";
+function buildPics(urls = []) {
+  const abs = (urls || []).filter(Boolean).map(u => resolveMediaURL(u));
+  if (abs.length === 0) return "";
 
-  const arr = `[${urls.map(u => `'${esc(resolveMediaURL(u))}'`).join(',')}]`;
-  const n = Math.min(urls.length, 4); // 最多展示 4 张
+  const arr = `[${abs.map(u => `'${esc(u)}'`).join(',')}]`;
+  const n = Math.min(abs.length, 4); // 最多展示 4 张
   const cls = `pics tw-grid n${n}`;
 
-  // 小工具：生成一个 cell
-  const imgCell = (u, i, extraClass = "") =>
-    `<div class="cell ${extraClass}">
-       <img src="${esc(resolveMediaURL(u))}"
-            alt="" loading="lazy"
-            onclick="event.stopPropagation(); openImageViewer(${arr}, ${i})">
-     </div>`;
+  const imgCell = (u, i, extraClass = "") => `
+    <div class="cell ${extraClass}">
+      <img src="${esc(u)}" alt="" loading="lazy"
+           onclick="event.stopPropagation(); openImageViewer(${arr}, ${i})">
+    </div>`;
 
   if (n === 1) {
-    return `<div class="${cls}">${imgCell(urls[0], 0, "a")}</div>`;
+    return `<div class="${cls}">${imgCell(abs[0], 0, "a")}</div>`;
   }
   if (n === 2) {
     return `<div class="${cls}">
-      ${imgCell(urls[0], 0, "a")}
-      ${imgCell(urls[1], 1, "b")}
+      ${imgCell(abs[0], 0, "a")}
+      ${imgCell(abs[1], 1, "b")}
     </div>`;
   }
   if (n === 3) {
     return `<div class="${cls}">
-      ${imgCell(urls[0], 0, "a")}
-      ${imgCell(urls[1], 1, "b")}
-      ${imgCell(urls[2], 2, "c")}
+      ${imgCell(abs[0], 0, "a")}
+      ${imgCell(abs[1], 1, "b")}
+      ${imgCell(abs[2], 2, "c")}
     </div>`;
   }
-  // 4+
   return `<div class="${cls}">
-    ${imgCell(urls[0], 0, "a")}
-    ${imgCell(urls[1], 1, "b")}
-    ${imgCell(urls[2], 2, "c")}
-    ${imgCell(urls[3], 3, "d")}
+    ${imgCell(abs[0], 0, "a")}
+    ${imgCell(abs[1], 1, "b")}
+    ${imgCell(abs[2], 2, "c")}
+    ${imgCell(abs[3], 3, "d")}
   </div>`;
 }
 
