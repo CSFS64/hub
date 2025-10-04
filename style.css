@@ -128,7 +128,7 @@ body{
 .card .head{ display:flex; gap:8px; align-items:center; }
 .card .name{ font-weight:700; }
 .card .meta{ color:var(--muted); font-size:12px; }
-.card .text{ margin:6px 0 8px; white-space:pre-wrap; word-break:break-word; }
+.card .text{ font-weight: 500; margin:6px 0 8px; white-space:pre-wrap; word-break:break-word; }
 .card .pics{ display:flex; gap:6px; flex-wrap:wrap; }
 .card .pics img{ border-radius:12px; border:1px solid var(--line); width:100%; max-width:260px; height:auto; }
 .card .actions{ display:flex; gap:16px; align-items:center; color:var(--muted); margin-top:8px; pointer-events:none; }
@@ -912,7 +912,7 @@ dialog {
   row-gap: 2px !important;
   column-gap: 2px !important;
 
-  box-shadow: 0 0 0 2px var(--line);
+  box-shadow: 0 0 0 1.5px var(--line);
   border-radius: 12px;
   overflow: hidden;
   background: transparent !important;
@@ -1034,4 +1034,3 @@ dialog {
 .img-viewer .nav{ top:50%; transform: translateY(-50%); width:44px; height:44px; }
 .img-viewer .prev{ left:20px; }
 .img-viewer .next{ right:20px; }
-
