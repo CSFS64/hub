@@ -740,7 +740,7 @@ dialog {
   background: var(--card);
   transition: background-color .22s ease, box-shadow .22s ease;
   margin-top: 12px;
-  box-shadow: 0 0 0 1px var(--outline-strong); /* 与图片外框一致 */
+  box-shadow: 0 0 0 0.5px var(--outline-strong); /* 与图片外框一致 */
   border: none;
 }
 .quote-embed > img.avatar{
