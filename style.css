@@ -725,6 +725,7 @@ dialog {
 .card .text + .quote-embed{ margin-top: 16px; }
 
 /* ===== 引用卡（使用 grid；正文与头像左对齐） ===== */
+:root { --outline-strong:#CFD9DE; }
 .quote-embed{
   display: grid;
   grid-template-columns: 28px 8px minmax(0,1fr); /* ← 关键：1fr -> minmax(0,1fr) */
@@ -736,10 +737,11 @@ dialog {
   width: 100%;                                     /* 保证占满父级 */
   padding: 12px;
   border-radius: 12px;
-  border: 1px solid var(--line);
   background: var(--card);
   transition: background-color .22s ease, box-shadow .22s ease;
   margin-top: 12px;
+  box-shadow: 0 0 0 1px var(--outline-strong); /* 与图片外框一致 */
+  border: none;
 }
 .quote-embed > img.avatar{
   grid-area: av;
