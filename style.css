@@ -454,40 +454,34 @@ dialog {
 }
 
 /* ===== 卡片正文折叠 / Show more ===== */
-/* 卡片正文：基础 */
+/* 基础正文样式保持不变 */
 .card .text{
   font-size: 15px;
   line-height: 1.6;
-  /* 关键：让行内换行按普通段落来，否则 -webkit-line-clamp 失效 */
-  white-space: normal;           /* 覆盖 pre-wrap 才能正确夹行 */
+  white-space: normal;
   word-break: break-word;
   overflow-wrap: anywhere;
-  position: relative;            /* 方便做渐隐层 */
 }
 
-/* 被夹时（5 行） */
+/* 列表正文被“夹”时，不用 line-clamp，不要自动省略号 */
 .card .text.clamped{
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 5;         /* 5 行 */
-  overflow: hidden;
+  display: block;        /* 重要：不要用 -webkit-box */
+  overflow: hidden;      /* 仅裁剪，不加省略号 */
+  /* 具体的 max-height 由 JS 根据真实行高设定，保证正好 5 行 */
 }
 
-/* Show more 样式（默认隐藏，JS 决定显示） */
+/* Show more：独立一行（和正文同一个行距效果） */
 .show-more{
-  display:none;
-  cursor:pointer;
-  color:var(--primary);
-  font-weight:600;
-  margin-top:4px;
-  z-index:2;                     /* 比卡片 hover 更高 */
-  position: relative;            /* 让 z-index 生效 */
-  text-decoration: none;         /* 默认不带下划线 */
+  display: inline-block;
+  margin-top: 4px;           /* 和你原先一样的间距 */
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
 }
 .show-more:hover,
-.show-more:focus-visible {       /* 鼠标悬停 & 键盘聚焦都显示下划线 */
-  text-decoration: underline;
-}
+.show-more:focus-visible { text-decoration: underline; }
+
 
 
 
