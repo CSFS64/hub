@@ -1037,3 +1037,16 @@ dialog {
 .img-viewer .close{ top:16px; right:16px; width:36px; height:36px; }
 .img-viewer .nav{ top:50%; transform:translateY(-50%); width:44px; height:44px; }
 .img-viewer .prev{ left:20px; } .img-viewer .next{ right:20px; }
+
+/* 引用卡正文：固定 5 行，多出内容在同一行末尾显示省略号 */
+.quote-embed .q-text{
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;   /* 始终 5 行 */
+  overflow: hidden;
+  /* 让省略号出现在最后一行末尾（多行场景由 line-clamp 负责） */
+  text-overflow: ellipsis;
+}
+
+/* 彻底移除引用卡的 Show more（不再展示 & 不再占位） */
+.quote-embed .show-more{ display:none !important; }
