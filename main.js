@@ -952,7 +952,7 @@ $.openQuote = (postId) => $.openComposer(postId, "quote");
 function handleRoute(){
   if ($.likeLock) $.likeLock.clear();
 
-  const m = location.hash.match(/^#\/post\/([0-9a-f]{24})$/i);
+  const m = location.hash.match(/^#\/post\/([A-Za-z0-9_-]{8,64})$/);
   if (m) {
     showPostPage(m[1]);
   } else {
@@ -1191,6 +1191,8 @@ async function showPostPage(id){
     await expandOne(d);
     $.feed.innerHTML = renderPostPage(d);
     bindPostPageEvents(d);
+    bindCardEvents();   // ★ 让评论卡片也有点赞/转发/删除/进详情
+    applyClamp();       // ★ 再跑一次 clamp 计算
   }catch(e){
     // 如果是 not found，直接回首页并提示
     if (String(e.message||"").toLowerCase().includes("not found")) {
@@ -1242,18 +1244,8 @@ function renderPostPage(p){
       </div>`;
   }
 
-  const comments = (p.comments||[]).map(c=>htm`
-    <div class="row comment">
-      <img class="rail avatar" src="${esc(c.author.avatar||'data:,')}" alt="">
-      <div class="body">
-        <div class="head">
-          <span class="name">${esc(c.author.nickname||c.author.username||"用户")}</span>
-          <span class="meta">· ${timeAgo(c.created_at)}</span>
-        </div>
-        <div class="text">${esc(c.text||"")}</div>
-      </div>
-    </div>
-  `).join("");
+  // 直接复用帖子卡片渲染，让评论也拥有 点赞/转发/删除/进详情 能力
+  const comments = (p.comments || []).map(renderCard).join("");
 
   return htm`
   <div class="post-topbar">
