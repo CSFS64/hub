@@ -459,7 +459,7 @@ function initRepostDialogs(){
         <div class="q-content">
           <div class="q-head">${esc(p.author?.nickname||p.author?.username||"用户")}
             <span class="meta">· ${timeAgo(p.created_at)}</span></div>
-          <div class="q-text clamped">${nl2brSafe(p.text||"")}</div>
+          <div class="q-text clamped">${nl2brSafe((p.text||"").replace(/\n+$/,""))}</div>
           <div class="show-more"
                onclick="this.previousElementSibling.classList.remove('clamped'); this.remove()">Show more</div>
         </div>
@@ -683,7 +683,7 @@ function renderCard(p){
             <span class="name">${esc(quote.author?.nickname || quote.author?.username || "用户")}</span>
             <span class="meta">· ${timeAgo(quote.created_at)}</span>
           </div>
-          <div class="q-text clamped">${nl2brSafe(quote.text || "")}</div>
+          <div class="q-text clamped">${nl2brSafe((quote.text||"").replace(/\n+$/,""))}</div>
           <div class="show-more"
                onclick="event.stopPropagation();
                         this.previousElementSibling.classList.remove('clamped');
