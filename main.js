@@ -669,6 +669,7 @@ function renderCard(p){
   }
 
   if (isQuote) {
+    const renderPics = (imgs = []) => buildPics(imgs);
     const me = session.get()?.user;
     const deletable = me && me.id===p.author.id;
     const quote = p.quote_of; // 对象
