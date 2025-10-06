@@ -1070,53 +1070,29 @@ dialog {
 /* 防止末尾 <br> 另起一行把省略号挤下去 */
 .quote-embed .q-text br:last-child{ display:none; }
 
-/* === 引用卡最终覆盖：粘到文件最后即可 === */
-/* 1) 标题与下文的间距：保持小间距即可 */
-.quote-embed .q-head{
-  margin: 0 0 8px !important;
-}
-
-/* 2) 取消任何把缩略图往下推的间距 */
-.quote-embed .q-thumb{
-  margin-top: 0 !important;
-}
-
-/* 3) 行对齐：图片与正文同起点（顶部对齐），底部自然与第5行齐平 */
-.quote-embed .q-row{
-  display: flex !important;
-  align-items: flex-start !important;
-}
-
-/* 4) 轻微光学对齐（可要可不要）：让图片顶边和正文更“平” */
-.quote-embed .q-text{
-  padding-top: 1px !important; /* 不需要可改为 0 */
-}
-
-/* === 引用卡：图片与正文同列、同宽、与头像间距一致 === */
+/* === 引用卡：左侧方图 = 文本 5 行高，且与头像等距 === */
 :root{
-  --q-fs: 15px;
-  --q-lh: 1.6;
-  --q-5lines: calc(5 * var(--q-fs) * var(--q-lh)); /* 5 行高度 */
+  --q-fs: 15px;               /* 引文字号 */
+  --q-lh: 1.6;                /* 行高倍数 */
+  --q-5lines: calc(5 * var(--q-fs) * var(--q-lh)); /* 5 行总高 */
 }
 
-/* 行1：头像 + 头部；行2：头像 + 内容列 */
-.quote-embed{
-  grid-template-columns: 28px 8px minmax(0,1fr) !important; /* 头像列 | 间距 | 内容列 */
-}
-
-/* 内容列内改为“上下叠放”：先图后文；不再左移 */
+/* 第2行容器：内容列内做两列布局（方图 | 文本） */
 .quote-embed .q-row{
   grid-area: row;
   display: grid !important;
-  grid-template-columns: minmax(0,1fr) !important; /* 单列 = 与正文同宽 */
-  grid-auto-rows: auto;
-  row-gap: 10px;                 /* 图文竖向间距 */
+  grid-template-columns: var(--q-5lines) 12px minmax(0,1fr) !important; /* 图 | 间距 | 文 */
+  align-items: start;
   margin-left: 0 !important;     /* 取消之前的 -36px 左移 */
 }
 
-/* 图片：占满内容列宽度，高度=5行（你要的“与5行文本齐高”可保留/可调） */
+/* 无图时退回单列 */
+.quote-embed:not(.has-thumb) .q-row{ display:block !important; }
+
+/* 图片：正方形，边长=5行高度；与文本同处“内容列”，所以与头像等距 */
 .quote-embed .q-thumb{
-  width: 100% !important;
+  grid-column: 1;
+  width: var(--q-5lines) !important;
   height: var(--q-5lines) !important;
   border-radius: 8px;
   overflow: hidden;
@@ -1126,8 +1102,9 @@ dialog {
   width:100%; height:100%; object-fit:cover; display:block;
 }
 
-/* 正文：与图片同列同宽；最多显示 5 行，与上面高度一致 */
+/* 文本：最多 5 行，高度与图片一致 */
 .quote-embed .q-text{
+  grid-column: 3;
   font-size: var(--q-fs);
   line-height: var(--q-lh);
   display: -webkit-box;
@@ -1135,8 +1112,5 @@ dialog {
   -webkit-line-clamp: 5;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-height: var(--q-5lines);   /* 与图片高度一致 */
+  max-height: var(--q-5lines);
 }
-
-/* 头部与内容列之间保持小间距 */
-.quote-embed .q-head{ margin: 0 0 8px !important; }
