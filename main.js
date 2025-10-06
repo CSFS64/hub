@@ -471,6 +471,7 @@ function initRepostDialogs(){
       $.quotePreview.onclick = ()=> goToPost(postId);
     }
   };
+}
 
 /* ====== Theme ====== */
 function applyTheme(){
