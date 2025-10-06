@@ -1070,3 +1070,24 @@ dialog {
 /* 防止末尾 <br> 另起一行把省略号挤下去 */
 .quote-embed .q-text br:last-child{ display:none; }
 
+/* === 引用卡最终覆盖：粘到文件最后即可 === */
+/* 1) 标题与下文的间距：保持小间距即可 */
+.quote-embed .q-head{
+  margin: 0 0 8px !important;
+}
+
+/* 2) 取消任何把缩略图往下推的间距 */
+.quote-embed .q-thumb{
+  margin-top: 0 !important;
+}
+
+/* 3) 行对齐：图片与正文同起点（顶部对齐），底部自然与第5行齐平 */
+.quote-embed .q-row{
+  display: flex !important;
+  align-items: flex-start !important;
+}
+
+/* 4) 轻微光学对齐（可要可不要）：让图片顶边和正文更“平” */
+.quote-embed .q-text{
+  padding-top: 1px !important; /* 不需要可改为 0 */
+}
