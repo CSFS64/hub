@@ -721,105 +721,76 @@ dialog {
   display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:5; overflow:hidden;
 }
 
-/* ===== 父帖正文与引用卡之间的距离（稍微更松） ===== */
-.card .text + .quote-embed{ margin-top: 16px; }
+/* 父帖正文与引用卡间距 */
+.card .text + .quote-embed{ margin-top:16px; }
 
-/* ===== 引用卡（使用 grid；正文与头像左对齐） ===== */
-:root { --outline-strong:#CFD9DE; }
+/* === 引用卡：两行布局（行1：头像+头；行2：缩略图+正文） === */
+:root { --outline-strong:#CFD9DE; --qthumb:72px; } /* 小图边长 */
+
+/* 容器：两行网格 */
 .quote-embed{
-  display: grid;
-  grid-template-columns: 28px 8px minmax(0,1fr); /* ← 关键：1fr -> minmax(0,1fr) */
+  display:grid;
+  grid-template-columns:28px 8px minmax(0,1fr);
   grid-template-areas:
-    "av  . head"
-    "av  . text"
-    "av  . more";
-  align-items: start;
-  width: 100%;                                     /* 保证占满父级 */
-  padding: 12px;
-  border-radius: 12px;
-  background: var(--card);
-  transition: background-color .22s ease, box-shadow .22s ease;
-  margin-top: 12px;
-  box-shadow: 0 0 0 0.5px var(--outline-strong); /* 与图片外框一致 */
-  border: none;
+    "av . head"   /* 第1行：头像 + 头部 */
+    "av . row";   /* 第2行：头像 + 缩略图+正文 行 */
+  align-items:start;
+  width:100%;
+  padding:12px;
+  border-radius:12px;
+  background:var(--card);
+  margin-top:12px;
+  box-shadow:0 0 0 0.5px var(--outline-strong);
+  border:none;
 }
 .quote-embed > img.avatar{
-  grid-area: av;
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  object-fit: cover;
+  grid-area:av;
+  width:28px; height:28px; border-radius:50%; object-fit:cover;
 }
-/* 防止 grid 子项按 min-content 折成“一字一行” */
-.quote-embed .q-head,
-.quote-embed .q-text,
-.quote-embed .show-more{ min-width: 0; }
-
 .quote-embed .q-head{
-  grid-area: head;
-  font-weight: 600; font-size: 14px;
-  margin: 0 0 12px;
+  grid-area:head;
+  font-weight:600; font-size:14px; margin:0 0 10px;
 }
-.quote-embed .q-head .meta{
-  margin-left: 6px; color: var(--muted); font-weight: 400;
+.quote-embed .q-head .meta{ margin-left:6px; color:var(--muted); font-weight:400; }
+
+/* 第2行：缩略图 + 正文（无图时自动单列） */
+.quote-embed .q-row{
+  grid-area:row;
+  display:grid;
+  grid-template-columns:var(--qthumb) 12px minmax(0,1fr); /* 图 | 间距 | 文 */
+  align-items:start;
 }
+.quote-embed:not(.has-thumb) .q-row{ grid-template-columns:minmax(0,1fr); }
+.quote-embed:not(.has-thumb) .q-text{ grid-column:1; }
 
-.quote-embed .q-text{
-  grid-area: text;
-  line-height: var(--post-lh);
-  white-space: normal;                 /* 不要 pre-wrap，\n 已被 <br> 处理 */
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  margin: 0;
-}
-.quote-embed .q-text.clamped{
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 5;
-  overflow: hidden;
-}
-.quote-embed .q-text br{ line-height: inherit; }
-
-.quote-embed .show-more{
-  grid-area: more;
-  display: none;
-  color: var(--primary);
-  font-weight: 600;
-  cursor: pointer;
-  margin-top: 6px;
-}
-.quote-embed .q-text.clamped + .show-more{ display: inline; }
-
-/* 引用卡：带左侧方形缩略图时的布局 */
-:root { --qthumb: 72px; }          /* 缩略图边长，可按需调成 64/80 */
-
-.quote-embed.has-thumb{
-  grid-template-columns: var(--qthumb) 12px minmax(0,1fr);
-  grid-template-areas:
-    "thumb . head"
-    "thumb . text";
-}
-
-/* 有缩略图时，头像就不再显示（推特的做法） */
-.quote-embed.has-thumb > img.avatar{ display:none; }
-
-/* 方形缩略图本体 */
+/* 缩略图 */
 .quote-embed .q-thumb{
-  grid-area: thumb;
-  width: var(--qthumb);
-  aspect-ratio: 1/1;
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--card);
-  box-shadow: 0 0 0 0.5px var(--outline-strong);  /* 与图片/引用卡外框一致 */
+  grid-column:1;
+  width:var(--qthumb); aspect-ratio:1/1;
+  border-radius:8px; overflow:hidden;
+  box-shadow:0 0 0 0.5px var(--outline-strong);
 }
-.quote-embed .q-thumb img{
-  display:block; width:100%; height:100%; object-fit:cover;
+.quote-embed .q-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+/* 正文：固定 5 行，省略号在第 5 行末尾 */
+.quote-embed .q-text{
+  grid-column:3;
+  font-size:15px; line-height:1.6; margin:0;
+  overflow:hidden;
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:5;
+  text-overflow:ellipsis;
+  white-space:normal;
+  word-break:break-word;
+  overflow-wrap:anywhere;
 }
 
-/* 小屏略微减小缩略图 */
-@media (max-width:680px){
-  :root { --qthumb: 64px; }
-}
+/* 引用卡不需要 Show more */
+.quote-embed .show-more{ display:none !important; }
+
+/* 小屏缩略图稍小 */
+@media (max-width:680px){ :root{ --qthumb:64px; } }
 
 /* ===== 悬停层级（父卡浅灰；引用卡在其上轻微更深） ===== */
 .card.clickable{ transition: background-color .22s ease; }
