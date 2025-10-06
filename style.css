@@ -746,20 +746,11 @@ dialog {
 }
 .quote-embed .q-head{
   grid-area:head;
-  font-weight:600; font-size:14px; margin:0 0 10px;
+  font-weight:600; font-size:14px; margin:0 0 8px;
 }
 .quote-embed .q-head .meta{ margin-left:6px; color:var(--muted); font-weight:400; }
 
 .quote-embed .q-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
-
-/* 正文：固定 5 行，省略号在第 5 行末尾 */
-.quote-embed .q-text{
-  grid-column:3;
-  font-size:15px; line-height:1.6; margin:0;
-  white-space:normal; word-break:break-word; overflow-wrap:anywhere;
-  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:5;
-  overflow:hidden; text-overflow:ellipsis;
-}
 
 /* 不需要 show-more */
 .quote-embed .show-more{ display:none !important; }
@@ -772,14 +763,6 @@ dialog {
   --q-fs: 15px;          /* 引文字号 */
   --q-lh: 1.6;           /* 引文行高倍数 */
   --qthumb: calc(5 * var(--q-fs) * var(--q-lh)); /* 5 行总高度 = 缩略图边长 */
-}
-
-/* 第二行容器改用 flex，并整体左移头像列(28) + 列间距(8) = 36px */
-.quote-embed .q-row{
-  grid-area: row;
-  display: flex;
-  align-items: flex-start;
-  margin-left: -36px;
 }
 
 /* 无图时不左移 */
@@ -1026,12 +1009,13 @@ dialog {
   --qthumb: calc(5 * var(--q-lhpx));               /* 5 行像素高 = 缩略图边长 */
 }
 
-/* 第二行：整体左移 28+8=36px，使缩略图左边与头像左边对齐 */
 .quote-embed .q-row{
+  grid-area: row;
   display: flex;
   align-items: flex-start;
   margin-left: -36px;
 }
+
 /* 无图时不要左移 */
 .quote-embed:not(.has-thumb) .q-row{ margin-left: 0; }
 
