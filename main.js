@@ -472,6 +472,7 @@ function initRepostDialogs(){
       $.quotePreview.innerHTML = html;
       $.quotePreview.onclick = ()=> goToPost(postId);
     }
+  }
 }
 
 /* ====== Theme ====== */
