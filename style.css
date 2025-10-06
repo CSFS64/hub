@@ -750,13 +750,6 @@ dialog {
 }
 .quote-embed .q-head .meta{ margin-left:6px; color:var(--muted); font-weight:400; }
 
-/* 缩略图 */
-.quote-embed .q-thumb{
-  grid-column:1;
-  width:var(--qthumb); aspect-ratio:1/1;
-  border-radius:8px; overflow:hidden;
-  box-shadow:0 0 0 0.5px var(--outline-strong);
-}
 .quote-embed .q-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
 
 /* 正文：固定 5 行，省略号在第 5 行末尾 */
@@ -783,9 +776,10 @@ dialog {
 
 /* 第二行容器改用 flex，并整体左移头像列(28) + 列间距(8) = 36px */
 .quote-embed .q-row{
+  grid-area: row;
   display: flex;
   align-items: flex-start;
-  margin-left: -36px;       /* 关键：让缩略图与头像左侧对齐 */
+  margin-left: -36px;
 }
 
 /* 无图时不左移 */
