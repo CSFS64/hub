@@ -1038,3 +1038,52 @@ dialog {
 
 /* 彻底移除引用卡的 Show more（不再展示 & 不再占位） */
 .quote-embed .show-more{ display:none !important; }
+
+/* —— 固定一份“像素行高”，避免小数取整误差 —— */
+:root{
+  --q-fs: 15px;         /* 引文字号（与你当前保持一致） */
+  --q-lh: 1.6;          /* 引文行高倍数 */
+  --q-lhpx: calc(var(--q-fs) * var(--q-lh));       /* 单行像素高 */
+  --qthumb: calc(5 * var(--q-lhpx));               /* 5 行像素高 = 缩略图边长 */
+}
+
+/* 第二行：整体左移 28+8=36px，使缩略图左边与头像左边对齐 */
+.quote-embed .q-row{
+  display: flex;
+  align-items: flex-start;
+  margin-left: -36px;
+}
+/* 无图时不要左移 */
+.quote-embed:not(.has-thumb) .q-row{ margin-left: 0; }
+
+/* 缩略图：严格等于 5 行的像素高度（正方形） */
+.quote-embed .q-thumb{
+  flex: 0 0 var(--qthumb);
+  width: var(--qthumb);
+  height: var(--qthumb);
+  margin-right: 12px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 0 0 0.5px var(--outline-strong);
+}
+.quote-embed .q-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+/* 文本：行高与字号一致，并把盒子最高度钉死为 5 行 */
+.quote-embed .q-text{
+  font-size: var(--q-fs);
+  line-height: var(--q-lh);
+  min-width: 0;
+
+  /* 多行截断（5 行） */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  /* 关键：文本盒子的最高度也设成 5 行，保证与缩略图等高 */
+  max-height: var(--qthumb);
+}
+/* 防止末尾 <br> 另起一行把省略号挤下去 */
+.quote-embed .q-text br:last-child{ display:none; }
+
