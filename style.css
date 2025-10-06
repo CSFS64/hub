@@ -721,8 +721,6 @@ dialog {
   display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:5; overflow:hidden;
 }
 
-:root { --outline-strong:#CFD9DE; --qthumb:72px; } /* 小图边长 */
-
 /* 父帖正文与引用卡间距 */
 .card .text + .quote-embed{ margin-top:16px; }
 
@@ -752,16 +750,6 @@ dialog {
 }
 .quote-embed .q-head .meta{ margin-left:6px; color:var(--muted); font-weight:400; }
 
-/* 第2行：缩略图 + 正文（无图时自动单列） */
-.quote-embed .q-row{
-  grid-area:row;
-  display:grid;
-  grid-template-columns:var(--qthumb) 12px minmax(0,1fr); /* 图 | 间距 | 文 */
-  align-items:start;
-}
-.quote-embed:not(.has-thumb) .q-row{ grid-template-columns:minmax(0,1fr); }
-.quote-embed:not(.has-thumb) .q-text{ grid-column:1; }
-
 /* 缩略图 */
 .quote-embed .q-thumb{
   grid-column:1;
@@ -785,9 +773,6 @@ dialog {
 
 /* 防止最后一个 <br> 把省略号挤到新行 */
 .quote-embed .q-text br:last-child{ display:none; }
-
-/* 小屏缩略图稍小 */
-@media (max-width:680px){ :root{ --qthumb:64px; } }
 
 /* === 引用卡：行高参数，缩略图边长 = 5 行文本高度 === */
 :root{
