@@ -721,13 +721,12 @@ dialog {
   display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:5; overflow:hidden;
 }
 
+:root { --outline-strong:#CFD9DE; --qthumb:72px; } /* 小图边长 */
+
 /* 父帖正文与引用卡间距 */
 .card .text + .quote-embed{ margin-top:16px; }
 
 /* === 引用卡：两行布局（行1：头像+头；行2：缩略图+正文） === */
-:root { --outline-strong:#CFD9DE; --qthumb:72px; } /* 小图边长 */
-
-/* 容器：两行网格 */
 .quote-embed{
   display:grid;
   grid-template-columns:28px 8px minmax(0,1fr);
@@ -776,18 +775,16 @@ dialog {
 .quote-embed .q-text{
   grid-column:3;
   font-size:15px; line-height:1.6; margin:0;
-  overflow:hidden;
-  display:-webkit-box;
-  -webkit-box-orient:vertical;
-  -webkit-line-clamp:5;
-  text-overflow:ellipsis;
-  white-space:normal;
-  word-break:break-word;
-  overflow-wrap:anywhere;
+  white-space:normal; word-break:break-word; overflow-wrap:anywhere;
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:5;
+  overflow:hidden; text-overflow:ellipsis;
 }
 
-/* 引用卡不需要 Show more */
+/* 不需要 show-more */
 .quote-embed .show-more{ display:none !important; }
+
+/* 防止最后一个 <br> 把省略号挤到新行 */
+.quote-embed .q-text br:last-child{ display:none; }
 
 /* 小屏缩略图稍小 */
 @media (max-width:680px){ :root{ --qthumb:64px; } }
