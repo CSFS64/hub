@@ -789,6 +789,51 @@ dialog {
 /* 小屏缩略图稍小 */
 @media (max-width:680px){ :root{ --qthumb:64px; } }
 
+/* === 引用卡：行高参数，缩略图边长 = 5 行文本高度 === */
+:root{
+  --q-fs: 15px;          /* 引文字号 */
+  --q-lh: 1.6;           /* 引文行高倍数 */
+  --qthumb: calc(5 * var(--q-fs) * var(--q-lh)); /* 5 行总高度 = 缩略图边长 */
+}
+
+/* 第二行容器改用 flex，并整体左移头像列(28) + 列间距(8) = 36px */
+.quote-embed .q-row{
+  display: flex;
+  align-items: flex-start;
+  margin-left: -36px;       /* 关键：让缩略图与头像左侧对齐 */
+}
+
+/* 无图时不左移 */
+.quote-embed:not(.has-thumb) .q-row{ margin-left: 0; }
+
+/* 缩略图：正方形，边长等于 5 行文本高度；右侧留 12px 间距 */
+.quote-embed .q-thumb{
+  flex: 0 0 var(--qthumb);
+  width: var(--qthumb);
+  height: var(--qthumb);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 0 0 0.5px var(--outline-strong);
+  margin-right: 12px;
+}
+.quote-embed .q-thumb img{
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+
+/* 文本：保持 5 行 clamp 与省略号 */
+.quote-embed .q-text{
+  font-size: var(--q-fs);
+  line-height: var(--q-lh);
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 防止末尾 <br> 把省略号挤到新行 */
+.quote-embed .q-text br:last-child{ display:none; }
+
 /* ===== 悬停层级（父卡浅灰；引用卡在其上轻微更深） ===== */
 .card.clickable{ transition: background-color .22s ease; }
 .card.clickable:hover{ background: var(--hover); }
