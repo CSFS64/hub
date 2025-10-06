@@ -453,15 +453,17 @@ function initRepostDialogs(){
   // 引用预览
   $.buildQuotePreview = async function(postId){
     const p = await api(`/posts/${postId}`, { method:"GET", auth: !!session.get() });
+    const hasThumb = !!(p?.images && p.images.length > 0);
+    const thumbURL = hasThumb ? esc(resolveMediaURL(p.images[0])) : "";
+  
     const html = `
-      <div class="quote-embed">
+      <div class="quote-embed ${hasThumb ? 'has-thumb' : ''}">
         <img class="avatar" src="${esc(p.author?.avatar || 'data:,')}" alt="">
+        ${hasThumb ? `<div class="q-thumb"><img src="${thumbURL}" alt=""></div>` : ``}
         <div class="q-content">
           <div class="q-head">${esc(p.author?.nickname||p.author?.username||"用户")}
             <span class="meta">· ${timeAgo(p.created_at)}</span></div>
-          <div class="q-text clamped">${nl2brSafe((p.text||"").replace(/\n+$/,""))}</div>
-          <div class="show-more"
-               onclick="this.previousElementSibling.classList.remove('clamped'); this.remove()">Show more</div>
+          <div class="q-text">${nl2brSafe((p.text||"").replace(/\n+$/,""))}</div>
         </div>
       </div>`;
     if ($.quotePreview){
@@ -469,7 +471,6 @@ function initRepostDialogs(){
       $.quotePreview.onclick = ()=> goToPost(postId);
     }
   };
-}
 
 /* ====== Theme ====== */
 function applyTheme(){
@@ -670,24 +671,21 @@ function renderCard(p){
     const me = session.get()?.user;
     const deletable = me && me.id===p.author.id;
     const quote = p.quote_of; // 对象
-
-    // —— 图片渲染：使用 tw-grid —— //
-    const renderPics = (imgs = []) => buildPics(imgs);
-  
+    const hasThumb = !!(quote?.images && quote.images.length > 0);
+    const thumbURL = hasThumb ? esc(resolveMediaURL(quote.images[0])) : "";
+    
     const quoteHtml = quote ? `
-      <div class="quote-embed" role="button"
+      <div class="quote-embed ${hasThumb ? 'has-thumb' : ''}" role="button"
            onclick="event.stopPropagation(); goToPost('${esc(quote.id)}')">
         <img class="avatar" src="${esc(quote.author?.avatar || 'data:,')}" alt="">
+        ${hasThumb ? `<div class="q-thumb"><img src="${thumbURL}" alt=""></div>` : ``}
         <div class="q-content">
           <div class="q-head">
             <span class="name">${esc(quote.author?.nickname || quote.author?.username || "用户")}</span>
             <span class="meta">· ${timeAgo(quote.created_at)}</span>
           </div>
-          <div class="q-text clamped">${nl2brSafe((quote.text||"").replace(/\n+$/,""))}</div>
-          <div class="show-more"
-               onclick="event.stopPropagation();
-                        this.previousElementSibling.classList.remove('clamped');
-                        this.remove()">Show more</div>
+          <!-- 去掉末尾换行，避免省略号落到新一行 -->
+          <div class="q-text">${nl2brSafe((quote.text || "").replace(/\n+$/,""))}</div>
         </div>
       </div>
     ` : "";
