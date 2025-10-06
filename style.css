@@ -1091,3 +1091,52 @@ dialog {
 .quote-embed .q-text{
   padding-top: 1px !important; /* 不需要可改为 0 */
 }
+
+/* === 引用卡：图片与正文同列、同宽、与头像间距一致 === */
+:root{
+  --q-fs: 15px;
+  --q-lh: 1.6;
+  --q-5lines: calc(5 * var(--q-fs) * var(--q-lh)); /* 5 行高度 */
+}
+
+/* 行1：头像 + 头部；行2：头像 + 内容列 */
+.quote-embed{
+  grid-template-columns: 28px 8px minmax(0,1fr) !important; /* 头像列 | 间距 | 内容列 */
+}
+
+/* 内容列内改为“上下叠放”：先图后文；不再左移 */
+.quote-embed .q-row{
+  grid-area: row;
+  display: grid !important;
+  grid-template-columns: minmax(0,1fr) !important; /* 单列 = 与正文同宽 */
+  grid-auto-rows: auto;
+  row-gap: 10px;                 /* 图文竖向间距 */
+  margin-left: 0 !important;     /* 取消之前的 -36px 左移 */
+}
+
+/* 图片：占满内容列宽度，高度=5行（你要的“与5行文本齐高”可保留/可调） */
+.quote-embed .q-thumb{
+  width: 100% !important;
+  height: var(--q-5lines) !important;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 0 0 0.5px var(--outline-strong);
+}
+.quote-embed .q-thumb img{
+  width:100%; height:100%; object-fit:cover; display:block;
+}
+
+/* 正文：与图片同列同宽；最多显示 5 行，与上面高度一致 */
+.quote-embed .q-text{
+  font-size: var(--q-fs);
+  line-height: var(--q-lh);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: var(--q-5lines);   /* 与图片高度一致 */
+}
+
+/* 头部与内容列之间保持小间距 */
+.quote-embed .q-head{ margin: 0 0 8px !important; }
