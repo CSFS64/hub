@@ -650,8 +650,9 @@ function renderCard(p){
     const canDeleteRepost = me && me.id === (p.author?.id); // 你自己发的这条“转发”
   
     const badge = `
-      <div class="repost-badge">
-        <span class="icon">🔁</span>${esc(reposter.nickname||reposter.username||"用户")} 转发了
+      <div class="repost-badge" style="display:flex;align-items:center;gap:6px;justify-content:space-between;">
+        <div><span class="icon">🔁</span>${esc(reposter.nickname||reposter.username||"用户")} 转发了</div>
+        ${canDeleteRepost ? `<div class="action del" title="删除">🗑️</div>` : ``}
       </div>
     `;
   
