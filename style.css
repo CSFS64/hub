@@ -721,80 +721,73 @@ dialog {
   display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:5; overflow:hidden;
 }
 
-/* 父帖正文与引用卡间距 */
-.card .text + .quote-embed{ margin-top:16px; }
+/* ===== 父帖正文与引用卡之间的距离（稍微更松） ===== */
+.card .text + .quote-embed{ margin-top: 16px; }
 
-/* === 引用卡：两行布局（行1：头像+头；行2：缩略图+正文） === */
+/* ===== 引用卡（使用 grid；正文与头像左对齐） ===== */
+:root { --outline-strong:#CFD9DE; }
 .quote-embed{
-  display:grid;
-  grid-template-columns:28px 8px minmax(0,1fr);
+  display: grid;
+  grid-template-columns: 28px 8px minmax(0,1fr); /* ← 关键：1fr -> minmax(0,1fr) */
   grid-template-areas:
-    "av . head"   /* 第1行：头像 + 头部 */
-    "av . row";   /* 第2行：头像 + 缩略图+正文 行 */
-  align-items:start;
-  width:100%;
-  padding:12px;
-  border-radius:12px;
-  background:var(--card);
-  margin-top:12px;
-  box-shadow:0 0 0 0.5px var(--outline-strong);
-  border:none;
+    "av  . head"
+    "av  . text"
+    "av  . more";
+  align-items: start;
+  width: 100%;                                     /* 保证占满父级 */
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--card);
+  transition: background-color .22s ease, box-shadow .22s ease;
+  margin-top: 12px;
+  box-shadow: 0 0 0 0.5px var(--outline-strong); /* 与图片外框一致 */
+  border: none;
 }
 .quote-embed > img.avatar{
-  grid-area:av;
-  width:28px; height:28px; border-radius:50%; object-fit:cover;
+  grid-area: av;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
 }
+/* 防止 grid 子项按 min-content 折成“一字一行” */
+.quote-embed .q-head,
+.quote-embed .q-text,
+.quote-embed .show-more{ min-width: 0; }
+
 .quote-embed .q-head{
-  grid-area:head;
-  font-weight:600; font-size:14px; margin:0 0 8px;
+  grid-area: head;
+  font-weight: 600; font-size: 14px;
+  margin: 0 0 12px;
 }
-.quote-embed .q-head .meta{ margin-left:6px; color:var(--muted); font-weight:400; }
-
-.quote-embed .q-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
-
-/* 不需要 show-more */
-.quote-embed .show-more{ display:none !important; }
-
-/* 防止最后一个 <br> 把省略号挤到新行 */
-.quote-embed .q-text br:last-child{ display:none; }
-
-/* === 引用卡：行高参数，缩略图边长 = 5 行文本高度 === */
-:root{
-  --q-fs: 15px;          /* 引文字号 */
-  --q-lh: 1.6;           /* 引文行高倍数 */
-  --qthumb: calc(5 * var(--q-fs) * var(--q-lh)); /* 5 行总高度 = 缩略图边长 */
+.quote-embed .q-head .meta{
+  margin-left: 6px; color: var(--muted); font-weight: 400;
 }
 
-/* 无图时不左移 */
-.quote-embed:not(.has-thumb) .q-row{ margin-left: 0; }
-
-/* 缩略图：正方形，边长等于 5 行文本高度；右侧留 12px 间距 */
-.quote-embed .q-thumb{
-  flex: 0 0 var(--qthumb);
-  width: var(--qthumb);
-  height: var(--qthumb);
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 0 0 0.5px var(--outline-strong);
-  margin-right: 12px;
-}
-.quote-embed .q-thumb img{
-  width: 100%; height: 100%; object-fit: cover; display: block;
-}
-
-/* 文本：保持 5 行 clamp 与省略号 */
 .quote-embed .q-text{
-  font-size: var(--q-fs);
-  line-height: var(--q-lh);
-  min-width: 0;
+  grid-area: text;
+  line-height: var(--post-lh);
+  white-space: normal;                 /* 不要 pre-wrap，\n 已被 <br> 处理 */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  margin: 0;
+}
+.quote-embed .q-text.clamped{
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 5;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
-/* 防止末尾 <br> 把省略号挤到新行 */
-.quote-embed .q-text br:last-child{ display:none; }
+.quote-embed .q-text br{ line-height: inherit; }
+
+.quote-embed .show-more{
+  grid-area: more;
+  display: none;
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 6px;
+}
+.quote-embed .q-text.clamped + .show-more{ display: inline; }
 
 /* ===== 悬停层级（父卡浅灰；引用卡在其上轻微更深） ===== */
 .card.clickable{ transition: background-color .22s ease; }
@@ -818,24 +811,62 @@ dialog {
   .card.clickable, .quote-embed{ transition: none !important; }
 }
 
-/* 标题的度量：显式定义，供缩略图对齐用 */
-:root{
-  --qhead-fs: 14px;           /* 标题字号 */
-  --qhead-lh: 1.4;            /* 标题行高倍数 */
-  --qhead-gap: 8px;           /* 标题与正文的间距（你也可以用 10px） */
-  --qhead-block: calc(var(--qhead-fs) * var(--qhead-lh) + var(--qhead-gap));
+/* 关键：第三列允许收缩到 0 */
+.quote-embed{
+  display: grid;
+  grid-template-columns: 28px 8px minmax(0,1fr); /* 1fr -> minmax(0,1fr) */
+  grid-template-areas:
+    "av  . head"
+    "av  . text"
+    "av  . more";
 }
 
-/* 标题用上面的度量，确保计算一致 */
-.quote-embed .q-head{
-  font-size: var(--qhead-fs);
-  line-height: var(--qhead-lh);
-  margin: 0 0 var(--qhead-gap);
+/* 让 q-content 不占一个格子，而是把子元素提升为 grid items */
+.quote-embed .q-content{
+  display: contents;
 }
 
-/* 让缩略图从“第一行正文”起步，而不是从 q-row 顶起步 */
-.quote-embed .q-thumb{
-  margin-top: var(--qhead-block);   /* 关键：与标题块等高 */
+/* 为稳妥，允许这些元素收缩 */
+.quote-embed .q-head,
+.quote-embed .q-text,
+.quote-embed .show-more{
+  min-width: 0;
+}
+
+/* ① 父帖正文 与 引用卡 的间距再拉开（避免合并边距只取较大值） */
+.card .text + .quote-embed{
+  margin-top: 16px;        /* 需要更大就改成 18px/20px */
+}
+
+/* ② 引用卡正文与头像左对齐（不再向右错开） */
+.quote-embed{
+  /* 第三列允许收缩，避免中文竖排 */
+  grid-template-columns: 28px 8px minmax(0,1fr);
+}
+
+/* 展平 q-content，让内部元素成为网格项 */
+.quote-embed .q-content{ display: contents; }
+
+/* 标题仍在头像右侧（第3列、第1行） */
+.quote-embed .q-head{ grid-column: 3; grid-row: 1; }
+
+/* 正文改为从第1列开始，横跨整行 —— 与头像左边缘对齐 */
+.quote-embed .q-text{
+  grid-column: 1 / -1;     /* 关键：从最左到最右 */
+  margin: 0;                /* 间距由 .q-head 的 margin-bottom 控制 */
+  min-width: 0;
+}
+
+/* “Show more” 也跟正文一起左对齐 */
+.quote-embed .show-more{
+  grid-column: 1 / -1;
+  margin-top: 6px;
+  min-width: 0;
+}
+
+/* 兼容：万一浏览器不支持 display: contents */
+@supports not (display: contents){
+  .quote-embed .q-content{ grid-column: 1 / -1; }
 }
 
 
@@ -1008,7 +1039,6 @@ dialog {
 .img-viewer .prev{ left:20px; } .img-viewer .next{ right:20px; }
 
 /* 引用卡正文：固定 5 行，多出内容在同一行末尾显示省略号 */
-.quote-embed .q-text br:last-child{ display:none; }
 .quote-embed .q-text{
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -1020,100 +1050,3 @@ dialog {
 
 /* 彻底移除引用卡的 Show more（不再展示 & 不再占位） */
 .quote-embed .show-more{ display:none !important; }
-
-/* —— 固定一份“像素行高”，避免小数取整误差 —— */
-:root{
-  --q-fs: 15px;         /* 引文字号（与你当前保持一致） */
-  --q-lh: 1.6;          /* 引文行高倍数 */
-  --q-lhpx: calc(var(--q-fs) * var(--q-lh));       /* 单行像素高 */
-  --qthumb: calc(5 * var(--q-lhpx));               /* 5 行像素高 = 缩略图边长 */
-}
-
-.quote-embed .q-row{
-  grid-area: row;
-  display: flex;
-  align-items: flex-start;
-  margin-left: -36px;
-}
-
-/* 无图时不要左移 */
-.quote-embed:not(.has-thumb) .q-row{ margin-left: 0; }
-
-/* 缩略图：严格等于 5 行的像素高度（正方形） */
-.quote-embed .q-thumb{
-  flex: 0 0 var(--qthumb);
-  width: var(--qthumb);
-  height: var(--qthumb);
-  margin-right: 12px;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 0 0 0.5px var(--outline-strong);
-}
-.quote-embed .q-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
-
-/* 文本：行高与字号一致，并把盒子最高度钉死为 5 行 */
-.quote-embed .q-text{
-  font-size: var(--q-fs);
-  line-height: var(--q-lh);
-  min-width: 0;
-
-  /* 多行截断（5 行） */
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 5;
-  overflow: hidden;
-  text-overflow: ellipsis;
-
-  /* 关键：文本盒子的最高度也设成 5 行，保证与缩略图等高 */
-  max-height: var(--qthumb);
-}
-/* 防止末尾 <br> 另起一行把省略号挤下去 */
-.quote-embed .q-text br:last-child{ display:none; }
-
-/* 与你现有变量保持一致 */
-:root{
-  --q-fs: 15px;        /* 引文字号 */
-  --q-lh: 1.6;         /* 引文行高倍数 */
-  --q-leading: calc((var(--q-lh) - 1) * var(--q-fs));      /* 1 行的“导空”像素 */
-  --q-5lines: calc(5 * var(--q-fs) * var(--q-lh));        /* 5 行总高（含上下各半行导空） */
-}
-
-/* 行容器：不左移，保持你“图片在左、正文在右”的 x 轴布局 */
-.quote-embed .q-row{
-  display: flex;
-  align-items: flex-start;
-  margin-left: 0;              /* 关键：x 轴不变 */
-}
-
-/* 让图片的顶/底分别与第 1/第 5 行对齐 */
-.quote-embed .q-thumb{
-  /* 图片本体高度 = 5 行总高 - 1 行导空（把上下两半行让给 margin） */
-  width: calc(var(--q-5lines));
-  height: calc(var(--q-5lines) - var(--q-leading));
-  flex: 0 0 auto;
-
-  /* 把上下各半行“让出来”，实现 y 轴对齐 */
-  margin-top: calc(var(--q-leading) / 2);
-  margin-bottom: calc(var(--q-leading) / 2);
-
-  margin-right: 12px;          /* 图片与正文内部间距，保持你之前的值 */
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 0 0 0.5px var(--outline-strong);
-}
-.quote-embed .q-thumb img{
-  width: 100%; height: 100%; object-fit: cover; display: block;
-}
-
-/* 正文依旧是 5 行 clamp，高度=5 行总高 */
-.quote-embed .q-text{
-  font-size: var(--q-fs);
-  line-height: var(--q-lh);
-  min-width: 0;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 5;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-height: var(--q-5lines);
-}
