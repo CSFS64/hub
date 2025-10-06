@@ -818,6 +818,26 @@ dialog {
   .card.clickable, .quote-embed{ transition: none !important; }
 }
 
+/* 标题的度量：显式定义，供缩略图对齐用 */
+:root{
+  --qhead-fs: 14px;           /* 标题字号 */
+  --qhead-lh: 1.4;            /* 标题行高倍数 */
+  --qhead-gap: 8px;           /* 标题与正文的间距（你也可以用 10px） */
+  --qhead-block: calc(var(--qhead-fs) * var(--qhead-lh) + var(--qhead-gap));
+}
+
+/* 标题用上面的度量，确保计算一致 */
+.quote-embed .q-head{
+  font-size: var(--qhead-fs);
+  line-height: var(--qhead-lh);
+  margin: 0 0 var(--qhead-gap);
+}
+
+/* 让缩略图从“第一行正文”起步，而不是从 q-row 顶起步 */
+.quote-embed .q-thumb{
+  margin-top: var(--qhead-block);   /* 关键：与标题块等高 */
+}
+
 
 
 
