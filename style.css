@@ -1039,6 +1039,7 @@ dialog {
 .img-viewer .prev{ left:20px; } .img-viewer .next{ right:20px; }
 
 /* 引用卡正文：固定 5 行，多出内容在同一行末尾显示省略号 */
+.quote-embed .q-text br:last-child{ display:none; }
 .quote-embed .q-text{
   display: -webkit-box;
   -webkit-box-orient: vertical;
