@@ -1070,43 +1070,46 @@ dialog {
 /* 防止末尾 <br> 另起一行把省略号挤下去 */
 .quote-embed .q-text br:last-child{ display:none; }
 
-/* === 引用卡：左侧方图 = 文本 5 行高，且与头像等距 === */
+/* 与你现有变量保持一致 */
 :root{
-  --q-fs: 15px;               /* 引文字号 */
-  --q-lh: 1.6;                /* 行高倍数 */
-  --q-5lines: calc(5 * var(--q-fs) * var(--q-lh)); /* 5 行总高 */
+  --q-fs: 15px;        /* 引文字号 */
+  --q-lh: 1.6;         /* 引文行高倍数 */
+  --q-leading: calc((var(--q-lh) - 1) * var(--q-fs));      /* 1 行的“导空”像素 */
+  --q-5lines: calc(5 * var(--q-fs) * var(--q-lh));        /* 5 行总高（含上下各半行导空） */
 }
 
-/* 第2行容器：内容列内做两列布局（方图 | 文本） */
+/* 行容器：不左移，保持你“图片在左、正文在右”的 x 轴布局 */
 .quote-embed .q-row{
-  grid-area: row;
-  display: grid !important;
-  grid-template-columns: var(--q-5lines) 12px minmax(0,1fr) !important; /* 图 | 间距 | 文 */
-  align-items: start;
-  margin-left: 0 !important;     /* 取消之前的 -36px 左移 */
+  display: flex;
+  align-items: flex-start;
+  margin-left: 0;              /* 关键：x 轴不变 */
 }
 
-/* 无图时退回单列 */
-.quote-embed:not(.has-thumb) .q-row{ display:block !important; }
-
-/* 图片：正方形，边长=5行高度；与文本同处“内容列”，所以与头像等距 */
+/* 让图片的顶/底分别与第 1/第 5 行对齐 */
 .quote-embed .q-thumb{
-  grid-column: 1;
-  width: var(--q-5lines) !important;
-  height: var(--q-5lines) !important;
+  /* 图片本体高度 = 5 行总高 - 1 行导空（把上下两半行让给 margin） */
+  width: calc(var(--q-5lines));
+  height: calc(var(--q-5lines) - var(--q-leading));
+  flex: 0 0 auto;
+
+  /* 把上下各半行“让出来”，实现 y 轴对齐 */
+  margin-top: calc(var(--q-leading) / 2);
+  margin-bottom: calc(var(--q-leading) / 2);
+
+  margin-right: 12px;          /* 图片与正文内部间距，保持你之前的值 */
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 0 0 0.5px var(--outline-strong);
 }
 .quote-embed .q-thumb img{
-  width:100%; height:100%; object-fit:cover; display:block;
+  width: 100%; height: 100%; object-fit: cover; display: block;
 }
 
-/* 文本：最多 5 行，高度与图片一致 */
+/* 正文依旧是 5 行 clamp，高度=5 行总高 */
 .quote-embed .q-text{
-  grid-column: 3;
   font-size: var(--q-fs);
   line-height: var(--q-lh);
+  min-width: 0;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 5;
