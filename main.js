@@ -72,6 +72,7 @@ async function toggleLike(postId, btnEl){
 
     // 一处更新，处处同步（列表多处副本 + 详情）
     updateLikeEverywhere(postId, nextLiked, nextLikes);
+    patchFeedCacheLike(postId, nextLiked, nextLikes);
 
   }catch(e){
     toast(e.message || "失败");
@@ -181,6 +182,42 @@ function updateRepostEverywhere(postId, reposted, shareCount, myRepostId){
     const s = detailBtn.querySelector('span');
     if (s && typeof shareCount === 'number') s.textContent = String(Math.max(0, shareCount|0));
   }
+}
+
+// 修补首页缓存里的点赞状态与数量
+function patchFeedCacheLike(postId, liked, likes){
+  if (!$.feedCache?.html) return;
+  const tmp = document.createElement('div');
+  tmp.innerHTML = $.feedCache.html;
+
+  tmp.querySelectorAll(`.card[data-id="${postId}"] .action.like`).forEach(btn=>{
+    btn.classList.toggle('liked', !!liked);
+    const s = btn.querySelector('span');
+    if (s && typeof likes === 'number') {
+      s.textContent = String(Math.max(0, likes|0));
+    }
+  });
+
+  $.feedCache.html = tmp.innerHTML;
+}
+
+//（可选）修补首页缓存里的转发状态与数量
+function patchFeedCacheRepost(postId, reposted, shareCount, myRepostId){
+  if (!$.feedCache?.html) return;
+  const tmp = document.createElement('div');
+  tmp.innerHTML = $.feedCache.html;
+
+  tmp.querySelectorAll(`.card[data-id="${postId}"] .action.repost`).forEach(btn=>{
+    btn.classList.toggle('reposted', !!reposted);
+    btn.dataset.reposted = reposted ? '1' : '0';
+    btn.dataset.repostId = reposted ? (myRepostId || '') : '';
+    const s = btn.querySelector('span');
+    if (s && typeof shareCount === 'number') {
+      s.textContent = String(Math.max(0, shareCount|0));
+    }
+  });
+
+  $.feedCache.html = tmp.innerHTML;
 }
 
 // 同步整站内所有该 postId 的点赞显示（列表卡片 + 详情页）
@@ -501,6 +538,7 @@ function initRepostDialogs(){
                          document.querySelector(`.post-thread .action.repost[data-id="${baseId}"]`);
           const cur = +(anyBtn?.querySelector('span')?.textContent || 0);
           updateRepostEverywhere(baseId, true, cur + 1, obj?.id || '');
+          patchFeedCacheRepost(baseId, true, cur + 1, obj?.id || '');
           snapshotFeed(); // 刷新缓存（见第Ⅱ部分）
         }catch(_){}
       }catch(e){ toast(e.message||"转发失败"); }
