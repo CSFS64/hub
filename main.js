@@ -8,10 +8,12 @@ const $ = {};
 
 $.feedCache = { tab: null, html: '', scroll: 0 };
 function snapshotFeed(){
-  // 保存当前 tab、列表 HTML、滚动位置
+  // 只在首页（hash === ""）时保存快照，避免把“帖子详情页”误存为首页
+  if (location.hash !== "") return;
   const tab = getCurrentTab();
   $.feedCache = { tab, html: $.feed?.innerHTML || '', scroll: window.scrollY || 0 };
 }
+
 function restoreFeedIfCached(){
   const tab = getCurrentTab();
   if ($.feedCache?.html && $.feedCache.tab === tab){
@@ -1016,9 +1018,11 @@ function handleRoute(){
 
   const m = location.hash.match(/^#\/post\/([A-Za-z0-9_-]{8,64})$/);
   if (m) {
+    // 进入详情页时，清空首页快照，避免后续“返回首页”被还原成某个详情的 HTML
+    $.feedCache = { tab: null, html: '', scroll: 0 };
     showPostPage(m[1]);
   } else {
-    // 默认首页（恢复 UI）
+    // 回到首页（恢复 UI）
     document.getElementById("composeInline").style.display = "";
     document.querySelector(".topbar .tabs").style.display = "";
     // 有缓存就直接还原；否则才发请求
@@ -1029,7 +1033,8 @@ function handleRoute(){
 }
 
 function goToPost(id){
-  snapshotFeed();  
+  // 只有从首页跳转到详情时才快照
+  if (location.hash === "") snapshotFeed();
   location.hash = `#/post/${id}`;
 }
 
