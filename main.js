@@ -1046,49 +1046,51 @@ function bindCardEvents(){
   });
 
   // 原有动作绑定，同时阻止冒泡
-  document.querySelectorAll(".card .open").forEach(b=>{
-    b.onclick = (e)=>{
-      e.stopPropagation();
-      const id = e.target.closest(".card").dataset.id;
-      $.openReply(id);   // ← 原来是 goToPost(id)
-    };
-  });
-
-  document.querySelectorAll(".card .like").forEach(b=>{
-    b.onclick = async (e)=>{
-      e.stopPropagation();
-      const me = await ensureLogin(); if(!me) return;
-      const card = e.currentTarget.closest(".card");   // 用 currentTarget 更稳
-      const id   = card?.dataset.id;
-      if (!id) return;
-      toggleLike(id, b);
-    };
-  });
-  
   document.querySelectorAll(".card .del, .repost-wrap .del").forEach(b => {
     b.onclick = async (e) => {
       e.stopPropagation();
   
-      // 先看是否在转发包裹里，如果是，就删这条“转发”的 id
       const wrap = e.target.closest('.repost-wrap');
       let id = wrap?.dataset.repostId;
-  
-      // 否则按原逻辑：删这张卡自身的 id（普通帖 / 引用帖）
       if (!id) {
         const card = e.target.closest(".card");
         id = card?.dataset.id;
       }
-  
       if (!id || id==='null' || id==='undefined' || id.length !== 24) {
         toast("这条帖子数据异常，已过滤"); 
         return;
       }
-  
       if (!confirm("确定删除这条帖子吗？")) return;
   
       try {
         await api(`/posts/${id}`, { method: "DELETE" });
         toast("已删除");
+  
+        // —— 如果在详情页 —— //
+        const m = location.hash.match(/^#\/post\/([A-Za-z0-9_-]{8,64})$/);
+        const currentPostId = m && m[1];
+  
+        if (currentPostId) {
+          // A) 删的是“当前详情的主贴”
+          if (id === currentPostId) {
+            location.hash = ""; // 回首页
+            return;
+          }
+          // B) 删的是“评论”：就地移除卡片，并给主贴评论数 -1
+          const commentCard = e.target.closest('.card');
+          if (commentCard) commentCard.remove();
+  
+          const anyBtn = document.querySelector(`.card[data-id="${currentPostId}"] .action.open span`) ||
+                         document.querySelector(`.post-thread .action.open[data-id="${currentPostId}"] span`);
+          const cur = +(anyBtn?.textContent || 0);
+          updateCommentCountEverywhere(currentPostId, Math.max(0, cur - 1));
+          patchFeedCacheComments(currentPostId, Math.max(0, cur - 1));
+  
+          // 不跳首页，不整体刷新；若想更新“空态”，可判断评论区是否为空再插入空态 DOM
+          return;
+        }
+  
+        // —— 不在详情页（首页/个人页）：按老逻辑刷新列表 —— //
         loadFeed(getCurrentTab());
       } catch (err) {
         toast(err.message || "删除失败");
@@ -1109,6 +1111,8 @@ function renderQuoted(p){
 }
 
 // 通用：打开编辑弹窗（reply/quote 共用 UI）
+$.replySending = false;
+
 $.openComposer = async (postId, mode = "reply") => {
   const me = await ensureLogin(); if (!me) return;
   try {
@@ -1234,10 +1238,15 @@ $.openComposer = async (postId, mode = "reply") => {
     btnEl.onclick = async () => {
       const text = (ta?.value || "").trim();
       if (mode === "reply") {
-        if (!text) return toast("回复不能为空");
-        if (text.length > LIMIT) { upsell?.classList.add("show"); return toast("超出 280 字，精简后再发"); }
+        if ($.replySending) return;
+        $.replySending = true;
+        btnEl.disabled = true;
+      
+        if (!text) { toast("回复不能为空"); $.replySending=false; btnEl.disabled=false; return; }
+        if (text.length > LIMIT) { upsell?.classList.add("show"); toast("超出 280 字，精简后再发"); $.replySending=false; btnEl.disabled=false; return; }
+      
         try {
-          // 有图就用 FormData，没有图保持 JSON
+          // 发送
           if ($.replyImages.length === 0) {
             await api(`/posts/${postId}/comments`, { method: "POST", body: { text } });
           } else {
@@ -1246,25 +1255,29 @@ $.openComposer = async (postId, mode = "reply") => {
             for (const it of $.replyImages) fd.append("images", it.file);
             await api(`/posts/${postId}/comments`, { method: "POST", body: fd });
           }
+      
+          // 本地 +1（只加一次），并修补缓存
+          const anyBtn = document.querySelector(`.card[data-id="${postId}"] .action.open span`) ||
+                         document.querySelector(`.post-thread .action.open[data-id="${postId}"] span`);
+          const cur = +(anyBtn?.textContent || 0);
+          updateCommentCountEverywhere(postId, cur + 1);
+          patchFeedCacheComments(postId, cur + 1);
+      
           $.replyImages = [];
-          if (previewEl) previewEl.innerHTML = "";
+          previewEl && (previewEl.innerHTML = "");
           $.closeReply();
+      
+          // 跳到详情（或刷新当前详情）
           if (location.hash === `#/post/${postId}`) { showPostPage(postId); }
           else { goToPost(postId); }
+      
           toast("已回复");
-        } catch (e) { toast(e.message || "发送失败"); }
-      } else {
-        // quote 模式：text 可空；提交 quote_of
-        if (text.length > LIMIT) { upsell?.classList.add("show"); return toast("超出 280 字，精简后再发"); }
-        try {
-          const fd = new FormData();
-          if (text) fd.append('text', text);
-          fd.append('quote_of', postId);
-          await api('/posts', { method:'POST', body: fd });
-          $.closeReply();
-          toast("已发布引用");
-          loadFeed(getCurrentTab());
-        } catch (e) { toast(e.message || "发布失败"); }
+        } catch (e) {
+          toast(e.message || "发送失败");
+        } finally {
+          $.replySending = false;
+          btnEl.disabled = false;
+        }
       }
     };
 
@@ -1649,6 +1662,8 @@ function renderPostPage(p){
 }
 
 function bindPostPageEvents(p){
+  $.pageReplySending = false;
+
   // 顶部栏：返回 & 右侧“回复”按钮
   const backTop = document.getElementById("btnBackTop");
   if (backTop) backTop.onclick = () => history.back();
@@ -1685,7 +1700,6 @@ function bindPostPageEvents(p){
           removeMyRepostEverywhere(p.id, myRepostId);
           patchFeedCacheRemove(myRepostId);
           snapshotFeed();
-          removeMyRepostCard(myRepostId);
           toast('已撤销转发');
         }catch(err){ toast(err.message || '撤销失败'); }
       }else{
@@ -1756,9 +1770,11 @@ function bindPostPageEvents(p){
       // 当前帖子 id 从路由取，最稳
       const match = location.hash.match(/^#\/post\/([0-9a-f]{24})$/i);
       const postId = match ? match[1] : p?.id;
-      if (!postId) { toast('未找到帖子 ID'); return; }
-
-      try{
+      if ($.pageReplySending) return;
+      $.pageReplySending = true;
+      replyBtn.disabled = true;
+      
+      try {
         if ($.pageReplyImages.length === 0) {
           await api(`/posts/${postId}/comments`, { method:'POST', body:{ text } });
         } else {
@@ -1767,12 +1783,27 @@ function bindPostPageEvents(p){
           for (const it of $.pageReplyImages) fd.append('images', it.file);
           await api(`/posts/${postId}/comments`, { method:'POST', body: fd });
         }
+      
+        // 本地 +1 & 修补缓存
+        const anyBtn = document.querySelector(`.card[data-id="${postId}"] .action.open span`) ||
+                       document.querySelector(`.post-thread .action.open[data-id="${postId}"] span`);
+        const cur = +(anyBtn?.textContent || 0);
+        updateCommentCountEverywhere(postId, cur + 1);
+        patchFeedCacheComments(postId, cur + 1);
+      
         textEl.value = '';
         $.pageReplyImages = [];
         if (pagePreview) pagePreview.innerHTML = '';
         toast('已回复');
-        showPostPage(postId); // 刷新评论列表
-      }catch(err){ toast(err.message || '评论失败'); }
+      
+        // 刷新评论列表（只刷新详情，不跳首页）
+        showPostPage(postId);
+      } catch(err){
+        toast(err.message || '评论失败');
+      } finally {
+        $.pageReplySending = false;
+        replyBtn.disabled = false;
+      }   
     });
   }
 
