@@ -404,9 +404,23 @@ function initRepostDialogs(){
       try{
         const fd1 = new FormData();
         fd1.append('repost_of', id);
-        await api('/posts', { method:'POST', body: fd1 });
+        const obj = await api('/posts', { method:'POST', body: fd1 });
         $.repostChoiceDialog?.close();
-        toast("已转发"); loadFeed(getCurrentTab());
+        toast("已转发");
+        // 立刻把当前卡片的转发按钮置为“已转发”
+        try{
+          const card = document.querySelector(`.card[data-id="${obj.repost_of?.id || $.repostTargetId}"]`);
+          if (card) {
+            const btn = card.querySelector('.action.repost');
+            if (btn) {
+              btn.classList.add('reposted');
+              btn.dataset.reposted = '1';
+              btn.dataset.repostId  = obj.id || '';
+              const s = btn.querySelector('span');
+              if (s) s.textContent = String((+s.textContent||0) + 1);
+            }
+          }
+        }catch(_){}
       }catch(e){ toast(e.message||"转发失败"); }
     };
   }
@@ -705,7 +719,9 @@ function renderCard(p){
           ${renderPics(p.images)}
           <div class="actions">
             <div class="action open">💬 <span>${p.comments_count||0}</span></div>
-            <div class="action repost" title="转发">🔁 <span>${getShareCount(p)}</span></div>
+            <div class="action repost ${p.reposted?'reposted':''}" title="转发"
+                 data-reposted="${p.reposted ? '1':'0'}"
+                 data-repost-id="${esc(p.my_repost_id||'')}">🔁 <span>${getShareCount(p)}</span></div>
             <div class="action like ${p.liked?'liked':''}">❤️ <span>${p.likes||0}</span></div>
             ${deletable ? `<div class="action del" title="删除">🗑️</div>` : ""}
           </div>
@@ -739,7 +755,9 @@ function renderOriginalCard(p){
       <div class="actions">
         <div class="action open">💬 <span>${p.comments_count||0}</span></div>
         <div class="action like ${p.liked?'liked':''}">❤️ <span>${p.likes||0}</span></div>
-        <div class="action repost" title="转发">🔁 <span>${getShareCount(p)}</span></div>
+        <div class="action repost ${p.reposted?'reposted':''}" title="转发"
+             data-reposted="${p.reposted ? '1':'0'}"
+             data-repost-id="${esc(p.my_repost_id||'')}">🔁 <span>${getShareCount(p)}</span></div>
         ${deletable ? `<div class="action del" title="删除">🗑️</div>` : ""}
       </div>
     </div>
@@ -747,14 +765,37 @@ function renderOriginalCard(p){
 }
 
 function bindCardEvents(){
-  // —— 转发按钮 —— //
+  // —— 转发按钮（可撤销） —— //
   document.querySelectorAll(".card .repost").forEach(b=>{
     b.onclick = async (e)=>{
       e.stopPropagation();
       const me = await ensureLogin(); if(!me) return;
-      const card = e.target.closest(".card");
-      const id = card.dataset.id;               // 原帖 id
-      $.openRepostChoice(id);                   // 打开选择弹窗
+  
+      const card = e.currentTarget.closest(".card");
+      const postId = card?.dataset.id;
+      if (!postId) return;
+  
+      const isReposted = b.dataset.reposted === '1';
+      const myRepostId = b.dataset.repostId || '';
+  
+      if (isReposted && myRepostId) {
+        // 撤销：删除我那条“纯转发”帖子
+        try{
+          await api(`/posts/${myRepostId}`, { method: "DELETE" });
+          // 本地 UI 同步：去蓝色、计数 -1、清 data
+          b.classList.remove('reposted');
+          b.dataset.reposted = '0';
+          b.dataset.repostId = '';
+          const s = b.querySelector('span');
+          if (s) s.textContent = String(Math.max(0, (+s.textContent||0) - 1));
+          toast("已撤销转发");
+        }catch(err){
+          toast(err.message || "撤销失败");
+        }
+      } else {
+        // 还没转发过：走你原来的“选择：转发/引用”流程
+        $.openRepostChoice(postId);
+      }
     };
   });
 
