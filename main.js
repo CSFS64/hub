@@ -880,6 +880,7 @@ function bindCardEvents(){
       }
     };
   });
+}
 
 //-----回复弹窗-----//
 $.closeReply = ()=> $.replyDialog.close();
@@ -1017,12 +1018,13 @@ function handleRoute(){
   if (m) {
     showPostPage(m[1]);
   } else {
-  // 默认首页（恢复 UI）
-  document.getElementById("composeInline").style.display = "";
-  document.querySelector(".topbar .tabs").style.display = "";
-  // 有缓存就直接还原；否则才发请求
-  if (!restoreFeedIfCached()) {
-    loadFeed(getCurrentTab());
+    // 默认首页（恢复 UI）
+    document.getElementById("composeInline").style.display = "";
+    document.querySelector(".topbar .tabs").style.display = "";
+    // 有缓存就直接还原；否则才发请求
+    if (!restoreFeedIfCached()) {
+      loadFeed(getCurrentTab());
+    }
   }
 }
 
@@ -1627,4 +1629,3 @@ function layoutSpine() {
     });
   }
 })();
-}
