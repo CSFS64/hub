@@ -1018,8 +1018,6 @@ function handleRoute(){
 
   const m = location.hash.match(/^#\/post\/([A-Za-z0-9_-]{8,64})$/);
   if (m) {
-    // 进入详情页时，清空首页快照，避免后续“返回首页”被还原成某个详情的 HTML
-    $.feedCache = { tab: null, html: '', scroll: 0 };
     showPostPage(m[1]);
   } else {
     // 回到首页（恢复 UI）
