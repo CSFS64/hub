@@ -220,6 +220,52 @@ function patchFeedCacheRepost(postId, reposted, shareCount, myRepostId){
   $.feedCache.html = tmp.innerHTML;
 }
 
+// 把一条新帖子插到当前首页列表最前面（并立即可交互）
+function prependCardToCurrentFeed(postObj){
+  // 只在首页 feed 场景插入（其它页面如单帖页就别插）
+  if (location.hash !== "") return;
+  if (!$.feed) return;
+
+  const html = renderCard(postObj);
+  $.feed.insertAdjacentHTML('afterbegin', html);
+
+  // 让新插入的卡片也有事件 & clamp
+  bindCardEvents();
+  applyClamp();
+
+  // 立刻刷新快照，确保返回时仍是“包含了这条转发”的缓存
+  snapshotFeed();
+}
+
+// 把“新生成的帖子”也塞进首页缓存的 HTML 顶部
+function patchFeedCachePrepend(postObj){
+  if (!$.feedCache?.html) return;
+  const html = renderCard(postObj);
+  $.feedCache.html = html + $.feedCache.html;
+}
+
+// 撤销转发后，把那条“我的转发卡片”从 DOM + 缓存里移除（如果当前页面有的话）
+function removeMyRepostEverywhere(myRepostId){
+  if (!myRepostId) return;
+
+  // DOM 中删
+  document.querySelectorAll(
+    `.card[data-id="${myRepostId}"], .repost-wrap[data-repost-id="${myRepostId}"]`
+  ).forEach(n => n.remove());
+
+  // 缓存中删
+  if ($.feedCache?.html){
+    const tmp = document.createElement('div');
+    tmp.innerHTML = $.feedCache.html;
+    tmp.querySelectorAll(
+      `.card[data-id="${myRepostId}"], .repost-wrap[data-repost-id="${myRepostId}"]`
+    ).forEach(n => n.remove());
+    $.feedCache.html = tmp.innerHTML;
+  }
+
+  snapshotFeed();
+}
+
 // 同步整站内所有该 postId 的点赞显示（列表卡片 + 详情页）
 function updateLikeEverywhere(postId, liked, likes){
   const apply = (btn) => {
@@ -538,6 +584,8 @@ function initRepostDialogs(){
                          document.querySelector(`.post-thread .action.repost[data-id="${baseId}"]`);
           const cur = +(anyBtn?.querySelector('span')?.textContent || 0);
           updateRepostEverywhere(baseId, true, cur + 1, obj?.id || '');
+          prependCardToCurrentFeed(obj);
+          patchFeedCachePrepend(obj);
           patchFeedCacheRepost(baseId, true, cur + 1, obj?.id || '');
           snapshotFeed(); // 刷新缓存（见第Ⅱ部分）
         }catch(_){}
@@ -1572,6 +1620,7 @@ function bindPostPageEvents(p){
           await api(`/posts/${myRepostId}`, { method:'DELETE' });
           updateRepostEverywhere(p.id, false, Math.max(0, cur - 1), '');
           snapshotFeed();
+          removeMyRepostEverywhere(myRepostId);
           toast('已撤销转发');
         }catch(err){ toast(err.message || '撤销失败'); }
       }else{
