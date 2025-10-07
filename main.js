@@ -652,7 +652,6 @@ function renderCard(p){
     const badge = `
       <div class="repost-badge" style="display:flex;align-items:center;gap:6px;justify-content:space-between;">
         <div><span class="icon">🔁</span>${esc(reposter.nickname||reposter.username||"用户")} 转发了</div>
-        ${canDeleteRepost ? `<div class="action del" title="删除">🗑️</div>` : ``}
       </div>
     `;
   
