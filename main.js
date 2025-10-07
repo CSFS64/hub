@@ -785,6 +785,7 @@ function renderOriginalCard(p){
   </article>`;
 }
 
+function bindCardEvents(){
   // —— 转发按钮（可撤销 & 全站同步） —— //
   document.querySelectorAll(".card .repost").forEach(b=>{
     b.onclick = async (e)=>{
@@ -879,7 +880,6 @@ function renderOriginalCard(p){
       }
     };
   });
-}
 
 //-----回复弹窗-----//
 $.closeReply = ()=> $.replyDialog.close();
