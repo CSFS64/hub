@@ -5,6 +5,26 @@ const FRONTEND_PROFILE_PREFIX = "#/user/"; // 简单 hash 路由
 
 /* ====== State ====== */
 const $ = {};
+
+$.feedCache = { tab: null, html: '', scroll: 0 };
+function snapshotFeed(){
+  // 保存当前 tab、列表 HTML、滚动位置
+  const tab = getCurrentTab();
+  $.feedCache = { tab, html: $.feed?.innerHTML || '', scroll: window.scrollY || 0 };
+}
+function restoreFeedIfCached(){
+  const tab = getCurrentTab();
+  if ($.feedCache?.html && $.feedCache.tab === tab){
+    $.feed.innerHTML = $.feedCache.html;
+    bindCardEvents();      // 重新挂事件
+    applyClamp();          // 重新计算 show more
+    // 恢复滚动
+    requestAnimationFrame(()=> window.scrollTo(0, $.feedCache.scroll|0));
+    return true;
+  }
+  return false;
+}
+
 const session = {
   get(){ try{ return JSON.parse(localStorage.getItem("mini_forum_session")||"null"); }catch{ return null; } },
   set(v){ localStorage.setItem("mini_forum_session", JSON.stringify(v)); },
@@ -141,22 +161,24 @@ function resolveMediaURL(src=""){
 }
 
 // 同步整站内所有该 postId 的点赞显示（列表卡片 + 详情页）
-function updateLikeEverywhere(postId, liked, likes){
-  try {
-    // 列表卡片
-    document.querySelectorAll(`.card[data-id="${postId}"] .action.like`).forEach(el=>{
-      el.classList.toggle("liked", !!liked);
-      const s = el.querySelector("span");
-      if (s) s.textContent = String(Math.max(0, likes|0));
-    });
-    // 详情页（如果在详情页上）
-    const detailEl = document.querySelector(`.post-thread .action.like[data-id="${postId}"]`);
-    if (detailEl){
-      detailEl.classList.toggle("liked", !!liked);
-      const s = detailEl.querySelector("span");
-      if (s) s.textContent = String(Math.max(0, likes|0));
-    }
-  } catch (_) {}
+function updateRepostEverywhere(postId, reposted, shareCount, myRepostId){
+  // 列表卡片
+  document.querySelectorAll(`.card[data-id="${postId}"] .action.repost`).forEach(btn=>{
+    btn.classList.toggle('reposted', !!reposted);
+    btn.dataset.reposted = reposted ? '1' : '0';
+    btn.dataset.repostId = reposted ? (myRepostId || '') : '';
+    const s = btn.querySelector('span');
+    if (s && typeof shareCount === 'number') s.textContent = String(Math.max(0, shareCount|0));
+  });
+  // 详情页
+  const detailBtn = document.querySelector(`.post-thread .action.repost[data-id="${postId}"]`);
+  if (detailBtn){
+    detailBtn.classList.toggle('reposted', !!reposted);
+    detailBtn.dataset.reposted = reposted ? '1' : '0';
+    detailBtn.dataset.repostId = reposted ? (myRepostId || '') : '';
+    const s = detailBtn.querySelector('span');
+    if (s && typeof shareCount === 'number') s.textContent = String(Math.max(0, shareCount|0));
+  }
 }
 
 function htm(strings,...vals){ return strings.map((s,i)=>s+(vals[i]??"")).join(""); }
@@ -407,19 +429,13 @@ function initRepostDialogs(){
         const obj = await api('/posts', { method:'POST', body: fd1 });
         $.repostChoiceDialog?.close();
         toast("已转发");
-        // 立刻把当前卡片的转发按钮置为“已转发”
         try{
-          const card = document.querySelector(`.card[data-id="${obj.repost_of?.id || $.repostTargetId}"]`);
-          if (card) {
-            const btn = card.querySelector('.action.repost');
-            if (btn) {
-              btn.classList.add('reposted');
-              btn.dataset.reposted = '1';
-              btn.dataset.repostId  = obj.id || '';
-              const s = btn.querySelector('span');
-              if (s) s.textContent = String((+s.textContent||0) + 1);
-            }
-          }
+          const baseId = obj?.repost_of?.id || $.repostTargetId;
+          const anyBtn = document.querySelector(`.card[data-id="${baseId}"] .action.repost`) ||
+                         document.querySelector(`.post-thread .action.repost[data-id="${baseId}"]`);
+          const cur = +(anyBtn?.querySelector('span')?.textContent || 0);
+          updateRepostEverywhere(baseId, true, cur + 1, obj?.id || '');
+          snapshotFeed(); // 刷新缓存（见第Ⅱ部分）
         }catch(_){}
       }catch(e){ toast(e.message||"转发失败"); }
     };
@@ -511,7 +527,10 @@ function bindNav(){
           // 已经在首页，手动刷新列表 & 确保 UI 可见
           document.getElementById("composeInline").style.display = "";
           document.querySelector(".topbar .tabs").style.display = "";
-          loadFeed(getCurrentTab());
+          // 有缓存就复原（不重新请求）；否则再拉取
+          if (!restoreFeedIfCached()){
+            loadFeed(getCurrentTab());
+          }
           // 可选：回到顶部
           // window.scrollTo({ top: 0, behavior: "instant" });
         }
@@ -547,6 +566,7 @@ function bindNav(){
 
 function setActiveTab(tab){
   $.tabs.forEach(t=>t.classList.toggle("is-active", t.dataset.tab===tab));
+  $.feedCache = { tab: null, html: '', scroll: 0 }; // 切换 Tab 清缓存
 }
 
 /* ====== Composer ====== */
@@ -633,6 +653,7 @@ async function loadFeed(tab="for_you"){
   }finally{
     $.loading.hidden = true;
     applyClamp();
+    snapshotFeed();
   }
 }
 
@@ -1005,6 +1026,7 @@ function handleRoute(){
 }
 
 function goToPost(id){
+  snapshotFeed();  
   location.hash = `#/post/${id}`;
 }
 
@@ -1216,6 +1238,7 @@ async function doSearch(){
     items = await expandRefs(items);
     $.feed.innerHTML = items.map(renderCard).join("") || `<div class="empty">未找到相关内容</div>`;
     bindCardEvents();
+    $.feedCache = { tab: null, html: '', scroll: 0 };
   }catch(e){ toast(e.message || "搜索失败"); }
 }
 
@@ -1311,7 +1334,10 @@ function renderPostPage(p){
 
         <div class="actions">
           <div class="action like ${p.liked?'liked':''}" data-id="${esc(p.id)}">❤️ <span>${p.likes||0}</span></div>
-          <div class="action repost" title="转发" data-id="${esc(p.id)}">🔁 <span>${getShareCount(p)}</span></div>
+          <div class="action repost ${p.reposted?'reposted':''}" title="转发"
+               data-id="${esc(p.id)}"
+               data-reposted="${p.reposted ? '1':'0'}"
+               data-repost-id="${esc(p.my_repost_id||'')}">🔁 <span>${getShareCount(p)}</span></div>
           ${deletable ? `<div class="action del" title="删除" data-id="${esc(p.id)}">🗑️</div>` : ""}
           <div class="action open" onclick="$.openReply('${p.id}')">💬 回复</div>
         </div>
@@ -1372,7 +1398,21 @@ function bindPostPageEvents(p){
       e.preventDefault();
       e.stopPropagation();
       const me = await ensureLogin(); if (!me) return;
-      $.openRepostChoice(p.id);
+  
+      const isReposted = repostEl.dataset.reposted === '1';
+      const myRepostId = repostEl.dataset.repostId || '';
+  
+      if (isReposted && myRepostId){
+        try{
+          const cur = +(repostEl.querySelector('span')?.textContent || 0);
+          await api(`/posts/${myRepostId}`, { method:'DELETE' });
+          updateRepostEverywhere(p.id, false, Math.max(0, cur - 1), '');
+          snapshotFeed();
+          toast('已撤销转发');
+        }catch(err){ toast(err.message || '撤销失败'); }
+      }else{
+        $.openRepostChoice(p.id);
+      }
     };
   }
 
