@@ -183,6 +183,26 @@ function updateRepostEverywhere(postId, reposted, shareCount, myRepostId){
   }
 }
 
+// 同步整站内所有该 postId 的点赞显示（列表卡片 + 详情页）
+function updateLikeEverywhere(postId, liked, likes){
+  const apply = (btn) => {
+    if (!btn) return;
+    btn.classList.toggle('liked', !!liked);
+    const s = btn.querySelector('span');
+    if (s && typeof likes === 'number') {
+      s.textContent = String(Math.max(0, likes|0));
+    }
+  };
+
+  // 列表里的所有副本（包括转发包裹中的原帖卡片）
+  document.querySelectorAll(`.card[data-id="${postId}"] .action.like`)
+    .forEach(apply);
+
+  // 详情页正文的点赞按钮（正文那块我给了 data-id）
+  document.querySelectorAll(`.post-thread .action.like[data-id="${postId}"]`)
+    .forEach(apply);
+}
+
 function htm(strings,...vals){ return strings.map((s,i)=>s+(vals[i]??"")).join(""); }
 function esc(s=""){ return s.replace(/[&<>"]/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[m])); }
 function timeAgo(iso){
