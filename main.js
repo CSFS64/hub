@@ -785,8 +785,7 @@ function renderOriginalCard(p){
   </article>`;
 }
 
-function bindCardEvents(){
-  // —— 转发按钮（可撤销） —— //
+  // —— 转发按钮（可撤销 & 全站同步） —— //
   document.querySelectorAll(".card .repost").forEach(b=>{
     b.onclick = async (e)=>{
       e.stopPropagation();
@@ -803,18 +802,18 @@ function bindCardEvents(){
         // 撤销：删除我那条“纯转发”帖子
         try{
           await api(`/posts/${myRepostId}`, { method: "DELETE" });
-          // 本地 UI 同步：去蓝色、计数 -1、清 data
-          b.classList.remove('reposted');
-          b.dataset.reposted = '0';
-          b.dataset.repostId = '';
-          const s = b.querySelector('span');
-          if (s) s.textContent = String(Math.max(0, (+s.textContent||0) - 1));
+          // 从任意一个按钮读当前数，然后广播 -1
+          const anyBtn = document.querySelector(`.card[data-id="${postId}"] .action.repost`) ||
+                         document.querySelector(`.post-thread .action.repost[data-id="${postId}"]`);
+          const cur = +(anyBtn?.querySelector('span')?.textContent || 0);
+          updateRepostEverywhere(postId, false, Math.max(0, cur - 1), '');
+          snapshotFeed(); // 更新首页快照，返回时仍保持状态
           toast("已撤销转发");
         }catch(err){
           toast(err.message || "撤销失败");
         }
       } else {
-        // 还没转发过：走你原来的“选择：转发/引用”流程
+        // 还没转发过：走“选择：转发/引用”
         $.openRepostChoice(postId);
       }
     };
@@ -1018,9 +1017,11 @@ function handleRoute(){
   if (m) {
     showPostPage(m[1]);
   } else {
-    // 默认首页（恢复 UI）
-    document.getElementById("composeInline").style.display = "";
-    document.querySelector(".topbar .tabs").style.display = "";
+  // 默认首页（恢复 UI）
+  document.getElementById("composeInline").style.display = "";
+  document.querySelector(".topbar .tabs").style.display = "";
+  // 有缓存就直接还原；否则才发请求
+  if (!restoreFeedIfCached()) {
     loadFeed(getCurrentTab());
   }
 }
