@@ -1821,12 +1821,18 @@ function bindPostPageEvents(p){
           await api(`/posts/${postId}/comments`, { method:'POST', body: fd });
         }
       
-        // 本地 +1 & 修补缓存
-        const curInFeed = document.querySelector(`.card[data-id="${postId}"] .action.open span`);
-        if (curInFeed) {
-          const cur = +(curInFeed.textContent || 0);
-          patchFeedCacheComments(postId, cur + 1);  // 只修补首页缓存，不动详情页 DOM
-        }
+        // 本地 +1（无论当前在详情页还是首页，都能拿到一个“当前数”）
+        const cur = getCurrentCommentCount(postId);   // 会优先读详情页动作区，其次读列表卡片
+        const next = cur + 1;
+        
+        // 1) 立刻同步整站所有副本（如果此刻在首页、或页面上有这条卡，就地 +1）
+        updateCommentCountEverywhere(postId, next);
+        
+        // 2) 同步首页快照缓存（即使此刻在详情页，返回首页也会是 +1 后的数）
+        patchFeedCacheComments(postId, next);
+        
+        // 3) 保险：刷新快照（可选）
+        snapshotFeed();
         
         textEl.value = '';
         $.pageReplyImages = [];
