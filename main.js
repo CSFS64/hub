@@ -266,6 +266,45 @@ function removeMyRepostEverywhere(myRepostId){
   snapshotFeed();
 }
 
+// 立刻把我那条“转发贴卡片”从当前页面移除
+function removeMyRepostEverywhere(basePostId, myRepostId){
+  // 1) 清理列表里的卡片
+  if (myRepostId) {
+    document.querySelectorAll(`.card[data-id="${myRepostId}"]`).forEach(card=>{
+      const wrap = card.closest('.repost-wrap');
+      (wrap || card).remove();
+    });
+  }
+
+  // 2) 复原原帖上的转发按钮（保险起见，再清一次 data）
+  document.querySelectorAll(`.card[data-id="${basePostId}"] .action.repost`).forEach(btn=>{
+    btn.classList.remove('reposted');
+    btn.dataset.reposted = '0';
+    btn.dataset.repostId = '';
+  });
+  const detailBtn = document.querySelector(`.post-thread .action.repost[data-id="${basePostId}"]`);
+  if (detailBtn){
+    detailBtn.classList.remove('reposted');
+    detailBtn.dataset.reposted = '0';
+    detailBtn.dataset.repostId = '';
+  }
+}
+
+// 同步更新首页快照缓存（撤销时从缓存里也删掉我的那条转发） 
+function patchFeedCacheRemove(myRepostId){
+  if (!$.feedCache?.html || !myRepostId) return;
+  const box = document.createElement('div');
+  box.innerHTML = $.feedCache.html;
+
+  // 删掉缓存里的那张卡
+  box.querySelectorAll(`.card[data-id="${myRepostId}"]`).forEach(card=>{
+    const wrap = card.closest('.repost-wrap');
+    (wrap || card).remove();
+  });
+
+  $.feedCache.html = box.innerHTML;
+}
+
 // 同步整站内所有该 postId 的点赞显示（列表卡片 + 详情页）
 function updateLikeEverywhere(postId, liked, likes){
   const apply = (btn) => {
@@ -960,6 +999,8 @@ function bindCardEvents(){
                          document.querySelector(`.post-thread .action.repost[data-id="${postId}"]`);
           const cur = +(anyBtn?.querySelector('span')?.textContent || 0);
           updateRepostEverywhere(postId, false, Math.max(0, cur - 1), '');
+          removeMyRepostEverywhere(postId, myRepostId);
+          patchFeedCacheRemove(myRepostId);
           snapshotFeed(); // 更新首页快照，返回时仍保持状态
           toast("已撤销转发");
         }catch(err){
@@ -1619,6 +1660,8 @@ function bindPostPageEvents(p){
           const cur = +(repostEl.querySelector('span')?.textContent || 0);
           await api(`/posts/${myRepostId}`, { method:'DELETE' });
           updateRepostEverywhere(p.id, false, Math.max(0, cur - 1), '');
+          removeMyRepostEverywhere(p.id, myRepostId);
+          patchFeedCacheRemove(myRepostId);
           snapshotFeed();
           removeMyRepostEverywhere(myRepostId);
           toast('已撤销转发');
