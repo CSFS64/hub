@@ -220,6 +220,27 @@ function patchFeedCacheRepost(postId, reposted, shareCount, myRepostId){
   $.feedCache.html = tmp.innerHTML;
 }
 
+// 同步整站内所有该 postId 的评论数量（列表 + 详情）
+function updateCommentCountEverywhere(postId, nextCount){
+  const n = Math.max(0, nextCount|0);
+  // 列表卡片
+  document.querySelectorAll(`.card[data-id="${postId}"] .action.open span`)
+    .forEach(s => s.textContent = String(n));
+  // 详情页（如果你在详情页动作区显示数量，也一起更）
+  document.querySelectorAll(`.post-thread .action.open[data-id="${postId}"] span`)
+    .forEach(s => s.textContent = String(n));
+}
+
+// 修补首页快照里的评论数量
+function patchFeedCacheComments(postId, nextCount){
+  if (!$.feedCache?.html) return;
+  const box = document.createElement('div');
+  box.innerHTML = $.feedCache.html;
+  box.querySelectorAll(`.card[data-id="${postId}"] .action.open span`)
+    .forEach(s => s.textContent = String(Math.max(0, nextCount|0)));
+  $.feedCache.html = box.innerHTML;
+}
+
 // 把一条新帖子插到当前首页列表最前面（并立即可交互）
 function prependCardToCurrentFeed(postObj){
   // 只在首页 feed 场景插入（其它页面如单帖页就别插）
@@ -245,7 +266,8 @@ function patchFeedCachePrepend(postObj){
 }
 
 // 撤销转发后，把那条“我的转发卡片”从 DOM + 缓存里移除（如果当前页面有的话）
-function removeMyRepostEverywhere(myRepostId){
+// （原先的单参版本：重命名为 removeMyRepostCard）
+function removeMyRepostCard(myRepostId){
   if (!myRepostId) return;
 
   // DOM 中删
@@ -1663,7 +1685,7 @@ function bindPostPageEvents(p){
           removeMyRepostEverywhere(p.id, myRepostId);
           patchFeedCacheRemove(myRepostId);
           snapshotFeed();
-          removeMyRepostEverywhere(myRepostId);
+          removeMyRepostCard(myRepostId);
           toast('已撤销转发');
         }catch(err){ toast(err.message || '撤销失败'); }
       }else{
