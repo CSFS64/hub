@@ -137,6 +137,7 @@ body{
 .card.clickable{ cursor:pointer; }
 .card.clickable:hover{ background:var(--hover); }
 .action.liked{ color:var(--primary); }
+.action.repost.reposted{ color:var(--primary); } /* 纯转发后变蓝 */
 
 .empty,.loading{ text-align:center; padding:24px; color:var(--muted); }
 
