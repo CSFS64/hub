@@ -360,12 +360,23 @@ function timeAgo(iso){
   const d = Math.floor(h/24); if (d<7) return `${d}d`;
   return new Date(iso).toLocaleDateString();
 }
+
+function getCurrentCommentCount(postId){
+  // 先看详情页动作区
+  const s1 = document.querySelector(`.post-thread .action.open[data-id="${postId}"] span`);
+  if (s1) return +(s1.textContent || 0);
+  // 再看列表里的第一处
+  const s2 = document.querySelector(`.card[data-id="${postId}"] .action.open span`);
+  return +(s2?.textContent || 0);
+}
+
 function toast(msg, ms=1800){
   const el = document.getElementById("toast");
   el.textContent = msg; el.hidden = false;
   clearTimeout($.toastT);
   $.toastT = setTimeout(()=> el.hidden = true, ms);
 }
+
 function fileToDataURL(f){ return new Promise(r=>{ const fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(f); }); }
 
 async function addImageFile(f){
@@ -1045,6 +1056,28 @@ function bindCardEvents(){
     };
   });
 
+  // 打开回复（列表/个人页/搜索等）
+  document.querySelectorAll(".card .open").forEach(b=>{
+    b.onclick = (e)=>{
+      e.stopPropagation();
+      const id = e.currentTarget.closest(".card")?.dataset.id;
+      if (!id) return;
+      $.openReply(id);
+    };
+  });
+  
+  // 点赞（列表/个人页/搜索等）
+  document.querySelectorAll(".card .like").forEach(b=>{
+    b.onclick = async (e)=>{
+      e.stopPropagation();
+      const me = await ensureLogin(); if(!me) return;
+      const card = e.currentTarget.closest(".card");
+      const id   = card?.dataset.id;
+      if (!id) return;
+      toggleLike(id, b);
+    };
+  });
+
   // 原有动作绑定，同时阻止冒泡
   document.querySelectorAll(".card .del, .repost-wrap .del").forEach(b => {
     b.onclick = async (e) => {
@@ -1257,9 +1290,7 @@ $.openComposer = async (postId, mode = "reply") => {
           }
       
           // 本地 +1（只加一次），并修补缓存
-          const anyBtn = document.querySelector(`.card[data-id="${postId}"] .action.open span`) ||
-                         document.querySelector(`.post-thread .action.open[data-id="${postId}"] span`);
-          const cur = +(anyBtn?.textContent || 0);
+          const cur = getCurrentCommentCount(postId);
           updateCommentCountEverywhere(postId, cur + 1);
           patchFeedCacheComments(postId, cur + 1);
       
@@ -1624,7 +1655,9 @@ function renderPostPage(p){
                data-reposted="${p.reposted ? '1':'0'}"
                data-repost-id="${esc(p.my_repost_id||'')}">🔁 <span>${getShareCount(p)}</span></div>
           ${deletable ? `<div class="action del" title="删除" data-id="${esc(p.id)}">🗑️</div>` : ""}
-          <div class="action open" onclick="$.openReply('${p.id}')">💬 回复</div>
+          <div class="action open" data-id="${esc(p.id)}" onclick="$.openReply('${p.id}')">
+            💬 <span>${p.comments_count||0}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -1785,9 +1818,7 @@ function bindPostPageEvents(p){
         }
       
         // 本地 +1 & 修补缓存
-        const anyBtn = document.querySelector(`.card[data-id="${postId}"] .action.open span`) ||
-                       document.querySelector(`.post-thread .action.open[data-id="${postId}"] span`);
-        const cur = +(anyBtn?.textContent || 0);
+        const cur = getCurrentCommentCount(postId);
         updateCommentCountEverywhere(postId, cur + 1);
         patchFeedCacheComments(postId, cur + 1);
       
