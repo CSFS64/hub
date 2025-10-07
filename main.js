@@ -244,6 +244,50 @@ function renderPreview(){
   });
 }
 
+// ===== 通用：为“任意目标列表 + 预览容器”添加图片（用于回复弹窗/详情页回复栏） =====
+async function addImageFileTo(listRef, previewEl, f){
+  if (!f || !f.type?.startsWith("image/")) return false;
+  if (listRef.length >= 3) { toast("最多 3 张图片"); return false; }
+  const url = await fileToDataURL(f);
+  listRef.push({ file: f, url });
+  renderPreviewTo(listRef, previewEl);
+  return true;
+}
+
+function renderPreviewTo(listRef, previewEl){
+  if (!previewEl) return;
+  previewEl.innerHTML = (listRef||[]).map((it, idx) => `
+    <div class="img-wrap" data-idx="${idx}">
+      <img src="${esc(it.url)}" alt="">
+      <button class="remove" title="移除">×</button>
+    </div>
+  `).join("");
+
+  // 删除
+  previewEl.querySelectorAll(".remove").forEach(btn=>{
+    btn.onclick = (e)=>{
+      e.stopPropagation();
+      const box = btn.closest(".img-wrap");
+      const i = +box.dataset.idx;
+      listRef.splice(i, 1);
+      renderPreviewTo(listRef, previewEl);
+    };
+  });
+
+  // 点击预览放大
+  previewEl.querySelectorAll("img").forEach(img=>{
+    img.onclick = ()=>{
+      const urls = listRef.map(it=>it.url);
+      const idx = [...previewEl.querySelectorAll("img")].indexOf(img);
+      openImageViewer(urls, idx);
+    };
+  });
+}
+
+// 回复相关的独立状态（不和发帖共用 $.images）
+$.replyImages = [];
+$.pageReplyImages = [];
+
 // 简易图片查看器（支持组切换）
 // ========= 修复版：图片查看器 =========
 let _viewer = { urls: [], idx: 0 };
@@ -928,7 +972,50 @@ $.openComposer = async (postId, mode = "reply") => {
 
     // 打开弹窗
     $.replyDialog.showModal();
-
+    
+    // —— 回复弹窗：图片选择 / 预览 / 粘贴 / 拖拽 —— //
+    $.replyImages = []; // 打开时清空
+    const addBtn    = document.getElementById("replyAddImage");
+    const fileInput = document.getElementById("replyImgInput");
+    const previewEl = document.getElementById("replyImgPreview");
+    
+    // 点击按钮 -> 打开文件选择
+    if (addBtn && fileInput) {
+      addBtn.onclick = (ev)=>{ ev.preventDefault(); fileInput.click(); };
+      fileInput.onchange = async ()=>{
+        const files = [...fileInput.files];
+        for (const f of files) await addImageFileTo($.replyImages, previewEl, f);
+        fileInput.value = "";
+      };
+    }
+    
+    // 粘贴图片到回复框
+    if (ta) {
+      ta.addEventListener("paste", async (e)=>{
+        const items = e.clipboardData?.items || [];
+        let added = false;
+        for (const it of items) {
+          if (it.kind === "file" && it.type?.startsWith("image/")) {
+            const f = it.getAsFile();
+            if (f) { await addImageFileTo($.replyImages, previewEl, f); added = true; }
+          }
+        }
+        const hasText = !!(e.clipboardData && e.clipboardData.getData("text/plain"));
+        if (added && !hasText) e.preventDefault();
+      });
+    }
+    
+    // 拖拽到输入框或预览区
+    [ta, previewEl].forEach(el=>{
+      if (!el) return;
+      el.addEventListener("dragover", (e)=> e.preventDefault());
+      el.addEventListener("drop", async (e)=>{
+        e.preventDefault();
+        const files = [...(e.dataTransfer?.files||[])];
+        for (const f of files) await addImageFileTo($.replyImages, previewEl, f);
+      });
+    });
+    
     requestAnimationFrame(layoutSpine);
 
     // 计数/自适应（保留原逻辑）
@@ -981,7 +1068,17 @@ $.openComposer = async (postId, mode = "reply") => {
         if (!text) return toast("回复不能为空");
         if (text.length > LIMIT) { upsell?.classList.add("show"); return toast("超出 280 字，精简后再发"); }
         try {
-          await api(`/posts/${postId}/comments`, { method: "POST", body: { text } });
+          // 有图就用 FormData，没有图保持 JSON
+          if ($.replyImages.length === 0) {
+            await api(`/posts/${postId}/comments`, { method: "POST", body: { text } });
+          } else {
+            const fd = new FormData();
+            fd.append("text", text);
+            for (const it of $.replyImages) fd.append("images", it.file);
+            await api(`/posts/${postId}/comments`, { method: "POST", body: fd });
+          }
+          $.replyImages = [];
+          if (previewEl) previewEl.innerHTML = "";
           $.closeReply();
           if (location.hash === `#/post/${postId}`) { showPostPage(postId); }
           else { goToPost(postId); }
@@ -1363,9 +1460,12 @@ function renderPostPage(p){
           <div class="reply-editor">
             <textarea id="commentTextPage" rows="1" placeholder="Post your reply"></textarea>
             <div class="reply-tools">
+              <button type="button" id="pageAddImage" class="icon-btn" title="添加图片">🖼️</button>
+              <input id="pageImgInput" type="file" accept="image/*" multiple hidden>
               <div class="char-counter" id="replyCounter">280</div>
               <button type="button" id="btnCommentPage" class="btn btn-primary">评论</button>
             </div>
+            <div id="pageImgPreview" class="img-preview" style="margin-top:6px;"></div>
             <div class="upsell" id="replyUpsell">
               Upgrade to <b>Premium+</b> to write longer posts and Articles.
               <a class="link" href="javascript:;">Learn more</a>
@@ -1487,8 +1587,17 @@ function bindPostPageEvents(p){
       if (!postId) { toast('未找到帖子 ID'); return; }
 
       try{
-        await api(`/posts/${postId}/comments`, { method:'POST', body:{ text } });
+        if ($.pageReplyImages.length === 0) {
+          await api(`/posts/${postId}/comments`, { method:'POST', body:{ text } });
+        } else {
+          const fd = new FormData();
+          fd.append('text', text);
+          for (const it of $.pageReplyImages) fd.append('images', it.file);
+          await api(`/posts/${postId}/comments`, { method:'POST', body: fd });
+        }
         textEl.value = '';
+        $.pageReplyImages = [];
+        if (pagePreview) pagePreview.innerHTML = '';
         toast('已回复');
         showPostPage(postId); // 刷新评论列表
       }catch(err){ toast(err.message || '评论失败'); }
@@ -1527,6 +1636,44 @@ function bindPostPageEvents(p){
 
     // 初次执行
     update();
+  }
+
+  // —— 详情页：图片选择 / 预览 / 粘贴 / 拖拽 —— //
+  $.pageReplyImages = []; // 进入详情时重置
+  const pageAddBtn  = document.getElementById("pageAddImage");
+  const pageInput   = document.getElementById("pageImgInput");
+  const pagePreview = document.getElementById("pageImgPreview");
+  const pageTA      = document.getElementById("commentTextPage");
+  
+  if (pageAddBtn && pageInput){
+    pageAddBtn.onclick = (ev)=>{ ev.preventDefault(); pageInput.click(); };
+    pageInput.onchange = async ()=>{
+      const files = [...pageInput.files];
+      for (const f of files) await addImageFileTo($.pageReplyImages, pagePreview, f);
+      pageInput.value = "";
+    };
+  }
+  if (pageTA){
+    pageTA.addEventListener("paste", async (e)=>{
+      const items = e.clipboardData?.items || [];
+      let added = false;
+      for (const it of items) {
+        if (it.kind === "file" && it.type?.startsWith("image/")) {
+          const f = it.getAsFile();
+          if (f) { await addImageFileTo($.pageReplyImages, pagePreview, f); added = true; }
+        }
+      }
+      const hasText = !!(e.clipboardData && e.clipboardData.getData("text/plain"));
+      if (added && !hasText) e.preventDefault();
+    });
+    [pageTA, pagePreview].forEach(el=>{
+      el.addEventListener("dragover", (e)=> e.preventDefault());
+      el.addEventListener("drop", async (e)=>{
+        e.preventDefault();
+        const files = [...(e.dataTransfer?.files||[])];
+        for (const f of files) await addImageFileTo($.pageReplyImages, pagePreview, f);
+      });
+    });
   }
 }
 
