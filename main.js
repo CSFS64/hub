@@ -1290,18 +1290,22 @@ $.openComposer = async (postId, mode = "reply") => {
           }
       
           // 本地 +1（只加一次），并修补缓存
-          const cur = getCurrentCommentCount(postId);
-          updateCommentCountEverywhere(postId, cur + 1);
-          patchFeedCacheComments(postId, cur + 1);
-      
-          $.replyImages = [];
-          previewEl && (previewEl.innerHTML = "");
-          $.closeReply();
-      
-          // 跳到详情（或刷新当前详情）
-          if (location.hash === `#/post/${postId}`) { showPostPage(postId); }
-          else { goToPost(postId); }
-      
+          const isOnDetail = (location.hash === `#/post/${postId}`);
+          
+          if (isOnDetail) {
+            // 详情页：不做本地 +1，直接刷新详情页拿准数
+            $.closeReply();
+            showPostPage(postId);
+          } else {
+            // 列表页：只更新列表卡片和缓存，然后再跳详情
+            const cur = getCurrentCommentCount(postId);
+            updateCommentCountEverywhere(postId, cur + 1);   // 只会影响列表里的那张卡
+            patchFeedCacheComments(postId, cur + 1);
+          
+            $.closeReply();
+            goToPost(postId);  // 跳到详情页
+          }
+          
           toast("已回复");
         } catch (e) {
           toast(e.message || "发送失败");
@@ -1818,17 +1822,20 @@ function bindPostPageEvents(p){
         }
       
         // 本地 +1 & 修补缓存
-        const cur = getCurrentCommentCount(postId);
-        updateCommentCountEverywhere(postId, cur + 1);
-        patchFeedCacheComments(postId, cur + 1);
-      
+        const curInFeed = document.querySelector(`.card[data-id="${postId}"] .action.open span`);
+        if (curInFeed) {
+          const cur = +(curInFeed.textContent || 0);
+          patchFeedCacheComments(postId, cur + 1);  // 只修补首页缓存，不动详情页 DOM
+        }
+        
         textEl.value = '';
         $.pageReplyImages = [];
         if (pagePreview) pagePreview.innerHTML = '';
         toast('已回复');
-      
-        // 刷新评论列表（只刷新详情，不跳首页）
+
+        // 刷新详情页（拿后端准数，不做本地 +1）
         showPostPage(postId);
+
       } catch(err){
         toast(err.message || '评论失败');
       } finally {
