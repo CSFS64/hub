@@ -241,6 +241,27 @@ function patchFeedCacheComments(postId, nextCount){
   $.feedCache.html = box.innerHTML;
 }
 
+// 同步整站内所有该 postId 的浏览量（列表卡片 + 详情页）
+function updateViewsEverywhere(postId, nextCount){
+  const n = Math.max(0, nextCount|0);
+  // 列表里的所有副本（普通卡、转发包裹中的原帖卡）
+  document.querySelectorAll(`.card[data-id="${postId}"] .views span`)
+    .forEach(s => s.textContent = String(n));
+  // 详情页
+  document.querySelectorAll(`.post-thread .views span`)
+    .forEach(s => s.textContent = String(n));
+}
+
+// 修补首页快照里的浏览量
+function patchFeedCacheViews(postId, nextCount){
+  if (!$.feedCache?.html) return;
+  const box = document.createElement('div');
+  box.innerHTML = $.feedCache.html;
+  box.querySelectorAll(`.card[data-id="${postId}"] .views span`)
+    .forEach(s => s.textContent = String(Math.max(0, nextCount|0)));
+  $.feedCache.html = box.innerHTML;
+}
+
 // 把一条新帖子插到当前首页列表最前面（并立即可交互）
 function prependCardToCurrentFeed(postObj){
   // 只在首页 feed 场景插入（其它页面如单帖页就别插）
@@ -989,6 +1010,7 @@ function renderCard(p){
                  data-repost-id="${esc(p.my_repost_id||'')}">🔁 <span>${getShareCount(p)}</span></div>
             <div class="action like ${p.liked?'liked':''}">❤️ <span>${p.likes||0}</span></div>
             ${deletable ? `<div class="action del" title="删除">🗑️</div>` : ""}
+            <div class="views" title="浏览量">👁️ <span>${p.views_count || 0}</span></div>
           </div>
         </div>
       </article>`;
@@ -1024,6 +1046,7 @@ function renderOriginalCard(p){
              data-reposted="${p.reposted ? '1':'0'}"
              data-repost-id="${esc(p.my_repost_id||'')}">🔁 <span>${getShareCount(p)}</span></div>
         ${deletable ? `<div class="action del" title="删除">🗑️</div>` : ""}
+        <div class="views" title="浏览量">👁️ <span>${p.views_count || 0}</span></div>
       </div>
     </div>
   </article>`;
@@ -1607,6 +1630,21 @@ async function showPostPage(id){
     bindPostPageEvents(d);
     bindCardEvents();   // ★ 让评论卡片也有点赞/转发/删除/进详情
     applyClamp();       // ★ 再跑一次 clamp 计算
+    
+    // ===== 进入详情就计一次浏览量 =====
+    try{
+      await api(`/posts/${id}/view`, { method: "POST" });
+      // 本地 +1：详情区
+      const span = document.querySelector('.post-thread .views span');
+      if (span) span.textContent = String((+span.textContent||0) + 1);
+      // 本地 +1：列表/首页（如果页面上有这条卡的话）
+      updateViewsEverywhere(id, (+span?.textContent || (d.views_count||0)));
+      // 同步首页缓存
+      patchFeedCacheViews(id, (+span?.textContent || (d.views_count||0)));
+    }catch(e){
+      console.warn('view count update failed', e);
+    }
+
   }catch(e){
     // 如果是 not found，直接回首页并提示
     if (String(e.message||"").toLowerCase().includes("not found")) {
@@ -1692,6 +1730,7 @@ function renderPostPage(p){
           <div class="action open" data-id="${esc(p.id)}" onclick="$.openReply('${p.id}')">
             💬 <span>${p.comments_count||0}</span>
           </div>
+          <div class="views" title="浏览量">👁️ <span>${p.views_count || 0}</span></div>
         </div>
       </div>
     </div>
