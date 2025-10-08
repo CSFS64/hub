@@ -20,6 +20,8 @@ function restoreFeedIfCached(){
     $.feed.innerHTML = $.feedCache.html;
     bindCardEvents();      // 重新挂事件
     applyClamp();          // 重新计算 show more
+    // 返回首页时让已还原的列表重新具备“曝光即打点”的能力
+    setupViewIO($.feed);
     // 恢复滚动
     requestAnimationFrame(()=> window.scrollTo(0, $.feedCache.scroll|0));
     return true;
@@ -248,7 +250,7 @@ function updateViewsEverywhere(postId, nextCount){
   document.querySelectorAll(`.card[data-id="${postId}"] .views span`)
     .forEach(s => s.textContent = String(n));
   // 详情页
-  document.querySelectorAll(`.post-thread .views span`)
+  document.querySelectorAll(`.post-thread .row.detail .views span`)
     .forEach(s => s.textContent = String(n));
 }
 
@@ -438,6 +440,34 @@ function renderPreview(){
       openImageViewer(urls, idx);
     };
   });
+}
+
+// 放在全局 utils 区域
+const _viewedOnce = new Set();   // 本页 session 内防重（服务端也有 10 分钟幂等）
+
+function setupViewIO(container){
+  if (!container) return;
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(async (en) => {
+      if (!en.isIntersecting) return;
+      const card = en.target.closest('.card');
+      if (!card) return;
+      const pid = card.dataset.id;
+      if (!pid || _viewedOnce.has(pid)) return;
+
+      _viewedOnce.add(pid);      // 本页内只打一次
+      io.unobserve(en.target);
+
+      try{
+        const r = await api(`/posts/${pid}/view`, { method:'POST' });
+        const n = Number(r?.views_count || 0);
+        updateViewsEverywhere(pid, n);
+        patchFeedCacheViews(pid, n);
+      }catch(e){ /* 静默失败 */ }
+    });
+  }, { root: null, threshold: 0.6 }); // 60% 进视口才算一次“看见”
+
+  container.querySelectorAll('.card[data-id]').forEach(el => io.observe(el));
 }
 
 // ===== 通用：为“任意目标列表 + 预览容器”添加图片（用于回复弹窗/详情页回复栏） =====
@@ -913,6 +943,7 @@ async function loadFeed(tab="for_you"){
     $.feed.innerHTML = items.map(renderCard).join("");
     bindCardEvents();
     hydrateSuggestions(items);
+    setupViewIO($.feed);
   }catch(e){
     toast(e.message || "加载失败");
   }finally{
@@ -1630,20 +1661,22 @@ async function showPostPage(id){
     bindPostPageEvents(d);
     bindCardEvents();   // ★ 让评论卡片也有点赞/转发/删除/进详情
     applyClamp();       // ★ 再跑一次 clamp 计算
-    
-    // ===== 进入详情就计一次浏览量 =====
+
+    // showPostPage 里，在 bindPostPageEvents(d); applyClamp(); 之后，补这一段：
     try {
-      const v = await api(`/posts/${id}/view`, { method: "POST" });
+      const commentsWrap = $.feed.querySelector('.post-thread');
+      if (commentsWrap) {
+        setupViewIO(commentsWrap);   // 里面的 .card[data-id]（每条评论）会被观察并打点
+      }
+    } catch(_) {}
     
-      // 只有真正计数成功才 +1
-      if (v && v.ok) {
-        const span = document.querySelector('.post-thread .views span');
-        if (span) span.textContent = String((+span.textContent || 0) + 1);
-    
-        // 用详情里的新值，同步列表与首页缓存
-        const newVal = +document.querySelector('.post-thread .views span')?.textContent || (d.views_count || 0);
-        updateViewsEverywhere(id, newVal);
-        patchFeedCacheViews(id, newVal);
+    // ===== 进入详情：只发打点，请以后端返回为准（不做本地 +1） =====
+    try {
+      const r = await api(`/posts/${id}/view`, { method: "POST" });
+      const n = Number(r?.views_count ?? NaN);
+      if (!Number.isNaN(n)) {
+        updateViewsEverywhere(id, n);
+        patchFeedCacheViews(id, n);
       }
     } catch (e) {
       console.warn('view count update failed', e);
