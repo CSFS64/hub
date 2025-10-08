@@ -1204,20 +1204,24 @@ $.openComposer = async (postId, mode = "reply") => {
     const addBtn    = document.getElementById("replyAddImage");
     const fileInput = document.getElementById("replyImgInput");
     const previewEl = document.getElementById("replyImgPreview");
+    const ta        = document.getElementById("replyText");
     
-    // 点击按钮 -> 打开文件选择
+    // 先把预览区清空一次（防止上次残留）
+    renderPreviewTo($.replyImages, previewEl);
+    
+    // 覆盖式绑定（不会叠加）
     if (addBtn && fileInput) {
-      addBtn.onclick = (ev)=>{ ev.preventDefault(); fileInput.click(); };
-      fileInput.onchange = async ()=>{
+      addBtn.onclick = (ev) => { ev.preventDefault(); fileInput.click(); };
+      fileInput.onchange = async () => {
         const files = [...fileInput.files];
         for (const f of files) await addImageFileTo($.replyImages, previewEl, f);
         fileInput.value = "";
       };
     }
     
-    // 粘贴图片到回复框
     if (ta) {
-      ta.addEventListener("paste", async (e)=>{
+      // 覆盖旧的 paste 处理器（不会叠加）
+      ta.onpaste = async (e) => {
         const items = e.clipboardData?.items || [];
         let added = false;
         for (const it of items) {
@@ -1228,18 +1232,18 @@ $.openComposer = async (postId, mode = "reply") => {
         }
         const hasText = !!(e.clipboardData && e.clipboardData.getData("text/plain"));
         if (added && !hasText) e.preventDefault();
-      });
+      };
     }
     
-    // 拖拽到输入框或预览区
-    [ta, previewEl].forEach(el=>{
+    // 拖拽也用覆盖式绑定
+    [ta, previewEl].forEach(el => {
       if (!el) return;
-      el.addEventListener("dragover", (e)=> e.preventDefault());
-      el.addEventListener("drop", async (e)=>{
+      el.ondragover = (e) => { e.preventDefault(); };
+      el.ondrop = async (e) => {
         e.preventDefault();
-        const files = [...(e.dataTransfer?.files||[])];
+        const files = [...(e.dataTransfer?.files || [])];
         for (const f of files) await addImageFileTo($.replyImages, previewEl, f);
-      });
+      };
     });
     
     requestAnimationFrame(layoutSpine);
@@ -1280,11 +1284,18 @@ $.openComposer = async (postId, mode = "reply") => {
     update();
 
     // 关闭时清理
-    const handleResize = () => autosize();
-    window.addEventListener("resize", handleResize, { passive: true });
     $.replyDialog.addEventListener("close", () => {
       window.removeEventListener("resize", handleResize);
-      if (ta) ta.oninput = ta.onfocus = ta.onkeydown = null;
+      if (ta) {
+        ta.oninput = ta.onfocus = ta.onkeydown = null;
+        ta.onpaste = null;
+        ta.ondragover = null;
+        ta.ondrop = null;
+      }
+      if (previewEl) {
+        previewEl.ondragover = null;
+        previewEl.ondrop = null;
+      }
     }, { once: true });
 
     // 发送（按模式分流）
