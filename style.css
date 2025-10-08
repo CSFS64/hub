@@ -1132,3 +1132,8 @@ dialog {
   .img-preview.preview-grid .img-wrap { border-radius: 12px; }
   .img-preview.preview-grid .img-wrap > .remove { top: 4px; right: 4px; }
 }
+
+/* ===== 浏览量按钮右侧顶格 ===== */
+.actions { display: flex; align-items: center; gap: 12px; }
+.actions .views { margin-left: auto; opacity: .8; }
+.actions .views span { min-width: 1.5em; display: inline-block; text-align: right; }
