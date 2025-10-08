@@ -438,6 +438,8 @@ function renderPreviewTo(listRef, previewEl){
     </div>
   `).join("");
 
+  applyPreviewLayout(previewEl, (listRef || []).length);
+
   // 删除
   previewEl.querySelectorAll(".remove").forEach(btn=>{
     btn.onclick = (e)=>{
@@ -457,6 +459,24 @@ function renderPreviewTo(listRef, previewEl){
       openImageViewer(urls, idx);
     };
   });
+}
+
+// 根据图片数量切换预览容器的网格布局（1/2/3）
+function applyPreviewLayout(previewEl, n){
+  if (!previewEl) return;
+
+  // 没图片：移除样式标记，恢复为空状态
+  if (!n || n <= 0) {
+    previewEl.classList.remove('preview-grid');
+    previewEl.removeAttribute('data-count');
+    return;
+  }
+
+  // 套用我们在 CSS 里定义的网格样式
+  previewEl.classList.add('preview-grid');
+  // 只允许 1~3（你的后端就是最多 3 张）
+  const count = Math.min(Math.max(n|0, 1), 3);
+  previewEl.dataset.count = String(count);
 }
 
 // 回复相关的独立状态（不和发帖共用 $.images）
