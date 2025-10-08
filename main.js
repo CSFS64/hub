@@ -1010,7 +1010,7 @@ function renderCard(p){
                  data-repost-id="${esc(p.my_repost_id||'')}">🔁 <span>${getShareCount(p)}</span></div>
             <div class="action like ${p.liked?'liked':''}">❤️ <span>${p.likes||0}</span></div>
             ${deletable ? `<div class="action del" title="删除">🗑️</div>` : ""}
-            <div class="views" title="浏览量">👁️ <span>${p.views_count || 0}</span></div>
+            <div class="views" title="浏览量">📊 <span>${p.views_count || 0}</span></div>
           </div>
         </div>
       </article>`;
@@ -1046,7 +1046,7 @@ function renderOriginalCard(p){
              data-reposted="${p.reposted ? '1':'0'}"
              data-repost-id="${esc(p.my_repost_id||'')}">🔁 <span>${getShareCount(p)}</span></div>
         ${deletable ? `<div class="action del" title="删除">🗑️</div>` : ""}
-        <div class="views" title="浏览量">👁️ <span>${p.views_count || 0}</span></div>
+        <div class="views" title="浏览量">📊 <span>${p.views_count || 0}</span></div>
       </div>
     </div>
   </article>`;
@@ -1734,7 +1734,7 @@ function renderPostPage(p){
           <div class="action open" data-id="${esc(p.id)}" onclick="$.openReply('${p.id}')">
             💬 <span>${p.comments_count||0}</span>
           </div>
-          <div class="views" title="浏览量">👁️ <span>${p.views_count || 0}</span></div>
+          <div class="views" title="浏览量">📊 <span>${p.views_count || 0}</span></div>
         </div>
       </div>
     </div>
