@@ -133,21 +133,25 @@
             <div class="mf-rail me">
               <img id="replyMyAvatar" class="avatar" alt="">
             </div>
-            <div class="mf-editor body">
-              <textarea id="replyText" class="mf-input" rows="1" placeholder="Post your reply"></textarea>
-              <div class="mf-tools">
-                <button type="button" id="replyAddImage" class="icon-btn" title="添加图片">📷</button>
-                <input id="replyImgInput" type="file" accept="image/*" multiple hidden>
-                <div id="replyModalCounter" class="mf-counter">280</div>
-                <button id="btnReply" class="mf-btn primary" type="button">Reply</button>
-              </div>
-              <!-- 预览容器：显示已选择/粘贴/拖拽进来的图片缩略图 -->
-              <div id="replyImgPreview" class="img-preview" style="margin-top:6px;"></div>
-              <div id="replyModalUpsell" class="upsell">
-                Upgrade to <b>Premium+</b> to write longer posts and Articles.
-                <a class="link" href="javascript:;">Learn more</a>
-              </div>
+            
+            <div class="composer-body">
+            <textarea id="replyText" rows="3" placeholder="Post your reply"></textarea>
+          
+            <div class="composer-actions">
+              <label class="icon-btn">
+                📷<input id="replyImgInput" type="file" accept="image/*" multiple hidden>
+              </label>
+              <div class="preview" id="replyImgPreview"></div>
+              <div class="char-counter" id="replyModalCounter">280</div>
+              <button id="btnReply" class="btn btn-primary" type="button">Reply</button>
             </div>
+          
+            <div id="replyModalUpsell" class="upsell">
+              Upgrade to <b>Premium+</b> to write longer posts and Articles.
+              <a class="link" href="javascript:;">Learn more</a>
+            </div>
+          </div>
+
           </div>
           <!-- /mf-thread -->
         </div>
