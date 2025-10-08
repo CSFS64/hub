@@ -1204,7 +1204,6 @@ $.openComposer = async (postId, mode = "reply") => {
     const addBtn    = document.getElementById("replyAddImage");
     const fileInput = document.getElementById("replyImgInput");
     const previewEl = document.getElementById("replyImgPreview");
-    const ta        = document.getElementById("replyText");
     
     // 先把预览区清空一次（防止上次残留）
     renderPreviewTo($.replyImages, previewEl);
