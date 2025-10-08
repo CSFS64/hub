@@ -1181,13 +1181,10 @@ $.openComposer = async (postId, mode = "reply") => {
     
     // —— 回复弹窗：图片选择 / 预览 / 粘贴 / 拖拽 —— //
     $.replyImages = []; // 打开时清空
-    const addBtn    = document.getElementById("replyAddImage");
     const fileInput = document.getElementById("replyImgInput");
     const previewEl = document.getElementById("replyImgPreview");
     
-    // 点击按钮 -> 打开文件选择
-    if (addBtn && fileInput) {
-      addBtn.onclick = (ev)=>{ ev.preventDefault(); fileInput.click(); };
+    if (fileInput) {
       fileInput.onchange = async ()=>{
         const files = [...fileInput.files];
         for (const f of files) await addImageFileTo($.replyImages, previewEl, f);
