@@ -1632,16 +1632,20 @@ async function showPostPage(id){
     applyClamp();       // ★ 再跑一次 clamp 计算
     
     // ===== 进入详情就计一次浏览量 =====
-    try{
-      await api(`/posts/${id}/view`, { method: "POST" });
-      // 本地 +1：详情区
-      const span = document.querySelector('.post-thread .views span');
-      if (span) span.textContent = String((+span.textContent||0) + 1);
-      // 本地 +1：列表/首页（如果页面上有这条卡的话）
-      updateViewsEverywhere(id, (+span?.textContent || (d.views_count||0)));
-      // 同步首页缓存
-      patchFeedCacheViews(id, (+span?.textContent || (d.views_count||0)));
-    }catch(e){
+    try {
+      const v = await api(`/posts/${id}/view`, { method: "POST" });
+    
+      // 只有真正计数成功才 +1
+      if (v && v.ok) {
+        const span = document.querySelector('.post-thread .views span');
+        if (span) span.textContent = String((+span.textContent || 0) + 1);
+    
+        // 用详情里的新值，同步列表与首页缓存
+        const newVal = +document.querySelector('.post-thread .views span')?.textContent || (d.views_count || 0);
+        updateViewsEverywhere(id, newVal);
+        patchFeedCacheViews(id, newVal);
+      }
+    } catch (e) {
       console.warn('view count update failed', e);
     }
 
